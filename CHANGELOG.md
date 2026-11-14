@@ -3,6 +3,15 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.2.1 — 2026-11-14
+
+- **Riproduzione dopo le modifiche**: Play usa le note, le durate, i BPM e il suono attuali.
+  Prima poteva continuare a riprodurre la vecchia versione del brano, anche le sole pause
+  della tablatura appena creata.
+- Risolto un errore del lettore dopo l'aggiunta o la rimozione di battute; conservate le
+  impostazioni del mixer quando si avvia la riproduzione.
+- Se il motore audio non è ancora pronto, Play mostra un avviso invece di non rispondere.
+
 ## 0.2.0 — 2026-11-14
 
 Interfaccia rifatta e prime risposte ai problemi segnalati.

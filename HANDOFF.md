@@ -23,6 +23,21 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.2.1
+
+- **Audio dopo le modifiche**: `RenderScore` rigenera il MIDI solo se cambia l'istanza di `Score`.
+  Le modifiche nello stesso oggetto (note, durate, BPM, suono, tracce) richiedono
+  `Api.LoadMidiForScore()`: lo fa `OnEditorChanged`, fermando prima il lettore e invalidando
+  `_midiReady`. Non aggiungere la rigenerazione al generico `Render`, usato anche per zoom e tracce.
+- `_midiReady` segue `MidiLoad` / `MidiLoaded`. Non azzerarlo in `TracksChanged`, che arriva
+  dopo `Changed` e potrebbe lasciare bloccate le anteprime quando il MIDI è già pronto.
+- `Relink()` ricostruisce anche i gruppi dei ritornelli: una nuova `MasterBar` senza
+  `RepeatGroup` causa `NullReferenceException` durante la generazione MIDI, anche senza ritornelli.
+- L'autotest ora verifica il MIDI ricevuto dal lettore (note e suono), i BPM, campioni audio
+  non silenziosi e Play dal pulsante. Facoltativamente `GS_SELFTEST_REPORT` imposta il percorso
+  del resoconto (il log in corso usa lo stesso percorso con estensione `.live.txt`);
+  senza questa variabile restano i percorsi `%TEMP%` descritti sotto.
+
 ### Aggiornamento v0.2.0 (leggere prima del resto)
 
 Le sezioni sotto descrivono la v0.1.0; con la v0.2.0 è cambiato questo:

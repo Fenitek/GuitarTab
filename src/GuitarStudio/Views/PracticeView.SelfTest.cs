@@ -5,6 +5,8 @@ using System.Windows.Input;
 using AlphaTab.Core.EcmaScript;
 using AlphaTab.Importer;
 using AlphaTab.Model;
+using AlphaTab.Midi;
+using AlphaTab.Synth;
 using GuitarStudio.Editing;
 
 namespace GuitarStudio.Views;
@@ -21,8 +23,10 @@ public partial class PracticeView
     {
         if (_selfTestStarted || Environment.GetEnvironmentVariable("GS_SELFTEST") != "1") return;
         _selfTestStarted = true;
-        var log = new LiveLog(Path.Combine(Path.GetTempPath(), "gs_selftest_live.txt"));
-        var report = Path.Combine(Path.GetTempPath(), "gs_selftest.txt");
+        var report = Environment.GetEnvironmentVariable("GS_SELFTEST_REPORT") ?? Path.Combine(Path.GetTempPath(), "gs_selftest.txt");
+        var log = new LiveLog(Environment.GetEnvironmentVariable("GS_SELFTEST_REPORT") != null
+            ? Path.ChangeExtension(report, ".live.txt")
+            : Path.Combine(Path.GetTempPath(), "gs_selftest_live.txt"));
 
         try
         {
@@ -42,6 +46,11 @@ public partial class PracticeView
                 _testModifiers = null;
                 await Task.Delay(wait);
             }
+
+            await VerifyAudioEdits(log);
+            _editor.MarkSaved();
+            NewFile();
+            await Task.Delay(800);
 
             // Riff: corda 6 tasto 5, 7; corda 5 tasto 5, 12 (due cifre) con hammer-on.
             for (var i = 0; i < 5; i++) await K(Key.Down);
@@ -190,6 +199,61 @@ public partial class PracticeView
             log.AppendLine("ECCEZIONE: " + ex);
         }
         File.WriteAllText(report, log.ToString());
+    }
+
+    private async Task VerifyAudioEdits(LiveLog log)
+    {
+        MidiFile? loadedMidi = null;
+        void CaptureMidi(MidiFile file) => loadedMidi = file;
+        void Require(bool condition, string message)
+        {
+            if (!condition) throw new InvalidOperationException(message);
+            log.AppendLine("audio OK: " + message);
+        }
+
+        Api.MidiLoad.On(CaptureMidi);
+        try
+        {
+            _editor.MoveTo(0, 0, 6);
+            _editor.SetFret(5);
+            await Task.Delay(300);
+            Require(loadedMidi?.Events.OfType<NoteOnEvent>().Any(n => n.NoteKey == 45) == true,
+                "la nota scritta nella tablatura vuota arriva al MIDI del lettore");
+
+            _editor.SetStartTempo(75);
+            await Task.Delay(300);
+            Require(Math.Abs(Api.EndTime - 12800) < 2, "il lettore usa il nuovo BPM (4 battute a 75 BPM = 12,8 s)");
+
+            _editor.SetFret(7);
+            await Task.Delay(300);
+            Require(loadedMidi!.Events.OfType<NoteOnEvent>().Any(n => n.NoteKey == 47) &&
+                    !loadedMidi.Events.OfType<NoteOnEvent>().Any(n => n.NoteKey == 45),
+                "il lettore sostituisce la vecchia nota dopo una modifica");
+
+            var staff = _editor.Staff!;
+            _editor.SetTrackProperties("Chitarra", 25, staff.Tuning.ToList(), staff.StringTuning.Name, 0);
+            await Task.Delay(300);
+            Require(loadedMidi.Events.OfType<ProgramChangeEvent>().Any(p => p.Program == 25),
+                "il cambio di suono raggiunge il sintetizzatore");
+
+            var exporter = await Api.ExportAudio(new AudioExportOptions { MetronomeVolume = 0 });
+            var chunk = await exporter.Render(500) ?? throw new InvalidOperationException("Nessun campione audio generato");
+            var samples = chunk.Samples;
+            double peak = 0;
+            for (var i = 0; i < samples.Length; i++)
+                peak = Math.Max(peak, Math.Abs(samples[i]));
+            Require(peak > 0.0001, $"il sintetizzatore produce audio non silenzioso (picco {peak:0.0000})");
+
+            Api.Stop();
+            Play_Click(this, new RoutedEventArgs());
+            await Task.Delay(700);
+            Require(_playing && Api.TimePosition > 0, "Play avvia il brano modificato e il tempo avanza");
+            Api.Stop();
+        }
+        finally
+        {
+            Api.MidiLoad.Off(CaptureMidi);
+        }
     }
 
     private sealed class LiveLog

@@ -960,6 +960,9 @@ public sealed class TabEditor
                 }
             }
         }
+        // Anche le battute senza segni di ritornello devono appartenere a un RepeatGroup:
+        // il lettore MIDI lo usa per attraversarle dopo inserimenti, incolla e cancellazioni.
+        score.RebuildRepeatGroups();
     }
 
     // ---------------------------------------------------------------- proprietà della battuta

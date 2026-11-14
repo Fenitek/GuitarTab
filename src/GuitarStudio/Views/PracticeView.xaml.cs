@@ -101,12 +101,16 @@ public partial class PracticeView : UserControl
         _editor.CursorMoved += OnEditorCursorMoved;
         _editor.TracksChanged += () =>
         {
-            // I canali audio della traccia nuova esistono solo dopo che alphaTab ha rigenerato il MIDI:
-            // suonare un'anteprima prima fa andare in crash il sintetizzatore.
-            _midiReady = false;
             RebuildTracksPanel();
         };
-        api.MidiLoaded.On(_ => Ui(() => _midiReady = true));
+        api.MidiLoad.On(_ => Ui(() => _midiReady = false));
+        api.MidiLoaded.On(_ => Ui(() =>
+        {
+            _midiReady = true;
+            // Il ricaricamento del MIDI azzera la posizione: torna alla nota dell'editor.
+            if (!_playing && _editor.CurrentBeat is { } beat)
+                api.TickPosition = beat.AbsolutePlaybackStart;
+        }));
         Fretboard.FretClicked += OnFretClicked;
         BuildEffectButtons();
         api.PlayedBeatChanged.On(beat => Ui(() => OnPlayedBeat(beat)));
@@ -334,7 +338,15 @@ public partial class PracticeView : UserControl
     private void OnEditorChanged()
     {
         _revision++;
+        // RenderScore rigenera il MIDI solo quando cambia l'istanza di Score (es. Annulla).
+        // Scrivere note o cambiare BPM/suono modifica invece lo stesso oggetto: senza questo
+        // aggiornamento il lettore continua a suonare il brano precedente, anche solo pause.
+        var reloadMidi = ReferenceEquals(Api.Score, _editor.Score);
+        Api.Stop();
+        // Mai suonare anteprime con i canali del vecchio MIDI, soprattutto dopo nuove tracce.
+        _midiReady = false;
         Render();
+        if (reloadMidi) Api.LoadMidiForScore();
         UpdateTitle();
         UpdateEditUi();
         RebuildTracksPanel();
@@ -756,7 +768,24 @@ public partial class PracticeView : UserControl
 
     private void Play_Click(object sender, RoutedEventArgs e)
     {
-        if (!_soundFontReady) return;
+        if (!_soundFontReady || !_midiReady || !Api.IsReadyForPlayback)
+        {
+            ShowToast(!_soundFontReady
+                ? "I suoni non sono ancora pronti. Se il problema continua, ricarica il SoundFont dal menu ☰."
+                : "Preparazione del brano in corso: riprova tra un momento.", ToastKind.Warning);
+            return;
+        }
+        // Il ricaricamento MIDI ripristina i volumi dei canali: conserva le scelte del mixer.
+        if (!_playing && _editor.Score is { } score)
+        {
+            foreach (var track in score.Tracks)
+            {
+                var tracks = new List<AlphaTab.Model.Track> { track };
+                Api.ChangeTrackMute(tracks, track.PlaybackInfo.IsMute);
+                Api.ChangeTrackSolo(tracks, track.PlaybackInfo.IsSolo);
+                Api.ChangeTrackVolume(tracks, _trackVolumes.GetValueOrDefault((int)track.Index, 1));
+            }
+        }
         if (TrainerToggle.IsChecked == true && !_playing && Api.TickPosition == 0)
             SetSpeed(ReadInt(TrainerStart, 60));
         Api.PlayPause();
