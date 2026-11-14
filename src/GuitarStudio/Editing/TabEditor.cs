@@ -284,7 +284,7 @@ public sealed class TabEditor
             InsertBarAt(BarIndex + 1);
             BarIndex++;
             BeatIndex = 0;
-        });
+        }, new HistorySnapshot.BarSplice(Score!, BarIndex + 1, 0, 1));
     }
 
     private void AppendRestInBar(Voice voice)
@@ -424,6 +424,8 @@ public sealed class TabEditor
     public void Paste()
     {
         if (!IsEditable || _clipboard is not { Count: > 0 } clip || CurrentVoice is not { } voice) return;
+        var replace = voice.Beats.All(b => b.Notes.Count == 0);
+        var targetBar = replace ? BarIndex : BarIndex + 1;
         Edit(() =>
         {
             if (_clipboardWholeBars)
@@ -454,7 +456,9 @@ public sealed class TabEditor
                 BeatIndex = Math.Min(insertAt, voice.Beats.Count - 1);
             }
             _anchor = null;
-        }, _clipboardWholeBars ? null : HistorySnapshot.Bars.Capture([CurrentBar!]));
+        }, _clipboardWholeBars
+            ? new HistorySnapshot.BarSplice(Score!, targetBar, replace ? 1 : 0, clip.Count)
+            : HistorySnapshot.Bars.Capture([CurrentBar!]));
     }
 
     /// <summary>Elimina i tempi della sola voce selezionata, preservando le altre voci.</summary>
@@ -801,7 +805,7 @@ public sealed class TabEditor
             BarIndex++;
             BeatIndex = 0;
             _anchor = null;
-        });
+        }, new HistorySnapshot.BarSplice(Score!, BarIndex + 1, 0, 1));
     }
 
     public void DeleteBar()
@@ -813,7 +817,7 @@ public sealed class TabEditor
             Relink();
             BeatIndex = 0;
             _anchor = null;
-        });
+        }, new HistorySnapshot.BarSplice(Score!, BarIndex, 1, 0));
     }
 
     /// <summary>Riempie di pause la parte mancante della battuta, o toglie i tempi in eccesso.</summary>

@@ -1,4 +1,74 @@
-# Prestazioni dell'editor — v0.4.1
+# Prestazioni dell'editor
+
+## v0.4.2 — battute e anteprima
+
+14 novembre 2026, stessa macchina e carico descritti sotto: 200 battute, quattro tracce,
+6.400 tempi e 8.000 note; .NET 10.0.204 Release. Mediane di 10 campioni dopo riscaldamento.
+Misure senza UI, con assert e preparazione esclusi dal cronometro. I processi di misura
+iniziale e finale sono stati eseguiti separatamente, senza autotest concorrente.
+Prima = sorgenti bf73f88 con la sola nuova misura; dopo = snapshot strutturali v0.4.2.
+Campioni: [benchmarks/v0.4.2.csv](benchmarks/v0.4.2.csv).
+
+| Operazione nel modello | Prima (ms) | Dopo (ms) | Massimo dopo (ms) |
+|---|---:|---:|---:|
+| InsertBarAfter | 605,28 | 9,73 | 13,97 |
+| DeleteBar | 592,29 | 7,35 | 11,24 |
+| Incolla battuta intera | 571,94 | 3,51 | 6,76 |
+| MoveRight oltre fine brano | 600,11 | 3,74 | 21,26 |
+
+| Operazione | Undo prima → dopo (ms) | Redo prima → dopo (ms) |
+|---|---:|---:|
+| InsertBarAfter | 847,74 → 10,86 | 827,01 → 10,07 |
+| DeleteBar | 824,04 → 6,91 | 813,87 → 6,53 |
+| Incolla battuta intera | 812,16 → 5,13 | 821,07 → 3,66 |
+| MoveRight oltre fine brano | 845,98 → 2,31 | 773,65 → 2,17 |
+
+Tutti i 120 tempi finali (modifica, Undo e Redo) sono sotto 50 ms; massimo complessivo
+26,75 ms. L'incolla misurato è di una battuta su una battuta popolata. I test funzionali
+coprono anche più battute e la sostituzione della prima battuta vuota, conservando le altre voci.
+La soglia riguarda il modello: rendering, MIDI e pannello dell'app sono esclusi.
+
+Lo snapshot salva indice/conteggi dello splice, MasterBar rimosse e Bar in tutti gli staff,
+più il contesto limitato dei collegamenti ai margini. Undo e Redo mantengono lo stesso Score.
+I test confrontano tutti i membri del `.gp` con il riferimento dello snapshot completo,
+normalizzati con un identico roundtrip Full per eliminare differenze di ID e timestamp ZIP.
+Ripetono Undo/Redo tre volte, con quattro tracce, secondo staff, due voci, armature diverse,
+sezioni, ritornelli, BPM e note collegate. Non è un confronto limitato ai soli tasti/durate.
+
+### Anteprima: difetto e correzione
+
+Il controllo aggiunto prima della correzione in GS_SELFTEST ha fallito con **1 richiesta,
+0 PlayNote riusciti**, benché il MIDI tornasse pronto. Dopo: **1 richiesta, 1 PlayNote**,
+circa **310 ms** dalla richiesta. Il contatore misura il ritorno riuscito da PlayNote,
+non una verifica a orecchio dell'uscita audio.
+
+L'ultima richiesta conserva Score, revisione e identità della nota. OnMidiLoaded la esegue
+solo per il MIDI corrente, con SoundFont pronto e nota ancora presente nel modello.
+Altre modifiche, Undo, cambio documento o chiusura annullano la richiesta; spostare soltanto
+il cursore la conserva. Due cifre rapide sostituiscono la richiesta e suonano solo il tasto finale.
+L'autotest copre anche eventi MIDI vecchi, nota staccata e nuovi canali dopo Aggiungi traccia.
+Il singolo punto PlayNote resta protetto da `_midiReady` e dal controllo della revisione.
+
+**Proposta non applicata:** circa 310 ms sono percepibili per il feedback di scrittura.
+Un motore separato per le sole anteprime, già inizializzato con SoundFont e canali propri,
+permetterebbe di preparare una breve nota senza rigenerare il MIDI dell'intero brano.
+Richiederebbe un proprio stato di disponibilità e test di suono/canali. In questa versione
+restano il motore attuale e il debounce di 300 ms, senza anticipare PlayNote sul sintetizzatore non pronto.
+
+### Riprodurre le nuove verifiche
+
+```powershell
+$env:GS_PERF_STRUCTURAL_REPORT = Join-Path $PWD 'artifacts/structural.json'
+dotnet test -c Release --filter FullyQualifiedName~StructuralOperationsOn200BarsAnd4Tracks
+$env:GS_SELFTEST = '1'
+$env:GS_SELFTEST_EXIT = '1'
+dotnet run -c Release --project src/GuitarStudio
+```
+
+`GS_SELFTEST_PREVIEW_ONLY=1` esegue soltanto le nuove verifiche di anteprima e chiude.
+Il normale GS_SELFTEST comprende questi controlli, quelli precedenti e l'autosalvataggio reale.
+
+## Misura storica v0.4.1
 
 14 novembre 2026; Windows x64, AMD Ryzen 9 9900X, SDK .NET 10.0.204, Release.
 Tempi in millisecondi: mediane di 10 campioni dopo riscaldamento, su questa macchina.

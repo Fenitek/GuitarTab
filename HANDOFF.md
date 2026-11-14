@@ -23,6 +23,42 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.4.2
+
+- `HistorySnapshot.BarSplice`: indice, conteggi prima/dopo, MasterBar eliminate serializzate
+  e contesto `Bars` di tutte le tracce/staff coinvolti. Per inserire non salva il nuovo contenuto;
+  l'inverso lo cattura prima di Undo. Il contesto ai margini conserva gli effetti che Finish
+  può modificare fuori dalla battuta rimossa. Il serializzatore generico ModelData<T>
+  riusa l'adattatore alphaTab 1.9 per MasterBar e Bar, senza passare da `.gp`.
+- MoveRight oltre fine, InsertBarAfter, DeleteBar e Paste a battute intere usano BarSplice.
+  Nell'incolla con prima battuta vuota lo splice sostituisce una battuta e ne inserisce N-1:
+  ripristina anche le altre voci/staff della prima battuta. Al ripristino modifica prima
+  tutte le liste MasterBars/Bars, poi Relink, Chain e Finish. Score resta lo stesso oggetto;
+  `BarIndices=null` comunica alla UI un cambiamento strutturale.
+- HistoryTests è diviso in due file partial. Confronta tutti i membri `.gp` dopo un identico
+  roundtrip Full (ID/timestamp ZIP normalizzati), non solo i campi del confronto musicale.
+  Copre inizio/centro/fine, più battute, sostituzione vuota, quattro tracce, secondo staff,
+  due voci, armature, metadati, effetti ai margini e storie miste, con Undo/Redo ripetuti.
+- PerformanceTests misura le quattro operazioni strutturali e i relativi Undo/Redo;
+  `GS_PERF_STRUCTURAL_REPORT` sceglie il JSON. Dati in docs/benchmarks/v0.4.2.csv:
+  modifica nel modello circa 600 → 3,5–9,7 ms; tutti i 120 tempi finali sotto 50 ms
+  (massimo 26,75 ms). Metodo e tabella completi in docs/PERFORMANCE.md.
+- **Anteprima confermata persa prima della correzione:** autotest 1 richiesta/0 PlayNote,
+  con MIDI già pronto. Ora PreviewCurrentNote conserva l'ultima PendingPreview
+  (Score, Note, revisione, timestamp). OnMidiLoaded corrente la riprova; anche SoundFontLoaded
+  può sbloccarla. Prima di PlayNote: SoundFont e `_midiReady` veri, revisione corrente,
+  nota ancora appartenente alla catena Score/Track/Staff/Bar/Voice/Beat. Mai PlayNote se falso.
+- OnEditorChanged e CancelPendingMidiReload invalidano l'anteprima; il solo cursore non
+  la invalida. Due cifre rapide suonano solo il tasto finale. Contatori richieste/suonate
+  e latenza per autotest; misurato 1/1 in circa 310 ms. Il debounce resta 300 ms.
+  Un motore separato già pronto è solo una proposta nel resoconto, non implementata.
+- GS_SELFTEST include le verifiche di anteprima (eventi vecchi, nota staccata, Undo,
+  cambio documento e nuovi canali); `GS_SELFTEST_PREVIEW_ONLY=1` esegue solo queste e chiude.
+  Usare GS_SELFTEST_EXIT=1 per la chiusura del test completo.
+- Verifica v0.4.2: 59 test verdi, build 0 avvisi/0 errori, autotest completo OK
+  (anteprime, audio e autosave reale), nessuna nuova eccezione nel crash.log. L'attesa
+  del controllo autosave confronta la revisione corrente e registra i numeri di revisione.
+
 ### Aggiornamento v0.4.1
 
 - Misure/limiti in `docs/PERFORMANCE.md`, campioni in `docs/benchmarks/v0.4.1.csv`.
@@ -215,10 +251,10 @@ src/GuitarStudio/
 
 ### Modello e modifiche (`TabEditor`)
 - Ogni modifica passa da `Edit(action)`: snapshot locale per note/tempi/appunti locali,
-  `.gp` completo per operazioni strutturali (max 100 passi). Pulisce collegamenti staccati,
+  splice per battute e `.gp` completo per tracce/altre proprietà globali (max 100 passi). Pulisce collegamenti staccati,
   chiama `Score.Finish(settings)`, corregge ID duplicati e lancia Changed. La vista aggiorna
   subito i controlli, accorpa il render dopo 16 ms e il MIDI dopo 300 ms. Restano costosi
-  esportazione, annulla strutturale e render completo (vedi v0.4.1).
+  esportazione, annulla di tracce/proprietà globali e render completo (vedi v0.4.1 e v0.4.2).
 - **Numerazione delle corde**: in alphaTab `Note.String = 1` è la corda **più grave**. Nell'editor `Line = 1` è la corda **più acuta** (in alto nella tab). Conversione: `ModelString(line) = StringCount - line + 1`.
 - Dopo inserimenti o cancellazioni di battute e tempi, `Relink()` ricostruisce a mano indici e collegamenti (MasterBar, Bar, Voice, Beat, Prev/Next). Funziona, ma dipende dai dettagli interni di alphaTab.
 - `MasterBar.KeySignature` ha un setter che scrive sulle `Bar` collegate. Impostarlo su una MasterBar nuova senza battute dà `NullReferenceException`: l'armatura si copia sulle singole `Bar`.

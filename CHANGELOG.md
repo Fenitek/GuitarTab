@@ -3,6 +3,18 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.4.2 — 2026-11-14
+
+- Inserire, eliminare e incollare battute intere, anche avanzando oltre la fine del brano,
+  non richiede più una copia dell'intera partitura per Annulla. Sul brano di prova da
+  200 battute e quattro tracce le operazioni nel modello scendono da circa 600 a 4–10 ms.
+- Annulla e Ripeti delle battute conservano voci, tracce, pentagrammi, ritornelli, sezioni,
+  cambi di tempo e collegamenti alle note vicine; test di confronto dei file Guitar Pro.
+- Ripristinata l'anteprima delle note dopo una modifica: l'ultima nota richiesta suona
+  quando il MIDI aggiornato è pronto. Note eliminate e richieste superate vengono scartate.
+- Autotest esteso per anteprime e nuovi canali; misure e proposta per ridurre l'attesa
+  dell'anteprima in `docs/PERFORMANCE.md` (proposta non applicata).
+
 ## 0.4.1 — 2026-11-14
 
 - Scrivere note e annullarle è più rapido sui brani lunghi: le modifiche locali conservano

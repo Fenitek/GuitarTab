@@ -36,6 +36,20 @@ public partial class PracticeView
             NewFile();
             await Task.Delay(800);
             log.AppendLine($"nuova: battute={_editor.Staff!.Bars.Count} corde={_editor.StringCount} editabile={_editor.IsEditable}");
+            await VerifyNotePreview(log);
+            if (Environment.GetEnvironmentVariable("GS_SELFTEST_PREVIEW_ONLY") == "1")
+            {
+                if (App.UnhandledErrorCount != initialErrors)
+                    throw new InvalidOperationException("Errori non gestiti durante la verifica dell'anteprima.");
+                log.AppendLine("OK");
+                File.WriteAllText(report, log.ToString());
+                _editor.MarkSaved();
+                Application.Current.Shutdown();
+                return;
+            }
+            _editor.MarkSaved();
+            NewFile();
+            await Task.Delay(800);
 
             async Task K(Key k, ModifierKeys mods = ModifierKeys.None, int wait = 120)
             {
@@ -216,6 +230,77 @@ public partial class PracticeView
         }
     }
 
+    private async Task VerifyNotePreview(LiveLog log)
+    {
+        void Require(bool condition, string message)
+        {
+            if (!condition) throw new InvalidOperationException(message);
+            log.AppendLine("anteprima OK: " + message);
+        }
+        async Task Ready()
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(5);
+            while ((!_soundFontReady || !_midiReady) && DateTime.UtcNow < deadline) await Task.Delay(25);
+            Require(_soundFontReady && _midiReady, "MIDI e suoni pronti");
+        }
+        await Ready();
+        var requested = _previewRequested;
+        var played = _previewPlayed;
+        _lastDigit = null;
+        TypeDigit(5);
+        Require(!_midiReady && _previewPlayed == played && _pendingPreview != null, "richiesta accodata senza PlayNote a MIDI non pronto");
+        _midiLoads.Enqueue((_editor.Score, _revision - 1));
+        OnMidiLoaded();
+        Require(!_midiReady && _previewPlayed == played, "un MidiLoaded vecchio non suona l'anteprima");
+        await Ready();
+        log.AppendLine($"anteprima: richieste={_previewRequested - requested}, suonate={_previewPlayed - played}, latenza={_lastPreviewLatencyMs:0.0} ms");
+        Require(_previewRequested == requested + 1 && _previewPlayed == played + 1 && _lastPreviewFret == 5,
+            "la nota richiesta suona una sola volta dopo il caricamento corrente");
+
+        requested = _previewRequested; played = _previewPlayed;
+        _lastDigit = null;
+        TypeDigit(1); TypeDigit(2);
+        Require(!_midiReady && _previewPlayed == played, "due cifre rapide attendono il MIDI");
+        await Ready();
+        Require(_previewRequested == requested + 2 && _previewPlayed == played + 1 && _lastPreviewFret == 12,
+            "1 e 2 rapidi suonano soltanto il tasto 12");
+
+        played = _previewPlayed;
+        _lastDigit = null;
+        TypeDigit(8);
+        _editor.CurrentBeat!.RemoveNote(_editor.CurrentNote!); // Nota staccata senza cambiare revisione: verifica anche l'esistenza.
+        await Ready();
+        Require(_previewPlayed == played && _pendingPreview == null, "una nota non più presente non viene suonata");
+
+        played = _previewPlayed;
+        _lastDigit = null;
+        TypeDigit(7);
+        _editor.Undo();
+        await Ready();
+        Require(_previewPlayed == played, "Annulla scarta l'anteprima della revisione precedente");
+
+        played = _previewPlayed;
+        _lastDigit = null;
+        TypeDigit(9);
+        _editor.MoveRight();
+        await Ready();
+        Require(_previewPlayed == played + 1 && _lastPreviewFret == 9 && _editor.CurrentNote == null,
+            "spostare il cursore conserva l'anteprima della nota scritta");
+
+        played = _previewPlayed;
+        TypeDigit(3);
+        _editor.MarkSaved(); NewFile();
+        await Ready();
+        Require(_previewPlayed == played && _pendingPreview == null, "Nuova annulla l'anteprima del documento precedente");
+
+        _editor.AddTrack("Basso anteprima", 33, new double[] { 43, 38, 33, 28 }, true);
+        played = _previewPlayed;
+        _lastDigit = null; TypeDigit(4);
+        Require(!_midiReady && _previewPlayed == played, "nuova traccia: nessuna anteprima sui vecchi canali");
+        await Ready();
+        Require(_previewPlayed == played + 1 && _lastPreviewFret == 4, "nuova traccia: anteprima dopo i nuovi canali MIDI");
+    }
+
     private async Task VerifyAutosave(LiveLog log)
     {
         void Require(bool condition, string message)
@@ -231,8 +316,10 @@ public partial class PracticeView
         var revision = _revision;
         log.AppendLine("autosave: attesa del timer reale (fino a 65 secondi)");
         var deadline = DateTime.UtcNow.AddSeconds(65);
-        while (_autosavedRevision != revision && DateTime.UtcNow < deadline) await Task.Delay(250);
-        Require(_autosavedRevision == revision && File.Exists(_autosave.FilePath), "copia creata dal timer reale");
+        while ((_autosavedRevision != _revision || !File.Exists(_autosave.FilePath)) && DateTime.UtcNow < deadline)
+            await Task.Delay(250);
+        log.AppendLine($"autosave: revisione iniziale={revision}, corrente={_revision}, salvata={_autosavedRevision}, modificato={_editor.IsDirty}");
+        Require(_autosavedRevision == _revision && File.Exists(_autosave.FilePath), "copia creata dal timer reale");
         var recovered = ScoreLoader.LoadScoreFromBytes(new Uint8Array(File.ReadAllBytes(_autosave.FilePath)), Api.Settings);
         Require(recovered.Title == _editor.Score!.Title && recovered.Tracks.Count == _editor.Score.Tracks.Count,
             "copia Guitar Pro leggibile con titolo e tracce attuali");

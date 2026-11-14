@@ -16,6 +16,48 @@ internal abstract class HistorySnapshot
         internal override void Restore(TabEditor editor) => editor.RestoreScore(bytes);
     }
 
+    /// <summary>Ripristina uno splice di battute, conservando soltanto la regione e i suoi collegamenti.</summary>
+    internal sealed class BarSplice : HistorySnapshot
+    {
+        private readonly int _index;
+        private readonly int _removeCount;
+        private readonly object?[] _masters;
+        private readonly Bars _context;
+
+        internal BarSplice(Score score, int index, int oldCount, int newCount)
+        {
+            _index = index;
+            _removeCount = newCount;
+            _masters = score.MasterBars.Skip(index).Take(oldCount).Select(ModelData<MasterBar>.Write).ToArray();
+            var first = Math.Max(0, index - (oldCount == 0 ? 1 : 0));
+            var last = Math.Min(score.MasterBars.Count - 1, index + Math.Max(0, oldCount - 1));
+            _context = Bars.Capture(score.Tracks.SelectMany(t => t.Staves)
+                .SelectMany(s => s.Bars.Skip(first).Take(last - first + 1)));
+        }
+
+        internal override HistorySnapshot CaptureCurrent(TabEditor editor) =>
+            new BarSplice(editor.Score!, _index, _removeCount, _masters.Length);
+
+        internal override void Restore(TabEditor editor)
+        {
+            var score = editor.Score!;
+            Splice(score.MasterBars, _index, _removeCount, _masters.Select(ModelData<MasterBar>.Read));
+            foreach (var staff in score.Tracks.SelectMany(t => t.Staves))
+            {
+                Splice(staff.Bars, _index, _removeCount, _masters.Select(_ => new Bar()));
+            }
+            // La regione contiene anche tutte le Bar delle battute rimosse, in ogni staff.
+            // Prima si ripristina la topologia; solo dopo si risolvono gli indirizzi delle note.
+            _context.Restore(editor);
+        }
+
+        private static void Splice<T>(IList<T> list, int index, int removeCount, IEnumerable<T> insert)
+        {
+            for (var i = 0; i < removeCount; i++) list.RemoveAt(index);
+            foreach (var item in insert) list.Insert(index++, item);
+        }
+    }
+
     internal sealed class Bars : HistorySnapshot
     {
         internal override IReadOnlyList<int> BarIndices => _bars.Keys.Select(a => a.Bar).Distinct().Order().ToArray();
@@ -27,7 +69,7 @@ internal abstract class HistorySnapshot
         internal Bars(IEnumerable<Bar> bars)
         {
             var list = bars.Distinct().ToList();
-            _bars = list.ToDictionary(AddressOf, BarData.Write);
+            _bars = list.ToDictionary(AddressOf, ModelData<Bar>.Write);
             foreach (var note in list.SelectMany(b => b.Voices).SelectMany(v => v.Beats).SelectMany(b => b.Notes))
             {
                 Remember(note);
@@ -48,7 +90,7 @@ internal abstract class HistorySnapshot
             foreach (var (address, data) in _bars)
             {
                 var staff = editor.Score!.Tracks[address.Track].Staves[address.Staff];
-                staff.Bars[address.Bar] = BarData.Read(data);
+                staff.Bars[address.Bar] = ModelData<Bar>.Read(data);
             }
             editor.FinishRestoredBars(() =>
             {
@@ -94,29 +136,29 @@ internal abstract class HistorySnapshot
     // automazioni, testi e stili che ModelCopy (destinato agli appunti) non copia.
     // Read non esegue Finish su una battuta isolata: le legature tra battute restano intatte.
     // Questo adattatore è l'unico punto dipendente dai tipi interni della versione NuGet fissata.
-    private static class BarData
+    private static class ModelData<T> where T : class, new()
     {
         private static readonly Assembly ModelAssembly = typeof(Score).Assembly;
         private static readonly Type WriterType = ModelAssembly.GetType("AlphaTab.Io.MapObjectWriter", throwOnError: true)!;
         private static readonly Type ReaderType = ModelAssembly.GetType("AlphaTab.Io.MapObjectReader", throwOnError: true)!;
-        private static readonly Type Serializer = ModelAssembly.GetType("AlphaTab.Generated.Model.BarSerializer", throwOnError: true)!;
+        private static readonly Type Serializer = ModelAssembly.GetType($"AlphaTab.Generated.Model.{typeof(T).Name}Serializer", throwOnError: true)!;
         private static readonly MethodInfo WriteMethod = Serializer.GetMethod("Write")!;
         private static readonly MethodInfo ReadMethod = Serializer.GetMethod("Read")!;
         private static readonly PropertyInfo Result = WriterType.GetProperty("Result")!;
 
-        internal static object? Write(Bar bar)
+        internal static object? Write(T model)
         {
             var writer = Activator.CreateInstance(WriterType)!;
-            WriteMethod.Invoke(null, [bar, writer]);
+            WriteMethod.Invoke(null, [model, writer]);
             return Result.GetValue(writer);
         }
 
-        internal static Bar Read(object? data)
+        internal static T Read(object? data)
         {
-            var bar = new Bar();
+            var model = new T();
             var reader = Activator.CreateInstance(ReaderType, [data])!;
-            ReadMethod.Invoke(null, [bar, reader]);
-            return bar;
+            ReadMethod.Invoke(null, [model, reader]);
+            return model;
         }
     }
 }

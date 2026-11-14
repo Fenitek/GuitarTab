@@ -354,6 +354,7 @@ public partial class PracticeView : UserControl
     private void OnEditorChanged()
     {
         var total = Stopwatch.StartNew();
+        _pendingPreview = null;
         _lastDeferredRenderMs = 0;
         _lastDeferredMidiMs = 0;
         _revision++;
@@ -724,9 +725,11 @@ public partial class PracticeView : UserControl
     /// <summary>Fa sentire la nota appena scritta.</summary>
     private void PreviewCurrentNote()
     {
-        if (_playing || !_soundFontReady || !_midiReady || _editor.CurrentNote is not { } note) return;
-        try { Api.PlayNote(note); }
-        catch (Exception ex) { App.Log(ex); }
+        _previewRequested++;
+        _pendingPreview = null;
+        if (_playing || _editor.Score is not { } score || _editor.CurrentNote is not { } note) return;
+        _pendingPreview = new PendingPreview(score, note, _revision, Stopwatch.GetTimestamp());
+        TryPlayPendingPreview();
     }
 
     private void ApplyEffect(NoteEffect effect)

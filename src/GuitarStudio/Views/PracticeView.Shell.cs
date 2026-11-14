@@ -146,6 +146,7 @@ public partial class PracticeView
     private void OnSoundFontLoaded()
     {
         _soundFontReady = true;
+        TryPlayPendingPreview();
         if (_announceSoundFont) ShowToast($"Suoni caricati: {_soundFontName}", ToastKind.Ok);
         else StatusText.Text = $"Motore audio pronto · suoni: {_soundFontName}";
         _announceSoundFont = false;

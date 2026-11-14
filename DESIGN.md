@@ -113,6 +113,8 @@ Gli edit aggiornano subito stato, cursore e celle della panoramica. Il mixer riu
 controlli finché tracce e numero battute non cambiano. Il ridisegno completo è accorpato
 dopo circa 16 ms; il MIDI dopo circa 300 ms dall'ultimo tasto. Durante l'attesa le anteprime
 sono bloccate. Il renderer resta sincrono sul dispatcher, senza worker.
+L'ultima anteprima richiesta viene eseguita quando MIDI corrente e suoni sono pronti;
+un'altra modifica o il cambio documento la scartano, lo spostamento del cursore la conserva.
 
 ## Do's and Don'ts
 

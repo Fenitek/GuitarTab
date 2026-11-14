@@ -5,7 +5,7 @@ using static GuitarStudio.Tests.EditorFixture;
 
 namespace GuitarStudio.Tests;
 
-public sealed class HistoryTests
+public sealed partial class HistoryTests
 {
     [Fact]
     public void LocalUndoKeepsScoreAndUntouchedBarsAndTrackAlive()
