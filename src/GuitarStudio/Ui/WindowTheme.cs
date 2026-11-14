@@ -32,15 +32,21 @@ public static class WindowTheme
             var hwnd = new WindowInteropHelper(window).Handle;
             var on = 1;
             DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, ref on, sizeof(int));
-            // Windows 11: barra del titolo dello stesso colore dei pannelli (formato 0x00BBGGRR).
-            var caption = 0x002F2826;
+            // Windows 11: gli stessi colori del tema, convertiti nel formato COLORREF (BGR).
+            var caption = ColorRef("BgPanel");
             DwmSetWindowAttribute(hwnd, DwmwaCaptionColor, ref caption, sizeof(int));
-            var border = 0x004A403D;
+            var border = ColorRef("Line");
             DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref border, sizeof(int));
         }
         catch
         {
             // Su sistemi che non lo supportano resta la barra standard.
         }
+    }
+
+    private static int ColorRef(string resource)
+    {
+        var color = ((SolidColorBrush)Application.Current.FindResource(resource)).Color;
+        return color.R | (color.G << 8) | (color.B << 16);
     }
 }

@@ -32,6 +32,16 @@ public partial class PracticeView
 
         try
         {
+            if (_visualCapture != null)
+            {
+                await Task.Delay(800);
+                await RunVisualSelfTest(log);
+                if (App.UnhandledErrorCount != initialErrors) throw new InvalidOperationException("Errore durante il controllo visivo.");
+                log.AppendLine("OK");
+                File.WriteAllText(report, log.ToString());
+                Application.Current.Shutdown();
+                return;
+            }
             await Task.Delay(1500);
             NewFile();
             await Task.Delay(800);
@@ -222,7 +232,7 @@ public partial class PracticeView
             log.AppendLine("ECCEZIONE: " + ex);
         }
         File.WriteAllText(report, log.ToString());
-        if (Environment.GetEnvironmentVariable("GS_SELFTEST_EXIT") == "1")
+        if (_visualCapture != null || Environment.GetEnvironmentVariable("GS_SELFTEST_EXIT") == "1")
         {
             Focus();
             _editor.MarkSaved();

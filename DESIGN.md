@@ -65,11 +65,19 @@ condivisi → viste. Questo documento rispecchia i valori, non genera un secondo
 Mapping: background/BgDark, panel/BgPanel, input/BgInput, primary/Accent, text/TextMain,
 secondary-text/TextDim, border/Line, danger/Danger, paper/Paper. Nuovi colori solo nel tema.
 
+Manico: famiglia Fretboard*, Accent per la nota selezionata e PlaybackNote durante Play.
+Partitura: Score* per alphaTab, Editor* per cursore e intervallo; ToastBackground e ShadowColor
+per gli avvisi. Mixer: TrackPrimary/Bass/Fifth/Sixth, con Accent e PlaybackNote riusati;
+TrackActiveRow, TrackRowSeparator e TrackSelectionBorder per lo stato. TransparentFill è condiviso.
+Le voci selezionate dei menu usano TextMain e SemiBold: ambra sul grigio evidenziato non
+raggiungeva 4,5:1. I valori della palette restano quelli precedenti.
+
 ## Typography
 
 UiFont per controlli e istruzioni; MonoFont per tempi e posizioni; MusicFont per simboli.
 Testi almeno 13 px, spiegazioni brevi e ad alto contrasto. Non affidarsi ai soli simboli:
 etichette accessibili e tooltip spiegano voce, durata e scorciatoia.
+Anche il disegno manuale del manico usa 13 px, con 20 px riservati ai numeri inferiori.
 
 ## Layout
 
@@ -81,6 +89,8 @@ poi il tasto. Due pulsanti compatti rimangono visibili anche con la tavolozza mi
 
 Pannelli separati da bordi sobri; popup e toast mantengono lo stile scuro esistente.
 Gli avvisi si sovrappongono alla partitura senza spostarla.
+Il testo degli avvisi riceve la larghezza disponibile tramite DockPanel: deve andare a capo
+anche con i pannelli laterali aperti al minimo della finestra.
 
 ## Shapes
 
@@ -103,6 +113,7 @@ Il recupero automatico usa lo stesso dialogo: Recupera apre una copia da salvare
 nome scelto dall'utente; Elimina copia la scarta; Più tardi, Esc e chiusura del dialogo la
 conservano. La copia locale aggiornata ogni 60 secondi non toglie il segno delle modifiche
 non salvate. Solo Salva o la chiusura pulita eliminano la copia della sessione.
+Se il recupero ha precedenza su un file passato all'avvio, un toast nomina il file non aperto.
 
 Le voci hanno tempi e selezioni indipendenti. Cambiare voce mantiene la posizione ritmica
 quando possibile. Attivare una voce vuota crea pause modificabili ed è annullabile.
@@ -115,6 +126,11 @@ dopo circa 16 ms; il MIDI dopo circa 300 ms dall'ultimo tasto. Durante l'attesa 
 sono bloccate. Il renderer resta sincrono sul dispatcher, senza worker.
 L'ultima anteprima richiesta viene eseguita quando MIDI corrente e suoni sono pronti;
 un'altra modifica o il cambio documento la scartano, lo spostamento del cursore la conserva.
+
+Verifica visiva v0.4.3: 1920×1080 pixel e minimo 1000×620 DIP (1500×930 pixel a 150%).
+Restano da riprogettare il trasporto troppo largo, la guida a due colonne al minimo e
+le etichette ravvicinate degli ultimi tasti del manico. Inventario foto e limiti della
+cattura in docs/CONTROLLO_VISIVO.md; prova del focus reale in docs/PROVA_MANUALE.md.
 
 ## Do's and Don'ts
 

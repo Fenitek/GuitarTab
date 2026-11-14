@@ -1,0 +1,70 @@
+Foto (prima-completa e dopo),Testo sotto 13 px (prima → dopo),Contrasto basso (prima → dopo),Tagli e disposizione (prima → dopo),Controlli chiari (prima → dopo)
+1920-avviso.png,F1 → —,—,T → T,Nessuno → nessuno
+1920-combo-TrackCapoCombo-popup-1.png,—,C2 → —,—,Nessuno → nessuno
+1920-combo-TrackCapoCombo.png,F1 → —,C1 → C1; C2 → —,T → T,Nessuno → nessuno
+1920-combo-TrackSoundCombo-popup-1.png,—,C2 → —,—,Nessuno → nessuno
+1920-combo-TrackSoundCombo.png,F1 → —,C1 → C1; C2 → —,T → T,Nessuno → nessuno
+1920-combo-TrackTuningCombo-popup-1.png,—,C2 → —,—,Nessuno → nessuno
+1920-combo-TrackTuningCombo.png,F1 → —,C1 → C1; C2 → —,T → T,Nessuno → nessuno
+1920-combo-ViewCombo-popup-1.png,—,C2 → —,—,Nessuno → nessuno
+1920-combo-ViewCombo.png,F1 → —,C1 → C1; C2 → —,T → T,Nessuno → nessuno
+1920-combo-ZoomCombo-popup-1.png,—,C2 → —,—,Nessuno → nessuno
+1920-combo-ZoomCombo.png,F1 → —,C1 → C1; C2 → —,T → T,Nessuno → nessuno
+1920-combo-battuta-BarDenCombo-popup-1.png,—,C2 → —,—,Nessuno → nessuno
+1920-combo-battuta-BarDenCombo.png,F1 → —,C1 → C1; C2 → —,T → T,Nessuno → nessuno
+1920-guida-popup-1.png,—,—,—,Nessuno → nessuno
+1920-guida.png,—,—,—,Nessuno → nessuno
+1920-menu-file-popup-1.png,—,—,—,Nessuno → nessuno
+1920-menu-file.png,F1 → —,C1 → C1,T → T,Nessuno → nessuno
+1920-nuova-traccia-CapoCombo-popup-1.png,—,—,—,Nessuno → nessuno
+1920-nuova-traccia-CapoCombo-popup-2.png,—,C2 → —,—,Nessuno → nessuno
+1920-nuova-traccia-CapoCombo.png,F1 → —,C1 → C1; C2 → —,T → T,Nessuno → nessuno
+1920-nuova-traccia-InstrumentCombo-popup-1.png,—,—,—,Nessuno → nessuno
+1920-nuova-traccia-InstrumentCombo-popup-2.png,—,C2 → —,—,Nessuno → nessuno
+1920-nuova-traccia-InstrumentCombo.png,F1 → —,C1 → C1; C2 → —,T → T,Nessuno → nessuno
+1920-nuova-traccia-TuningCombo-popup-1.png,—,—,—,Nessuno → nessuno
+1920-nuova-traccia-TuningCombo-popup-2.png,—,C2 → —,—,Nessuno → nessuno
+1920-nuova-traccia-TuningCombo.png,F1 → —,C1 → C1; C2 → —,T → T,Nessuno → nessuno
+1920-nuova-traccia-TypeCombo-popup-1.png,—,—,—,Nessuno → nessuno
+1920-nuova-traccia-TypeCombo-popup-2.png,—,C2 → —,—,Nessuno → nessuno
+1920-nuova-traccia-TypeCombo.png,F1 → —,C1 → C1; C2 → —,T → T,Nessuno → nessuno
+1920-nuova-traccia-popup-1.png,—,—,—,Nessuno → nessuno
+1920-nuova-traccia.png,F1 → —,C1 → C1,T → T,Nessuno → nessuno
+1920-principale.png,F1 → —,C1 → C1,T → T,Nessuno → nessuno
+1920-recupera-popup-1.png,—,—,—,Nessuno → nessuno
+1920-recupera.png,—,—,T → T (ospite),Nessuno → nessuno
+avvio-recuperato.png,—,—,"T, R1 → T",Nessuno → nessuno
+minimo-avviso.png,F1 → —,—,T → T; A1 → —; M1 → M1,Nessuno → nessuno
+minimo-combo-TrackCapoCombo-popup-1.png,—,C2 → —,—,Nessuno → nessuno
+minimo-combo-TrackCapoCombo.png,F1 → —,C1 → C1; C2 → —,T → T; M1 → M1,Nessuno → nessuno
+minimo-combo-TrackSoundCombo-popup-1.png,—,C2 → —,—,Nessuno → nessuno
+minimo-combo-TrackSoundCombo.png,F1 → —,C1 → C1; C2 → —,T → T; M1 → M1,Nessuno → nessuno
+minimo-combo-TrackTuningCombo-popup-1.png,—,C2 → —,—,Nessuno → nessuno
+minimo-combo-TrackTuningCombo.png,F1 → —,C1 → C1; C2 → —,T → T; M1 → M1,Nessuno → nessuno
+minimo-combo-ViewCombo-popup-1.png,—,C2 → —,—,Nessuno → nessuno
+minimo-combo-ViewCombo.png,F1 → —,C1 → C1; C2 → —,T → T; M1 → M1,Nessuno → nessuno
+minimo-combo-ZoomCombo-popup-1.png,—,C2 → —,—,Nessuno → nessuno
+minimo-combo-ZoomCombo.png,F1 → —,C1 → C1; C2 → —,T → T; M1 → M1,Nessuno → nessuno
+minimo-combo-battuta-BarDenCombo-popup-1.png,—,C2 → —,—,Nessuno → nessuno
+minimo-combo-battuta-BarDenCombo.png,F1 → —,C1 → C1; C2 → —,T → T; M1 → M1,Nessuno → nessuno
+minimo-guida-popup-1.png,—,—,"G1, G2 → G2",Nessuno → nessuno
+minimo-guida.png,—,—,"G1, G2 → G2",Nessuno → nessuno
+minimo-menu-file-popup-1.png,—,—,—,Nessuno → nessuno
+minimo-menu-file.png,F1 → —,C1 → C1,T → T; M1 → M1,Nessuno → nessuno
+minimo-nuova-traccia-CapoCombo-popup-1.png,—,—,—,Nessuno → nessuno
+minimo-nuova-traccia-CapoCombo-popup-2.png,—,C2 → —,—,Nessuno → nessuno
+minimo-nuova-traccia-CapoCombo.png,—,—; C2 → —,T → T,Nessuno → nessuno
+minimo-nuova-traccia-InstrumentCombo-popup-1.png,—,—,—,Nessuno → nessuno
+minimo-nuova-traccia-InstrumentCombo-popup-2.png,—,C2 → —,—,Nessuno → nessuno
+minimo-nuova-traccia-InstrumentCombo.png,—,—; C2 → —,T → T,Nessuno → nessuno
+minimo-nuova-traccia-TuningCombo-popup-1.png,—,—,—,Nessuno → nessuno
+minimo-nuova-traccia-TuningCombo-popup-2.png,—,C2 → —,—,Nessuno → nessuno
+minimo-nuova-traccia-TuningCombo.png,—,—; C2 → —,T → T,Nessuno → nessuno
+minimo-nuova-traccia-TypeCombo-popup-1.png,—,—,—,Nessuno → nessuno
+minimo-nuova-traccia-TypeCombo-popup-2.png,—,C2 → —,—,Nessuno → nessuno
+minimo-nuova-traccia-TypeCombo.png,—,—; C2 → —,T → T,Nessuno → nessuno
+minimo-nuova-traccia-popup-1.png,—,—,—,Nessuno → nessuno
+minimo-nuova-traccia.png,—,—,T → T,Nessuno → nessuno
+minimo-principale.png,F1 → —,C1 → C1,T → T; M1 → M1,Nessuno → nessuno
+minimo-recupera-popup-1.png,—,—,—,Nessuno → nessuno
+minimo-recupera.png,—,—,T → T (ospite),Nessuno → nessuno

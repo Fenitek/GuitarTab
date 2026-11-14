@@ -20,6 +20,45 @@
     <SolidColorBrush x:Key="Danger" Color="#E0624F"/>
     <SolidColorBrush x:Key="Paper" Color="#F4F1EA"/>
 
+    <!-- Partitura, selezione e avvisi: valori storici, condivisi dalle viste. -->
+    <SolidColorBrush x:Key="ScoreBarCursor" Color="#22E8A33D"/>
+    <SolidColorBrush x:Key="ScoreBeatCursor" Color="#CCE8A33D"/>
+    <SolidColorBrush x:Key="ScoreSelection" Color="#334A90E2"/>
+    <SolidColorBrush x:Key="EditorColumnMark" Color="#264A90E2"/>
+    <SolidColorBrush x:Key="EditorCellBorder" Color="#D9480F"/>
+    <SolidColorBrush x:Key="EditorCellFill" Color="#33D9480F"/>
+    <SolidColorBrush x:Key="EditorRangeSelection" Color="#404A90E2"/>
+    <SolidColorBrush x:Key="ToastBackground" Color="#F517181C"/>
+    <Color x:Key="ShadowColor">Black</Color>
+    <SolidColorBrush x:Key="TransparentFill" Color="Transparent"/>
+
+    <!-- Manico: nessun cambiamento di colore nel trasferimento al tema. -->
+    <LinearGradientBrush x:Key="FretboardWood" StartPoint="0.5,0" EndPoint="0.5,1">
+        <GradientStop Color="#3A261A" Offset="0"/>
+        <GradientStop Color="#2B1C13" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="FretboardFret" Color="#B8B8B8"/>
+    <SolidColorBrush x:Key="FretboardNut" Color="#EEE6D0"/>
+    <SolidColorBrush x:Key="FretboardInlay" Color="#90E8E0C8"/>
+    <SolidColorBrush x:Key="PlaybackNote" Color="#4A90E2"/>
+    <SolidColorBrush x:Key="FretboardCursorBand" Color="#30D9480F"/>
+    <SolidColorBrush x:Key="FretboardHover" Color="#60FFFFFF"/>
+    <SolidColorBrush x:Key="FretboardLabel" Color="#9A9DA6"/>
+    <SolidColorBrush x:Key="FretboardCapo" Color="#C0202020"/>
+    <SolidColorBrush x:Key="FretboardString" Color="#D8D2C0"/>
+    <SolidColorBrush x:Key="FretboardNoteInk" Color="Black"/>
+    <Pen x:Key="FretboardFretPen" Brush="{StaticResource FretboardFret}" Thickness="2"/>
+    <Pen x:Key="FretboardNutPen" Brush="{StaticResource FretboardNut}" Thickness="6"/>
+
+    <!-- Mixer e panoramica delle tracce. Accent e PlaybackNote sono riusati. -->
+    <SolidColorBrush x:Key="TrackPrimary" Color="#E05A47"/>
+    <SolidColorBrush x:Key="TrackBass" Color="#5BBF7A"/>
+    <SolidColorBrush x:Key="TrackFifth" Color="#A66BD8"/>
+    <SolidColorBrush x:Key="TrackSixth" Color="#D6589E"/>
+    <SolidColorBrush x:Key="TrackSelectionBorder" Color="White"/>
+    <SolidColorBrush x:Key="TrackRowSeparator" Color="#2B2E35"/>
+    <SolidColorBrush x:Key="TrackActiveRow" Color="#33363F"/>
+
     <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
     <FontFamily x:Key="MusicFont">Segoe UI Symbol</FontFamily>
@@ -556,7 +595,8 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
                             <Setter TargetName="b" Property="Background" Value="{StaticResource AccentSoft}"/>
                         </Trigger>
                         <Trigger Property="IsHighlighted" Value="True">

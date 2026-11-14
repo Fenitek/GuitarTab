@@ -6,8 +6,7 @@ namespace GuitarStudio.Recovery;
 /// <summary>Copia locale atomica. Il lease esclude dal recupero le sessioni ancora aperte.</summary>
 public sealed class AutosaveStore : IDisposable
 {
-    public static string DefaultDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GuitarStudio", "autosave");
+    public static string DefaultDirectory => Path.Combine(AppPaths.DataDirectory, "autosave");
 
     private readonly FileStream _lease;
     private bool _disposed;

@@ -7,8 +7,7 @@ namespace GuitarStudio;
 public partial class App : Application
 {
     internal static int UnhandledErrorCount { get; private set; }
-    public static string LogPath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GuitarStudio", "crash.log");
+    public static string LogPath { get; } = Path.Combine(AppPaths.DataDirectory, "crash.log");
 
     /// <summary>File passato sulla riga di comando (per esempio trascinando una tablatura sull'icona).</summary>
     public static string? StartupFile { get; private set; }

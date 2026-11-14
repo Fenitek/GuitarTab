@@ -103,7 +103,7 @@ public sealed class HelpWindow : Window
         header.Children.Add(version);
         header.Children.Add(new TextBlock { Text = "Guida rapida", FontSize = 26, FontWeight = FontWeights.SemiBold, Foreground = Res("TextMain") });
 
-        var tabBar = new UniformGrid { Rows = 1, Width = 660 };
+        var tabBar = new UniformGrid { Rows = 1, MaxWidth = 660 };
         var tabHost = new Border
         {
             Background = Res("BgPanel"), CornerRadius = new CornerRadius(7), Padding = new Thickness(3), Child = tabBar,
@@ -140,7 +140,9 @@ public sealed class HelpWindow : Window
         };
         var tab = new RadioButton
         {
-            Content = title, GroupName = "help", Style = (Style)FindResource("InspectorTab"), Padding = new Thickness(10, 0, 10, 0)
+            Content = new TextBlock { Text = title, TextWrapping = TextWrapping.Wrap,
+                TextAlignment = TextAlignment.Center, Margin = new Thickness(8, 0, 8, 0) },
+            GroupName = "help", Style = (Style)FindResource("InspectorTab")
         };
         tab.Checked += (_, _) =>
         {

@@ -8,8 +8,7 @@ public sealed class AppSettings
 {
     private const int MaxRecent = 10;
 
-    private static readonly string FilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GuitarStudio", "settings.json");
+    private static readonly string FilePath = Path.Combine(AppPaths.DataDirectory, "settings.json");
 
     public static AppSettings Current { get; } = Load();
 

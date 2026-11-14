@@ -3,6 +3,17 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.4.3 — 2026-11-15
+
+- Colori di manico, partitura, selezioni e mixer raccolti nel tema, mantenendo i valori esistenti.
+- Lettere e numeri del manico portati ad almeno 13 px; testo selezionato nei menu più leggibile.
+  Gli avvisi vanno a capo anche quando lo spazio della partitura è stretto.
+- Le schede della guida rispettano la larghezza disponibile nella finestra minima.
+- Dopo un recupero, un avviso indica il nome del file richiesto all'avvio che non è stato aperto.
+- Controllo visivo a 1920×1080 e alla dimensione minima, con foto prima/dopo tramite autotest
+  e PrintWindow, senza controllare mouse o tastiera. Difetti residui in `docs/CONTROLLO_VISIVO.md`.
+- Aggiunta una prova a mano di cinque minuti in `docs/PROVA_MANUALE.md`.
+
 ## 0.4.2 — 2026-11-14
 
 - Inserire, eliminare e incollare battute intere, anche avanzando oltre la fine del brano,

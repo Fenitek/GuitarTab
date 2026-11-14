@@ -15,6 +15,7 @@ public partial class MainWindow : Window
         WindowTheme.Apply(this);
         VersionText.Text = AppInfo.VersionLabel;
         ApplySavedBounds();
+        if (Environment.GetEnvironmentVariable("GS_SELFTEST") == "1") ShowActivated = false;
 
         Closing += (_, e) =>
         {

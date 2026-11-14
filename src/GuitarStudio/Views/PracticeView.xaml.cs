@@ -7,7 +7,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Rectangle = System.Windows.Shapes.Rectangle;
 using Path = System.IO.Path;
-using Color = System.Windows.Media.Color;
 using AlphaTab.Rendering.Utils;
 using AlphaTab;
 using AlphaTab.Core.EcmaScript;
@@ -63,6 +62,7 @@ public partial class PracticeView : UserControl
     public PracticeView()
     {
         InitializeComponent();
+        ConfigureVisualSelfTest();
         // Modifica l'oggetto prima di OnApplyTemplate, senza invocare il setter Settings:
         // il worker predefinito non deve nascere (la sua dismissione in 1.9 può anche crashare).
         Tab.Settings.Core.UseWorkers = false;
@@ -154,7 +154,12 @@ public partial class PracticeView : UserControl
         LoadSoundFont(AppSettings.Current.SoundFontPath, announce: false);
 
         StartAutosave();
-        if (TryRecoverAutosave()) return;
+        if (TryRecoverAutosave())
+        {
+            if (App.StartupFile is { } requested)
+                ShowToast($"Tablatura recuperata. Il file richiesto «{Path.GetFileName(requested)}» non è stato aperto.", ToastKind.Warning);
+            return;
+        }
 
         // Un file passato sulla riga di comando ha la precedenza sull'esercizio demo.
         if (App.StartupFile is { } startup && OpenPath(startup, confirm: false)) return;
@@ -499,7 +504,7 @@ public partial class PracticeView : UserControl
                 var sp = tb.VisualBounds.H / (lines - 1);
                 if (i == _selectionRects.Count)
                 {
-                    var rect = new Rectangle { Fill = new SolidColorBrush(Color.FromArgb(0x40, 0x4A, 0x90, 0xE2)) };
+                    var rect = new Rectangle { Fill = (Brush)FindResource("EditorRangeSelection") };
                     _selectionRects.Add(rect);
                     SelectionLayer.Children.Add(rect);
                 }

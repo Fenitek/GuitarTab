@@ -13,21 +13,22 @@ public sealed class FretboardView : FrameworkElement
 {
     public const int Frets = 24;
 
-    private static readonly Brush Wood = new LinearGradientBrush(Color.FromRgb(0x3A, 0x26, 0x1A), Color.FromRgb(0x2B, 0x1C, 0x13), 90);
-    private static readonly Pen FretPen = new(new SolidColorBrush(Color.FromRgb(0xB8, 0xB8, 0xB8)), 2);
-    private static readonly Pen NutPen = new(new SolidColorBrush(Color.FromRgb(0xEE, 0xE6, 0xD0)), 6);
-    private static readonly Brush Inlay = new SolidColorBrush(Color.FromArgb(0x90, 0xE8, 0xE0, 0xC8));
-    private static readonly Brush NoteFill = new SolidColorBrush(Color.FromRgb(0xE8, 0xA3, 0x3D));
-    private static readonly Brush PlayFill = new SolidColorBrush(Color.FromRgb(0x4A, 0x90, 0xE2));
-    private static readonly Brush CursorBand = new SolidColorBrush(Color.FromArgb(0x30, 0xD9, 0x48, 0x0F));
-    private static readonly Brush HoverFill = new SolidColorBrush(Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF));
-    private static readonly Brush LabelBrush = new SolidColorBrush(Color.FromRgb(0x9A, 0x9D, 0xA6));
+    private Brush Res(string key) => (Brush)FindResource(key);
+    private Brush Wood => Res("FretboardWood");
+    private Pen FretPen => (Pen)FindResource("FretboardFretPen");
+    private Pen NutPen => (Pen)FindResource("FretboardNutPen");
+    private Brush Inlay => Res("FretboardInlay");
+    private Brush NoteFill => Res("Accent");
+    private Brush PlayFill => Res("PlaybackNote");
+    private Brush CursorBand => Res("FretboardCursorBand");
+    private Brush HoverFill => Res("FretboardHover");
+    private Brush LabelBrush => Res("FretboardLabel");
     private static readonly Typeface Face = new("Segoe UI");
     private static readonly int[] InlayFrets = { 3, 5, 7, 9, 15, 17, 19, 21 };
 
     private const double LeftLabels = 34;   // nomi delle corde
     private const double OpenArea = 30;     // zona delle corde a vuoto prima del capotasto
-    private const double BottomLabels = 16; // numeri dei tasti
+    private const double BottomLabels = 20; // spazio per i numeri dei tasti a 13 px
 
     private IReadOnlyList<(int Line, int Fret)> _notes = Array.Empty<(int, int)>();
     private bool _isPlaying;
@@ -83,7 +84,7 @@ public sealed class FretboardView : FrameworkElement
         var w = ActualWidth;
         var top = StringY(1) - 9;
         var bottom = StringY(StringCount) + 9;
-        dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, w, ActualHeight));
+        dc.DrawRectangle(Res("TransparentFill"), null, new Rect(0, 0, w, ActualHeight));
         dc.DrawRoundedRectangle(Wood, null, new Rect(LeftLabels + OpenArea, top, FretX(Frets) - LeftLabels - OpenArea, bottom - top), 3, 3);
 
         // Riga della corda selezionata.
@@ -105,12 +106,12 @@ public sealed class FretboardView : FrameworkElement
         {
             dc.DrawLine(FretPen, new Point(FretX(f), top), new Point(FretX(f), bottom));
             if (f is 3 or 5 or 7 or 9 or 12 or 15 or 17 or 19 or 21 or 24)
-                DrawText(dc, f.ToString(), NoteX(f), ActualHeight - BottomLabels / 2 - 1, 10.5, LabelBrush);
+                DrawText(dc, f.ToString(), NoteX(f), ActualHeight - BottomLabels / 2 - 1, 13, LabelBrush);
         }
         if (Capo > 0)
         {
             var x = (FretX(Capo - 1) + FretX(Capo)) / 2;
-            dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(0xC0, 0x20, 0x20, 0x20)), null,
+            dc.DrawRoundedRectangle(Res("FretboardCapo"), null,
                 new Rect(x - 5, top - 4, 10, bottom - top + 8), 4, 4);
         }
 
@@ -119,10 +120,10 @@ public sealed class FretboardView : FrameworkElement
         {
             var y = StringY(line);
             var thickness = 0.8 + 1.8 * (line - 1) / Math.Max(1, StringCount - 1);
-            dc.DrawLine(new Pen(new SolidColorBrush(Color.FromRgb(0xD8, 0xD2, 0xC0)), thickness),
+            dc.DrawLine(new Pen(Res("FretboardString"), thickness),
                 new Point(LeftLabels + 6, y), new Point(FretX(Frets), y));
             var name = line - 1 < StringNames.Count ? StringNames[line - 1] : "";
-            DrawText(dc, name, LeftLabels / 2, y, 12, line == CursorLine ? NoteFill : LabelBrush);
+            DrawText(dc, name, LeftLabels / 2, y, 13, line == CursorLine ? NoteFill : LabelBrush);
         }
 
         // Nota sotto il mouse.
@@ -135,8 +136,8 @@ public sealed class FretboardView : FrameworkElement
         {
             if (line < 1 || line > StringCount || fret < 0 || fret > Frets) continue;
             var p = new Point(NoteX(fret), StringY(line));
-            dc.DrawEllipse(fill, new Pen(Brushes.Black, 1), p, 10, 10);
-            DrawText(dc, fret.ToString(), p.X, p.Y, 10.5, Brushes.Black, bold: true);
+            dc.DrawEllipse(fill, new Pen(Res("FretboardNoteInk"), 1), p, 10, 10);
+            DrawText(dc, fret.ToString(), p.X, p.Y, 13, Res("FretboardNoteInk"), bold: true);
         }
     }
 

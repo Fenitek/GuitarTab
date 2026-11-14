@@ -6,7 +6,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using AlphaTab.Model;
 using GuitarStudio.Editing;
-using Color = System.Windows.Media.Color;
 using Track = AlphaTab.Model.Track;
 
 namespace GuitarStudio.Views;
@@ -434,11 +433,8 @@ public partial class PracticeView
 
     // ================================================================ pannello tracce
 
-    private static readonly Color[] TrackColors =
-    {
-        Color.FromRgb(0xE0, 0x5A, 0x47), Color.FromRgb(0xE8, 0xA3, 0x3D), Color.FromRgb(0x4A, 0x90, 0xE2),
-        Color.FromRgb(0x5B, 0xBF, 0x7A), Color.FromRgb(0xA6, 0x6B, 0xD8), Color.FromRgb(0xD6, 0x58, 0x9E)
-    };
+    private static readonly string[] TrackBrushKeys = ["TrackPrimary", "Accent", "PlaybackNote", "TrackBass", "TrackFifth", "TrackSixth"];
+    private Brush TrackBrush(int index) => (Brush)FindResource(TrackBrushKeys[index % TrackBrushKeys.Length]);
 
     private readonly List<(Border Row, List<Border> Cells)> _trackRows = new();
     private readonly Dictionary<int, double> _trackVolumes = new();
@@ -472,8 +468,7 @@ public partial class PracticeView
         {
             var track = score.Tracks[i];
             var index = i;
-            var color = TrackColors[i % TrackColors.Length];
-            var brush = new SolidColorBrush(color);
+            var brush = TrackBrush(i);
 
             var grid = new Grid { Height = 34 };
             AddTrackColumns(grid);
@@ -545,7 +540,7 @@ public partial class PracticeView
                     Tag = hasNotes,
                     Margin = new Thickness(0.5, 0, 0.5, 0),
                     CornerRadius = new CornerRadius(1.5),
-                    BorderBrush = Brushes.White,
+                    BorderBrush = (Brush)FindResource("TrackSelectionBorder"),
                     Cursor = Cursors.Hand,
                     ToolTip = $"Battuta {b + 1}" + (score.MasterBars[b].Section is { } sec ? $" — {sec.Text}" : "")
                 };
@@ -560,7 +555,7 @@ public partial class PracticeView
             Grid.SetColumn(bars, 6);
             grid.Children.Add(bars);
 
-            var row = new Border { Child = grid, BorderBrush = new SolidColorBrush(Color.FromRgb(0x2B, 0x2E, 0x35)), BorderThickness = new Thickness(0, 0, 0, 1) };
+            var row = new Border { Child = grid, BorderBrush = (Brush)FindResource("TrackRowSeparator"), BorderThickness = new Thickness(0, 0, 0, 1) };
             _trackRows.Add((row, cells));
             TrackRows.Children.Add(row);
         }
@@ -580,7 +575,7 @@ public partial class PracticeView
                 var hasNotes = staff != null && staff.Bars[b].Voices.Any(v => v.Beats.Any(beat => beat.Notes.Count > 0));
                 if (cell.Tag is not bool previous || previous != hasNotes)
                 {
-                    cell.Background = hasNotes ? new SolidColorBrush(TrackColors[t % TrackColors.Length]) : (Brush)FindResource("BgDeep");
+                    cell.Background = hasNotes ? TrackBrush(t) : (Brush)FindResource("BgDeep");
                     cell.Tag = hasNotes;
                 }
                 var tip = $"Battuta {b + 1}" + (score.MasterBars[b].Section is { } sec ? $" — {sec.Text}" : "");
@@ -607,7 +602,7 @@ public partial class PracticeView
         {
             var (row, cells) = _trackRows[i];
             var current = i == _editor.TrackIndex;
-            row.Background = current ? new SolidColorBrush(Color.FromRgb(0x33, 0x36, 0x3F)) : Brushes.Transparent;
+            row.Background = (Brush)FindResource(current ? "TrackActiveRow" : "TransparentFill");
             if (previous.Track == i && previous.Bar >= 0 && previous.Bar < cells.Count)
                 cells[previous.Bar].BorderThickness = new Thickness(0);
             if (current && _editor.BarIndex < cells.Count)

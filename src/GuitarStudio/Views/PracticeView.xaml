@@ -241,26 +241,26 @@
                 </Grid.RowDefinitions>
                 <Border Background="{StaticResource Paper}" Margin="10,10,10,6" CornerRadius="6" ClipToBounds="True">
                     <Grid>
-                        <at:AlphaTab x:Name="Tab" BarCursorFill="#22E8A33D" BeatCursorFill="#CCE8A33D" SelectionFill="#334A90E2"
+                        <at:AlphaTab x:Name="Tab" BarCursorFill="{StaticResource ScoreBarCursor}" BeatCursorFill="{StaticResource ScoreBeatCursor}" SelectionFill="{StaticResource ScoreSelection}"
                                      PreviewMouseLeftButtonDown="Tab_PreviewMouseLeftButtonDown"/>
                         <Canvas x:Name="Overlay" IsHitTestVisible="False" ClipToBounds="True">
                             <Canvas x:Name="SelectionLayer"/>
-                            <Rectangle x:Name="ColumnMark" Fill="#264A90E2" RadiusX="3" RadiusY="3" Visibility="Collapsed"/>
-                            <Rectangle x:Name="CellMark" Stroke="#D9480F" StrokeThickness="2" Fill="#33D9480F" RadiusX="3" RadiusY="3" Visibility="Collapsed"/>
+                            <Rectangle x:Name="ColumnMark" Fill="{StaticResource EditorColumnMark}" RadiusX="3" RadiusY="3" Visibility="Collapsed"/>
+                            <Rectangle x:Name="CellMark" Stroke="{StaticResource EditorCellBorder}" StrokeThickness="2" Fill="{StaticResource EditorCellFill}" RadiusX="3" RadiusY="3" Visibility="Collapsed"/>
                         </Canvas>
                         <!-- Avviso temporaneo, ben visibile sopra lo spartito -->
-                        <Border x:Name="Toast" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,18,0,0" Background="#F517181C"
+                        <Border x:Name="Toast" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,18,0,0" Background="{StaticResource ToastBackground}"
                                 BorderBrush="{StaticResource Accent}" BorderThickness="1" CornerRadius="9" Padding="16,11"
                                 Visibility="Collapsed" IsHitTestVisible="False">
                             <Border.Effect>
-                                <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.45" Color="Black"/>
+                                <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.45" Color="{StaticResource ShadowColor}"/>
                             </Border.Effect>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="ToastIcon" Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="19"
+                            <DockPanel>
+                                <TextBlock x:Name="ToastIcon" DockPanel.Dock="Left" Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="19"
                                            Foreground="{StaticResource Accent}" Margin="0,1,12,0" VerticalAlignment="Top"/>
                                 <TextBlock x:Name="ToastText" Foreground="{StaticResource TextMain}" FontSize="14.5" LineHeight="21"
                                            TextWrapping="Wrap" MaxWidth="520"/>
-                            </StackPanel>
+                            </DockPanel>
                         </Border>
                     </Grid>
                 </Border>
@@ -270,9 +270,9 @@
                 </Border>
             </Grid>
 
-            <GridSplitter x:Name="PaletteSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Left" Background="Transparent"
+            <GridSplitter x:Name="PaletteSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Left" Background="{StaticResource TransparentFill}"
                           ResizeBehavior="PreviousAndCurrent" ResizeDirection="Columns" Cursor="SizeWE" ToolTip="Trascina per allargare la tavolozza"/>
-            <GridSplitter x:Name="InspectorSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Right" Background="Transparent"
+            <GridSplitter x:Name="InspectorSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Right" Background="{StaticResource TransparentFill}"
                           ResizeBehavior="CurrentAndNext" ResizeDirection="Columns" Cursor="SizeWE" ToolTip="Trascina per allargare il pannello"/>
 
             <!-- Pannello proprietà -->

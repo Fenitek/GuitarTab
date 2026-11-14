@@ -9,6 +9,7 @@ public enum DialogKind { Info, Question, Warning, Error }
 /// <summary>Finestre di messaggio nel tema dell'app (al posto di MessageBox, che è chiara).</summary>
 public static class Dialogs
 {
+    internal static Func<Window, MessageBoxResult>? SelfTestPresenter;
     public static void Info(Window? owner, string message, string? title = null) =>
         Show(owner, title ?? "GuitarStudio", message, DialogKind.Info, ("OK", MessageBoxResult.OK, true));
 
@@ -104,7 +105,10 @@ public static class Dialogs
         root.Children.Add(body);
         root.Children.Add(row);
         window.Content = root;
-        window.ShowDialog();
+        if (Environment.GetEnvironmentVariable("GS_SELFTEST") == "1" && SelfTestPresenter is { } present)
+            result = present(window);
+        else
+            window.ShowDialog();
         return result;
     }
 }

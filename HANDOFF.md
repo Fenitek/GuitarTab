@@ -23,6 +23,45 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.4.3
+
+- Colori letterali rimossi dai sorgenti C#/XAML fuori da Dark.xaml, inclusi Black/White/
+  Transparent e i due COLORREF del titolo (WindowTheme ora converte BgPanel/Line in BGR).
+  Risorse semantiche Fretboard*, Score*, Editor*, Track*, ToastBackground,
+  ShadowColor e TransparentFill; riuso di Accent, PlaybackNote e BgDeep dove coincidevano.
+  Refactoring confrontato separatamente dai ritocchi visivi: 42 foto su 69 identiche;
+  le restanti differiscono solo nell'attribuzione renderizzata e nei dati/stati del recupero.
+- Manico: font disegnati 10,5/12 → 13 px, fascia inferiore 16 → 20 px. ComboBoxItem
+  selezionato: TextMain/SemiBold, perché Accent su BgPressed era 4,30:1. Toast: DockPanel
+  invece della misura orizzontale illimitata, così il testo non viene tagliato al minimo.
+  Guida: larghezza massima, invece che fissa, per le tre schede, titoli a capo con margine; resta da adattare il corpo a due colonne.
+- Setup: dopo un recupero, se esiste App.StartupFile, il toast nomina il file non aperto.
+  La copia resta non salvata e _currentPath resta null. Apertura normale da CLI verificata
+  separatamente; il confronto dell'autotest normalizza entrambi i percorsi Windows.
+- Diagnostics/VisualCapture.cs fotografa esclusivamente HWND dell'app con PrintWindow;
+  nessun input nativo, screenshot del desktop o attivazione di finestre. Le scene compongono
+  le foto degli HWND di popup/dialoghi sopra quella dell'ospite; i PNG *-popup-N conservano
+  anche ogni finestra completa, utile se il popup si estende oltre l'ospite.
+- Modalità foto: GS_SELFTEST=1 + GS_SELFTEST_UI=1 + GS_UI_CAPTURE_DIR, obbligatorio
+  GS_SELFTEST_DATA_DIR con dati sintetici. PracticeView.VisualSelfTest fotografa recupero,
+  modifica, tutti i combo visibili, ☰, guida, nuova traccia e avviso alle due dimensioni;
+  seleziona Recupera soltanto nel presentatore di test. Verifica il toast e chiude da sola,
+  anche in caso di errore. Senza GS_UI_CAPTURE_DIR resta l'autotest completo precedente.
+- AppPaths isola settings, autosave e crash.log in GS_SELFTEST_DATA_DIR soltanto con
+  GS_SELFTEST=1. La modalità normale mantiene LOCALAPPDATA/GuitarStudio. MainWindow non
+  richiede attivazione durante l'autotest; le finestre delle foto usano ShowActivated=false.
+- Foto fuori repository: `%USERPROFILE%/.codex/visualizations/2026/11/14/01a1dbd8-afd1-78d3-82a7-0e4fa2e0579a/GuitarStudio-v0.4.3/`.
+  `prima-completa`, `solo-tema`, `dopo` (vedi controllo visivo),
+  manifest DPI/dimensioni e confronti pixel. Foto a 1920×1080 fisici e minimo 1500×930
+  (Windows 150%, minimo applicazione 1000×620 DIP). Guida al proprio minimo 640×420 DIP;
+  dialoghi non ridimensionabili conservano la dimensione naturale in entrambi gli ospiti.
+- `docs/CONTROLLO_VISIVO.md` e relativo CSV riportano ogni foto e i difetti; restano trasporto
+  tagliato, guida al minimo, numeri dei tasti alti affollati e attribuzione alphaTab poco
+  contrastata. Richiedono un intervento oltre i ritocchi eseguiti; nessun ridisegno applicato.
+  `docs/PROVA_MANUALE.md`: 14 controlli entro cinque minuti, incluso recupero dopo arresto forzato.
+- Verifiche: build 0 avvisi/0 errori, 59 test, autotest completo OK, recupero+CLI e CLI senza
+  recupero controllati nell'autotest visivo. Nessuna modifica a UseWorkers=false o al MIDI.
+
 ### Aggiornamento v0.4.2
 
 - `HistorySnapshot.BarSplice`: indice, conteggi prima/dopo, MasterBar eliminate serializzate
