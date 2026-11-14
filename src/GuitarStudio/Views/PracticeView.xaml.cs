@@ -62,6 +62,9 @@ public partial class PracticeView : UserControl
     public PracticeView()
     {
         InitializeComponent();
+        // Modifica l'oggetto prima di OnApplyTemplate, senza invocare il setter Settings:
+        // il worker predefinito non deve nascere (la sua dismissione in 1.9 può anche crashare).
+        Tab.Settings.Core.UseWorkers = false;
         Loaded += OnLoaded;
     }
 
@@ -82,6 +85,10 @@ public partial class PracticeView : UserControl
     {
         var settings = new Settings();
         settings.Core.EnableLazyLoading = false;
+        // In alphaTab 1.9 il worker può restituire BoundsLookup di una versione precedente
+        // contro lo Score già modificato: inserimenti/tagli rapidi causano indici fuori limite.
+        // Render sul dispatcher: modello e geometria terminano insieme prima del prossimo edit.
+        settings.Core.UseWorkers = false;
         settings.Display.LayoutMode = LayoutMode.Page;
 #pragma warning disable CS0618 // StaveProfile è deprecato ma resta il modo più semplice per scegliere tab/spartito
         settings.Display.StaveProfile = StaveProfile.ScoreTab;

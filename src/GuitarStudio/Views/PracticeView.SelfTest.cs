@@ -24,6 +24,7 @@ public partial class PracticeView
     {
         if (_selfTestStarted || Environment.GetEnvironmentVariable("GS_SELFTEST") != "1") return;
         _selfTestStarted = true;
+        var initialErrors = App.UnhandledErrorCount;
         var report = Environment.GetEnvironmentVariable("GS_SELFTEST_REPORT") ?? Path.Combine(Path.GetTempPath(), "gs_selftest.txt");
         var log = new LiveLog(Environment.GetEnvironmentVariable("GS_SELFTEST_REPORT") != null
             ? Path.ChangeExtension(report, ".live.txt")
@@ -187,6 +188,8 @@ public partial class PracticeView
             _editor.MoveTo(0, 2, 5);
             await Task.Delay(1200);
             log.AppendLine($"cursore finale: {CursorText.Text} | traccia: {LcdTrack.Text} | play: {_playing}");
+            if (App.UnhandledErrorCount != initialErrors)
+                throw new InvalidOperationException("Errori non gestiti durante l'autotest: controllare crash.log.");
             log.AppendLine("OK");
 
             // GS_SELFTEST_UI=1: lascia aperti guida, menu e avviso per poterli fotografare.

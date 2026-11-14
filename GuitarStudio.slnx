@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/GuitarStudio/GuitarStudio.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GuitarStudio.Tests/GuitarStudio.Tests.csproj" />
+  </Folder>
 </Solution>

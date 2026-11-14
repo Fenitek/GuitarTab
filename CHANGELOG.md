@@ -3,6 +3,16 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.3.1 — 2026-11-14
+
+- Aggiunta una suite di test automatici per note, durate, battute, appunti, voci, tracce,
+  annulla/ripeti e salvataggio Guitar Pro, con verifica dei collegamenti tra i tempi.
+- «Correggi battuta» completa correttamente anche le battute rimaste corte dopo il taglio
+  dei tempi in eccesso e riduce una nota che supera da sola la durata della battuta.
+- Le nuove battute e tracce riempiono esattamente anche tempi come 3/8.
+- Risolto un errore durante modifiche rapide alle voci: il disegno della partitura poteva
+  ricevere collegamenti riferiti a una versione precedente del brano.
+
 ## 0.3.0 — 2026-11-14
 
 - **Due voci indipendenti nella stessa traccia**: con «1 ↑» e «2 ↓» nella tavolozza

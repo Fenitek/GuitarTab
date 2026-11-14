@@ -23,6 +23,27 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.3.1
+
+- `tests/GuitarStudio.Tests`: xUnit, `net10.0-windows`, incluso nella soluzione.
+  Eseguire `dotnet test`: crea partiture alphaTex senza UI; controlla indici, proprietà
+  dei genitori e catene PreviousBeat/NextBeat separate per voce dopo ogni modifica,
+  annulla/ripeti e rilettura di ExportGp. Verifica anche il contenuto musicale.
+- Guitar Pro normalizza una voce interamente vuota in un solo tempo vuoto: i confronti
+  ignorano questi segnaposto senza ignorare pause visibili o note.
+- Regressioni corrette: FixBar riempie di pause anche dopo aver tolto tempi in eccesso
+  e riduce una singola nota troppo lunga; RestsFor completa il resto nei metri dispari.
+- L'inserimento dei numeri a due cifre è coperto come SetFret(10/12/24) nel modello;
+  la combinazione temporizzata dei tasti reali resta coperta dall'autotest WPF.
+- **Rendering alphaTab 1.9**: `Core.UseWorkers = false`. Con il worker, una sequenza
+  rapida di taglia/annulla/ripeti può deserializzare BoundsLookup di uno Score vecchio
+  contro il modello attuale (`ArgumentOutOfRangeException` in BoundsLookup.FromJson).
+  Il disegno sul dispatcher evita la corsa; su partiture grandi può rendere l'editing meno fluido.
+  L'autotest ora fallisce anche per eccezioni WPF intercettate dall'App, prima ignorate nel report.
+  Impostare `Tab.Settings.Core.UseWorkers` sull'oggetto già esistente nel costruttore, prima
+  di OnApplyTemplate: cambiare da worker a sincrono dopo l'avvio provoca anche un'eccezione
+  di cancellazione non gestita sul thread interno di alphaTab.
+
 ### Aggiornamento v0.3.0
 
 - Due voci modificabili: `TabEditor.VoiceIndex`, `SelectVoice(0/1)`; `CurrentVoice`, selezione,

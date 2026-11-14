@@ -6,6 +6,7 @@ namespace GuitarStudio;
 
 public partial class App : Application
 {
+    internal static int UnhandledErrorCount { get; private set; }
     public static string LogPath { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GuitarStudio", "crash.log");
 
@@ -16,6 +17,7 @@ public partial class App : Application
     {
         DispatcherUnhandledException += (_, args) =>
         {
+            UnhandledErrorCount++;
             Log(args.Exception);
             args.Handled = true;
             Dialogs.Error(null, "Si è verificato un errore:\n" + args.Exception.Message + "\n\nDettagli in: " + LogPath);

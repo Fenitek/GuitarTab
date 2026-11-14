@@ -829,18 +829,18 @@ public sealed class TabEditor
                     Score!.Finish(_settings);
                 }
             }
-            else
+            // Una sola nota può essere più lunga dell'intera battuta: ne conserva il tasto,
+            // riduce la durata e completa con pause, come dopo la rimozione dei tempi in eccesso.
+            if (voice.CalculateDuration() > total + 0.5)
             {
-                var missing = total - used;
-                foreach (var d in Durations)
-                {
-                    while (missing >= Ticks(d) - 0.5)
-                    {
-                        voice.AddBeat(NewRest(d));
-                        missing -= Ticks(d);
-                    }
-                }
+                var beat = voice.Beats[0];
+                beat.Duration = Durations.First(d => Ticks(d) <= total + 0.5);
+                beat.Dots = 0;
+                beat.TupletNumerator = beat.TupletDenominator = -1;
+                Score!.Finish(_settings);
             }
+            foreach (var rest in RestsForTicks(total - voice.CalculateDuration(), Duration.Whole))
+                voice.AddBeat(rest);
             Relink();
         });
     }
@@ -919,8 +919,19 @@ public sealed class TabEditor
     private static IEnumerable<Beat> RestsFor(MasterBar mb, Duration duration)
     {
         var total = 3840.0 * mb.TimeSignatureNumerator / mb.TimeSignatureDenominator;
-        var count = Math.Max(1, (int)(total / Ticks(duration)));
-        for (var i = 0; i < count; i++) yield return NewRest(duration);
+        return RestsForTicks(total, duration);
+    }
+
+    private static IEnumerable<Beat> RestsForTicks(double remaining, Duration preferred)
+    {
+        foreach (var duration in Durations.Where(d => Ticks(d) <= Ticks(preferred)))
+        {
+            while (remaining >= Ticks(duration) - 0.5)
+            {
+                yield return NewRest(duration);
+                remaining -= Ticks(duration);
+            }
+        }
     }
 
     private static Beat NewRest(Duration d) => new() { Duration = d, IsEmpty = false };
