@@ -9,9 +9,12 @@ using Path = System.IO.Path;
 using Color = System.Windows.Media.Color;
 using AlphaTab.Rendering.Utils;
 using AlphaTab;
+using AlphaTab.Core.EcmaScript;
+using AlphaTab.Importer;
 using AlphaTab.Model;
 using AlphaTab.Synth;
 using GuitarStudio.Editing;
+using GuitarStudio.Ui;
 using Microsoft.Win32;
 using Duration = AlphaTab.Model.Duration;
 
@@ -64,6 +67,9 @@ public partial class PracticeView : UserControl
 
     private bool EditMode => PaletteToggle.IsChecked == true;
 
+    /// <summary>API di alphaTab: esiste da quando il controllo ha applicato il template (vedi Setup).</summary>
+    private AlphaTabApiBase<AlphaTab.Wpf.AlphaTab> Api => Tab.Api!;
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (_initialized) return;
@@ -77,7 +83,9 @@ public partial class PracticeView : UserControl
         var settings = new Settings();
         settings.Core.EnableLazyLoading = false;
         settings.Display.LayoutMode = LayoutMode.Page;
+#pragma warning disable CS0618 // StaveProfile è deprecato ma resta il modo più semplice per scegliere tab/spartito
         settings.Display.StaveProfile = StaveProfile.ScoreTab;
+#pragma warning restore CS0618
         settings.Display.Scale = 1.0;
         settings.Player.PlayerMode = PlayerMode.EnabledSynthesizer;
         settings.Player.EnableCursor = true;
@@ -87,7 +95,7 @@ public partial class PracticeView : UserControl
         settings.Player.ScrollMode = ScrollMode.Continuous;
         Tab.Settings = settings;
 
-        var api = Tab.Api;
+        var api = Tab.Api!;
         _editor = new TabEditor(api.Settings);
         _editor.Changed += OnEditorChanged;
         _editor.CursorMoved += OnEditorCursorMoved;
@@ -105,11 +113,8 @@ public partial class PracticeView : UserControl
 
         api.Error.On(err => Ui(() => StatusText.Text = "Errore: " + err.Message));
 
-        api.SoundFontLoaded.On(() => Ui(() =>
-        {
-            _soundFontReady = true;
-            StatusText.Text = "Motore audio pronto.";
-        }));
+        api.SoundFontLoaded.On(() => Ui(OnSoundFontLoaded));
+        api.Player?.SoundFontLoadFailed.On(_ => Ui(OnSoundFontFailed));
 
         api.PlayerReady.On(() => Ui(() =>
         {
@@ -136,12 +141,12 @@ public partial class PracticeView : UserControl
             _lastTick = args.CurrentTick;
         }));
 
-        var sf = Path.Combine(AppContext.BaseDirectory, "Assets", "sonivox.sf2");
-        if (File.Exists(sf))
-            api.LoadSoundFont(File.ReadAllBytes(sf), false);
-        else
-            StatusText.Text = "SoundFont non trovato: la riproduzione non funzionerà.";
+        InitLayout();
+        RebuildRecentMenu();
+        LoadSoundFont(AppSettings.Current.SoundFontPath, announce: false);
 
+        // Un file passato sulla riga di comando ha la precedenza sull'esercizio demo.
+        if (App.StartupFile is { } startup && OpenPath(startup, confirm: false)) return;
         api.Tex(DemoTex, null);
     }
 
@@ -166,7 +171,7 @@ public partial class PracticeView : UserControl
         if (score != _editor.Score && (_expectingLoad || _editor.Score == null))
         {
             _expectingLoad = false;
-            var track = Tab.Api.Tracks.Count > 0 ? (int)Tab.Api.Tracks[0].Index : 0;
+            var track = Api.Tracks.Count > 0 ? (int)Api.Tracks[0].Index : 0;
             _editor.Attach(score, track);
             RebuildTracksPanel();
         }
@@ -187,21 +192,34 @@ public partial class PracticeView : UserControl
             Title = "Apri una tablatura",
             Filter = "Tablature (*.gp;*.gp3;*.gp4;*.gp5;*.gpx;*.xml;*.musicxml;*.mxl;*.capx)|*.gp;*.gp3;*.gp4;*.gp5;*.gpx;*.xml;*.musicxml;*.mxl;*.capx|Tutti i file|*.*"
         };
-        if (dlg.ShowDialog() != true) return;
+        if (dlg.ShowDialog() == true) OpenPath(dlg.FileName, confirm: false);
+    }
 
+    /// <summary>Apre una tablatura dal disco. Restituisce false se non ci riesce o se l'utente annulla.</summary>
+    public bool OpenPath(string path, bool confirm = true)
+    {
+        if (_editor == null) return false; // il motore non è ancora pronto
+        if (confirm && !ConfirmDiscard()) return false;
         try
         {
-            Tab.Api.Stop();
-            var bytes = File.ReadAllBytes(dlg.FileName);
+            // Si legge prima il file: se non è valido, la tablatura aperta resta al suo posto.
+            var score = ScoreLoader.LoadScoreFromBytes(new Uint8Array(File.ReadAllBytes(path)), Api.Settings);
+            Api.Stop();
             _expectingLoad = true;
-            Tab.Api.Load(bytes, new List<double> { 0 });
-            _currentPath = dlg.FileName;
-            StatusText.Text = "Aperto: " + Path.GetFileName(dlg.FileName);
+            _currentPath = path;
+            Api.RenderScore(score, new List<double> { 0 }, null);
+            AppSettings.Current.AddRecent(path);
+            RebuildRecentMenu();
+            StatusText.Text = "Aperto: " + Path.GetFileName(path);
+            return true;
         }
         catch (Exception ex)
         {
-            MessageBox.Show("Non riesco ad aprire questo file:\n" + ex.Message, "GuitarStudio",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            App.Log(ex);
+            Dialogs.Warning(Window.GetWindow(this),
+                $"Non riesco ad aprire «{Path.GetFileName(path)}».\n\n" +
+                "Il formato non è tra quelli supportati (Guitar Pro 3–8, MusicXML, Capella) oppure il file è danneggiato.");
+            return false;
         }
     }
 
@@ -210,10 +228,10 @@ public partial class PracticeView : UserControl
     private void NewFile()
     {
         if (!ConfirmDiscard()) return;
-        Tab.Api.Stop();
+        Api.Stop();
         _currentPath = null;
         _expectingLoad = true;
-        Tab.Api.Tex(NewTex, null);
+        Api.Tex(NewTex, null);
         SetEditMode(true);
         StatusText.Text = "Nuova tablatura: scrivi i numeri dei tasti, muoviti con le frecce.";
     }
@@ -221,10 +239,10 @@ public partial class PracticeView : UserControl
     private void Demo_Click(object sender, RoutedEventArgs e)
     {
         if (!ConfirmDiscard()) return;
-        Tab.Api.Stop();
+        Api.Stop();
         _currentPath = null;
         _expectingLoad = true;
-        Tab.Api.Tex(DemoTex, null);
+        Api.Tex(DemoTex, null);
     }
 
     private void Save_Click(object sender, RoutedEventArgs e) => Save(false);
@@ -239,12 +257,10 @@ public partial class PracticeView : UserControl
         // I formati vecchi (.gp5, .gpx…) si possono leggere ma non scrivere: si salva in .gp.
         if (askPath || path == null || (ext != ".gp" && ext != ".atex"))
         {
-            var suggested = string.IsNullOrWhiteSpace(_editor.Score.Title) ? "Tablatura" : _editor.Score.Title;
-            foreach (var c in Path.GetInvalidFileNameChars()) suggested = suggested.Replace(c, '_');
             var dlg = new SaveFileDialog
             {
                 Title = "Salva tablatura",
-                FileName = suggested,
+                FileName = SafeFileName(_editor.Score.Title),
                 Filter = "Guitar Pro 7/8 (*.gp)|*.gp|alphaTex, testo (*.atex)|*.atex",
                 InitialDirectory = path != null ? Path.GetDirectoryName(path) : null
             };
@@ -262,14 +278,16 @@ public partial class PracticeView : UserControl
             _currentPath = path;
             _editor.MarkSaved();
             UpdateTitle();
-            StatusText.Text = "Salvato: " + path;
+            UpdateLcd();
+            AppSettings.Current.AddRecent(path);
+            RebuildRecentMenu();
+            ShowToast("Salvato: " + Path.GetFileName(path), ToastKind.Ok);
             return true;
         }
         catch (Exception ex)
         {
             App.Log(ex);
-            MessageBox.Show("Salvataggio non riuscito:\n" + ex.Message, "GuitarStudio",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Warning(Window.GetWindow(this), "Salvataggio non riuscito:\n" + ex.Message);
             return false;
         }
     }
@@ -279,8 +297,7 @@ public partial class PracticeView : UserControl
     {
         if (_editor == null || !_editor.IsDirty) return true;
         var title = string.IsNullOrWhiteSpace(_editor.Score?.Title) ? "la tablatura" : $"«{_editor.Score!.Title}»";
-        var r = MessageBox.Show($"Vuoi salvare le modifiche a {title}?", "GuitarStudio",
-            MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+        var r = Dialogs.SaveChanges(Window.GetWindow(this), $"Vuoi salvare le modifiche a {title}?");
         return r switch
         {
             MessageBoxResult.Yes => Save(false),
@@ -294,20 +311,22 @@ public partial class PracticeView : UserControl
     private void ViewCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (Tab?.Api == null || !_initialized) return;
-        Tab.Api.Settings.Display.StaveProfile = ViewCombo.SelectedIndex switch
+#pragma warning disable CS0618 // vedi Setup
+        Api.Settings.Display.StaveProfile = ViewCombo.SelectedIndex switch
         {
             1 => StaveProfile.Tab,
             2 => StaveProfile.Score,
             _ => StaveProfile.ScoreTab
         };
-        Tab.Api.UpdateSettings();
-        Tab.Api.Render();
+#pragma warning restore CS0618
+        Api.UpdateSettings();
+        Api.Render();
     }
 
     private void Render()
     {
         if (_editor.Score == null) return;
-        Tab.Api.RenderScore(_editor.Score, new List<double> { _editor.TrackIndex }, null);
+        Api.RenderScore(_editor.Score, new List<double> { _editor.TrackIndex }, null);
     }
 
     // ================================================================ editor
@@ -327,8 +346,8 @@ public partial class PracticeView : UserControl
         UpdateOverlay();
 
         // Come in Guitar Pro: il punto di partenza della riproduzione segue il cursore.
-        if (!_playing && _editor.CurrentBeat is { } beat && Tab.Api.IsReadyForPlayback)
-            Tab.Api.TickPosition = beat.AbsolutePlaybackStart;
+        if (!_playing && _editor.CurrentBeat is { } beat && Api.IsReadyForPlayback)
+            Api.TickPosition = beat.AbsolutePlaybackStart;
     }
 
     private void UpdateEditUi()
@@ -418,7 +437,7 @@ public partial class PracticeView : UserControl
         foreach (var r in _selectionRects) r.Visibility = Visibility.Collapsed;
         if (!EditMode || _editor?.IsEditable != true || _editor.CurrentBeat is not { } beat) return;
 
-        var lookup = Tab.Api.BoundsLookup;
+        var lookup = Api.BoundsLookup;
         var sv = ScrollView;
         if (lookup == null || sv?.Content is not FrameworkElement content) return;
 
@@ -490,7 +509,7 @@ public partial class PracticeView : UserControl
     private void Tab_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (!EditMode || _editor?.IsEditable != true) return;
-        var lookup = Tab.Api.BoundsLookup;
+        var lookup = Api.BoundsLookup;
         if (lookup == null || ScrollView?.Content is not FrameworkElement content) return;
 
         var p = e.GetPosition(content);
@@ -530,7 +549,7 @@ public partial class PracticeView : UserControl
 
     private void View_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (_editor == null || e.OriginalSource is TextBox) return;
+        if (_editor == null || e.OriginalSource is TextBox || e.Key == Key.F1) return;
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         var ctrl = CurrentModifiers.HasFlag(ModifierKeys.Control);
         var shift = CurrentModifiers.HasFlag(ModifierKeys.Shift);
@@ -606,17 +625,17 @@ public partial class PracticeView : UserControl
             case Key.Decimal: _editor.ToggleDot(); break;
             case Key.R: _editor.MakeRest(); break;
 
-            case Key.H: Effect(NoteEffect.HammerPull); break;
-            case Key.S: Effect(NoteEffect.Slide); break;
-            case Key.B: Effect(NoteEffect.Bend); break;
-            case Key.V: Effect(NoteEffect.Vibrato); break;
-            case Key.P: Effect(NoteEffect.PalmMute); break;
-            case Key.X: Effect(NoteEffect.Dead); break;
-            case Key.L: Effect(NoteEffect.LetRing); break;
-            case Key.T: Effect(NoteEffect.Tie); break;
-            case Key.G: Effect(NoteEffect.Ghost); break;
-            case Key.A: Effect(NoteEffect.Accent); break;
-            case Key.N: Effect(NoteEffect.HarmonicNatural); break;
+            case Key.H: ApplyEffect(NoteEffect.HammerPull); break;
+            case Key.S: ApplyEffect(NoteEffect.Slide); break;
+            case Key.B: ApplyEffect(NoteEffect.Bend); break;
+            case Key.V: ApplyEffect(NoteEffect.Vibrato); break;
+            case Key.P: ApplyEffect(NoteEffect.PalmMute); break;
+            case Key.X: ApplyEffect(NoteEffect.Dead); break;
+            case Key.L: ApplyEffect(NoteEffect.LetRing); break;
+            case Key.T: ApplyEffect(NoteEffect.Tie); break;
+            case Key.G: ApplyEffect(NoteEffect.Ghost); break;
+            case Key.A: ApplyEffect(NoteEffect.Accent); break;
+            case Key.N: ApplyEffect(NoteEffect.HarmonicNatural); break;
 
             default: e.Handled = false; break;
         }
@@ -656,14 +675,22 @@ public partial class PracticeView : UserControl
     private void PreviewCurrentNote()
     {
         if (_playing || !_soundFontReady || !_midiReady || _editor.CurrentNote is not { } note) return;
-        try { Tab.Api.PlayNote(note); }
+        try { Api.PlayNote(note); }
         catch (Exception ex) { App.Log(ex); }
     }
 
-    private void Effect(NoteEffect effect)
+    private void ApplyEffect(NoteEffect effect)
     {
+        // Hammer-on, slide e legatura collegano due note: se l'altra manca l'effetto verrebbe
+        // scartato senza dire niente, quindi lo spieghiamo invece di applicarlo.
+        if (_editor.LinkWarning(effect) is { } warning)
+        {
+            ShowToast(warning, ToastKind.Warning);
+            return;
+        }
         if (!_editor.ToggleEffect(effect))
-            StatusText.Text = "Metti prima una nota (o seleziona dei tempi con note), poi aggiungi l'effetto.";
+            ShowToast("Qui non c'è una nota a cui applicare l'effetto.\nScrivi prima il numero del tasto (0–9), poi aggiungi l'effetto.",
+                ToastKind.Warning);
     }
 
     // Pulsanti della barra dell'editor --------------------------------
@@ -682,7 +709,8 @@ public partial class PracticeView : UserControl
     private void Copy_Click(object sender, RoutedEventArgs e)
     {
         var n = _editor.Copy();
-        StatusText.Text = n > 0 ? $"Copiati {n} tempi." : "Niente da copiare.";
+        if (n > 0) ShowToast(n == 1 ? "Copiato 1 tempo." : $"Copiati {n} tempi.", ToastKind.Ok);
+        else ShowToast("Niente da copiare.");
         UpdateEditUi();
         Focus();
     }
@@ -705,7 +733,7 @@ public partial class PracticeView : UserControl
         {
             _editor.AddTrack(r.Name, r.Program, r.Tuning, r.IsBass);
             if (r.Capo > 0) _editor.SetTrackProperties(r.Name, r.Program, r.Tuning, r.TuningName, r.Capo);
-            StatusText.Text = $"Aggiunta la traccia «{r.Name}».";
+            ShowToast($"Aggiunta la traccia «{r.Name}».", ToastKind.Ok);
         }
         Focus();
     }
@@ -714,12 +742,12 @@ public partial class PracticeView : UserControl
     {
         if (_editor.Score is not { } score || score.Tracks.Count <= 1)
         {
-            StatusText.Text = "Una canzone deve avere almeno una traccia.";
+            ShowToast("Una canzone deve avere almeno una traccia.", ToastKind.Warning);
             return;
         }
         var name = _editor.Track?.Name;
-        if (MessageBox.Show($"Eliminare la traccia «{name}»? (Puoi annullare con Ctrl+Z)", "GuitarStudio",
-                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (!Dialogs.Confirm(Window.GetWindow(this), $"Eliminare la traccia «{name}»?\nPuoi tornare indietro con Annulla (Ctrl+Z).",
+                "Elimina traccia", "Elimina")) return;
         _editor.DeleteTrack();
         Focus();
     }
@@ -729,18 +757,18 @@ public partial class PracticeView : UserControl
     private void Play_Click(object sender, RoutedEventArgs e)
     {
         if (!_soundFontReady) return;
-        if (TrainerToggle.IsChecked == true && !_playing && Tab.Api.TickPosition == 0)
+        if (TrainerToggle.IsChecked == true && !_playing && Api.TickPosition == 0)
             SetSpeed(ReadInt(TrainerStart, 60));
-        Tab.Api.PlayPause();
+        Api.PlayPause();
     }
 
-    private void Stop_Click(object sender, RoutedEventArgs e) => Tab.Api.Stop();
+    private void Stop_Click(object sender, RoutedEventArgs e) => Api.Stop();
 
     private void SpeedSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (SpeedText == null) return;
         SpeedText.Text = $"{(int)e.NewValue}%";
-        if (_initialized && Tab.Api != null) Tab.Api.PlaybackSpeed = e.NewValue / 100.0;
+        if (_initialized && Tab?.Api != null) Api.PlaybackSpeed = e.NewValue / 100.0;
     }
 
     private void SetSpeed(int percent)
@@ -748,13 +776,13 @@ public partial class PracticeView : UserControl
         SpeedSlider.Value = Math.Clamp(percent, (int)SpeedSlider.Minimum, (int)SpeedSlider.Maximum);
     }
 
-    private void LoopToggle_Click(object sender, RoutedEventArgs e) => Tab.Api.IsLooping = LoopToggle.IsChecked == true;
+    private void LoopToggle_Click(object sender, RoutedEventArgs e) => Api.IsLooping = LoopToggle.IsChecked == true;
 
     private void MetronomeToggle_Click(object sender, RoutedEventArgs e) =>
-        Tab.Api.MetronomeVolume = MetronomeToggle.IsChecked == true ? 1 : 0;
+        Api.MetronomeVolume = MetronomeToggle.IsChecked == true ? 1 : 0;
 
     private void CountInToggle_Click(object sender, RoutedEventArgs e) =>
-        Tab.Api.CountInVolume = CountInToggle.IsChecked == true ? 1 : 0;
+        Api.CountInVolume = CountInToggle.IsChecked == true ? 1 : 0;
 
     // ================================================================ speed trainer
 
@@ -766,7 +794,7 @@ public partial class PracticeView : UserControl
         var current = (int)SpeedSlider.Value;
         if (current >= target)
         {
-            StatusText.Text = $"Obiettivo raggiunto: {target}% 🎉";
+            ShowToast($"Obiettivo raggiunto: {target}%", ToastKind.Ok);
             return;
         }
         var next = Math.Min(target, current + step);

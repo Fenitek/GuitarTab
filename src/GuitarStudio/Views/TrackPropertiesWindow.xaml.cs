@@ -1,78 +1,38 @@
 using System.Windows;
 using System.Windows.Controls;
 using AlphaTab.Model;
+using GuitarStudio.Editing;
+using GuitarStudio.Ui;
 
 namespace GuitarStudio.Views;
 
 public sealed record TrackSettings(string Name, int Program, IList<double> Tuning, string TuningName, int Capo, bool IsBass);
 
+/// <summary>Finestra "Nuova traccia". Suoni e accordature vengono da <see cref="InstrumentCatalog"/>.</summary>
 public partial class TrackPropertiesWindow : Window
 {
-    private static readonly (int Program, string Name)[] Instruments =
-    {
-        (24, "Chitarra classica (nylon)"),
-        (25, "Chitarra acustica (acciaio)"),
-        (26, "Chitarra jazz"),
-        (27, "Chitarra elettrica pulita"),
-        (28, "Chitarra elettrica stoppata"),
-        (29, "Chitarra overdrive"),
-        (30, "Chitarra distorta"),
-        (31, "Armonici di chitarra"),
-        (32, "Basso acustico"),
-        (33, "Basso elettrico (dita)"),
-        (34, "Basso elettrico (plettro)"),
-        (35, "Basso fretless"),
-        (36, "Basso slap")
-    };
-
-    private readonly bool _isNew;
-    private readonly IList<double>? _currentTuning;
+    private const string DefaultGuitarName = "Chitarra 2";
+    private const string DefaultBassName = "Basso";
 
     public TrackSettings? Result { get; private set; }
 
-    /// <summary>Nuova traccia.</summary>
     public TrackPropertiesWindow()
     {
         InitializeComponent();
-        _isNew = true;
-        Header.Text = "Nuova traccia";
-        NameBox.Text = "Chitarra 2";
-        Init(30);
-        TypeCombo.SelectedIndex = 0;
-    }
+        WindowTheme.Apply(this);
 
-    /// <summary>Modifica della traccia esistente (il numero di corde non si cambia).</summary>
-    public TrackPropertiesWindow(Track track)
-    {
-        InitializeComponent();
-        var staff = track.Staves[0];
-        Header.Text = "Proprietà della traccia";
-        NameBox.Text = track.Name;
-        _currentTuning = staff.Tuning;
-        Init((int)track.PlaybackInfo.Program);
-
-        var strings = staff.Tuning.Count;
-        var isBass = staff.Tuning.Max() < 55; // corda più acuta sotto il Sol3: è un basso
-        TypeCombo.SelectedIndex = (strings, isBass) switch { (7, _) => 1, (4, _) => 2, (5, true) => 3, _ => 0 };
-        TypeCombo.IsEnabled = false;
-        CapoCombo.SelectedIndex = Math.Clamp((int)staff.Capo, 0, 12);
-    }
-
-    private void Init(int program)
-    {
-        foreach (var (p, name) in Instruments)
-            InstrumentCombo.Items.Add(new ComboBoxItem { Content = name, Tag = p });
-        var idx = Array.FindIndex(Instruments, i => i.Program == program);
-        if (idx < 0)
-        {
-            InstrumentCombo.Items.Add(new ComboBoxItem { Content = $"Strumento MIDI {program}", Tag = program });
-            idx = InstrumentCombo.Items.Count - 1;
-        }
-        InstrumentCombo.SelectedIndex = idx;
-
-        for (var i = 0; i <= 12; i++) CapoCombo.Items.Add(i == 0 ? "nessuno" : i.ToString());
+        foreach (var (program, name) in InstrumentCatalog.Instruments)
+            InstrumentCombo.Items.Add(new ComboBoxItem { Content = name, Tag = program });
+        for (var i = 0; i <= 12; i++) CapoCombo.Items.Add(i == 0 ? "nessuno" : $"{i}° tasto");
         CapoCombo.SelectedIndex = 0;
-        Loaded += (_, _) => NameBox.Focus();
+
+        NameBox.Text = DefaultGuitarName;
+        TypeCombo.SelectedIndex = 0;
+        Loaded += (_, _) =>
+        {
+            NameBox.Focus();
+            NameBox.SelectAll();
+        };
     }
 
     private (int Strings, bool Bass) SelectedType => ((ComboBoxItem)TypeCombo.SelectedItem).Tag switch
@@ -85,50 +45,18 @@ public partial class TrackPropertiesWindow : Window
 
     private void TypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (TypeCombo.SelectedItem == null) return;
+        if (TypeCombo.SelectedItem == null || TuningCombo == null) return;
         var (strings, bass) = SelectedType;
 
         TuningCombo.Items.Clear();
-        var presets = Tuning.GetPresetsFor(strings)
-            .Where(t => bass ? t.Name.StartsWith("Bass", StringComparison.OrdinalIgnoreCase) || strings == 5
-                             : !t.Name.StartsWith("Bass", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        if (presets.Count == 0) presets.Add(Tuning.GetDefaultTuningFor(strings));
+        foreach (var t in InstrumentCatalog.PresetsFor(strings, bass))
+            TuningCombo.Items.Add(new ComboBoxItem { Content = InstrumentCatalog.Describe(t), Tag = t });
+        TuningCombo.SelectedIndex = 0;
 
-        var selected = 0;
-        foreach (var t in presets)
-        {
-            TuningCombo.Items.Add(new ComboBoxItem { Content = Describe(t), Tag = t });
-            if (_currentTuning != null && t.Tunings.SequenceEqual(_currentTuning)) selected = TuningCombo.Items.Count - 1;
-        }
-        if (_currentTuning != null && !presets.Any(t => t.Tunings.SequenceEqual(_currentTuning)))
-        {
-            var custom = new Tuning("Personalizzata", _currentTuning.ToList(), false);
-            TuningCombo.Items.Insert(0, new ComboBoxItem { Content = Describe(custom), Tag = custom });
-            selected = 0;
-        }
-        TuningCombo.SelectedIndex = selected;
-
-        if (_isNew)
-        {
-            InstrumentCombo.SelectedIndex = Array.FindIndex(Instruments, i => i.Program == (bass ? 33 : 30));
-            if (NameBox.Text is "Chitarra 2" or "Basso") NameBox.Text = bass ? "Basso" : "Chitarra 2";
-        }
-    }
-
-    private static string Describe(Tuning t)
-    {
-        var notes = string.Join(" ", t.Tunings.Reverse().Select(v => Tuning.GetTextForTuning(v, false)));
-        var name = t.Name
-            .Replace("Guitar ", "").Replace("Bass ", "").Replace(" Tuning", "")
-            .Replace("Standard", "Standard")
-            .Replace("Tune down ½ step", "½ tono sotto")
-            .Replace("Tune down 1 step", "1 tono sotto")
-            .Replace("Tune down 2 step", "2 toni sotto")
-            .Replace("Dropped", "Drop")
-            .Replace("Double Drop", "Doppio drop")
-            .Replace("variant", "variante");
-        return $"{name}  —  {notes}";
+        // Suono e nome proposti seguono il tipo, finché l'utente non ha scritto un nome suo.
+        var program = bass ? 33 : 30;
+        InstrumentCombo.SelectedItem = InstrumentCombo.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (int)i.Tag == program);
+        if (NameBox.Text is DefaultGuitarName or DefaultBassName) NameBox.Text = bass ? DefaultBassName : DefaultGuitarName;
     }
 
     private void Ok_Click(object sender, RoutedEventArgs e)
@@ -136,11 +64,12 @@ public partial class TrackPropertiesWindow : Window
         var name = NameBox.Text.Trim();
         if (name.Length == 0)
         {
-            MessageBox.Show(this, "Dai un nome alla traccia.", "GuitarStudio");
+            Dialogs.Info(this, "Dai un nome alla traccia.");
+            NameBox.Focus();
             return;
         }
-        var tuning = (Tuning)((ComboBoxItem)TuningCombo.SelectedItem).Tag;
-        var program = (int)((ComboBoxItem)InstrumentCombo.SelectedItem).Tag;
+        if (TuningCombo.SelectedItem is not ComboBoxItem { Tag: Tuning tuning } ||
+            InstrumentCombo.SelectedItem is not ComboBoxItem { Tag: int program }) return;
         Result = new TrackSettings(name, program, tuning.Tunings.ToList(), tuning.Name, CapoCombo.SelectedIndex, SelectedType.Bass);
         DialogResult = true;
     }

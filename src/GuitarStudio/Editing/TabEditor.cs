@@ -2,6 +2,7 @@ using AlphaTab;
 using AlphaTab.Core.EcmaScript;
 using AlphaTab.Exporter;
 using AlphaTab.Importer;
+using AlphaTab.Midi;
 using AlphaTab.Model;
 
 namespace GuitarStudio.Editing;
@@ -157,6 +158,14 @@ public sealed class TabEditor
     public void MarkSaved() => IsDirty = false;
 
     public byte[] ExportGp() => ToBytes(new Gp7Exporter().Export(Score!, _settings));
+
+    /// <summary>File MIDI standard con tutte le tracce.</summary>
+    public byte[] ExportMidi()
+    {
+        var file = new MidiFile();
+        new MidiFileGenerator(Score!, _settings, new AlphaSynthMidiFileHandler(file, true)).Generate();
+        return ToBytes(file.ToBinary());
+    }
 
     public string ExportAlphaTex() => new AlphaTexExporter().ExportToString(Score!, _settings);
 
@@ -527,6 +536,44 @@ public sealed class TabEditor
         return true;
     }
 
+    /// <summary>
+    /// Hammer-on, slide e legatura collegano due note sulla stessa corda. Se l'altra nota manca,
+    /// alphaTab scarta l'effetto in silenzio (in Score.Finish): va controllato PRIMA di applicarlo.
+    /// Restituisce l'avviso da mostrare all'utente, oppure null se l'effetto si può mettere
+    /// (o se lo si sta togliendo).
+    /// </summary>
+    public string? LinkWarning(NoteEffect effect)
+    {
+        if (HasSelection || CurrentNote is not { } note || HasEffect(note.Beat, note, effect)) return null;
+        switch (effect)
+        {
+            case NoteEffect.HammerPull:
+            case NoteEffect.Slide:
+            case NoteEffect.SlideShift:
+                if (HasNoteOnSameString(note, forward: true)) return null;
+                var what = effect == NoteEffect.HammerPull ? "L'hammer-on / pull-off" : "Lo slide";
+                return $"{what} parte da questa nota e arriva alla nota successiva sulla stessa corda, che qui manca.\n" +
+                       "Scrivi prima la nota di arrivo in un tempo dopo, su questa corda, poi torna qui e riprova.";
+            case NoteEffect.Tie:
+                if (HasNoteOnSameString(note, forward: false)) return null;
+                return "La legatura unisce questa nota a quella precedente sulla stessa corda, che qui manca.\n" +
+                       "Va messa sulla seconda delle due note: scrivi prima la nota di partenza.";
+            default:
+                return null;
+        }
+    }
+
+    private static bool HasNoteOnSameString(Note note, bool forward)
+    {
+        var beat = note.Beat;
+        for (var i = 0; i < 32 && beat != null; i++)
+        {
+            beat = forward ? beat.NextBeat : beat.PreviousBeat;
+            if (beat?.GetNoteOnString(note.String) != null) return true;
+        }
+        return false;
+    }
+
     private static void SetBeatEffect(Beat beat, NoteEffect effect, bool on)
     {
         switch (effect)
@@ -601,7 +648,7 @@ public sealed class TabEditor
             case NoteEffect.Tremolo: return beat?.IsTremolo == true;
         }
         if (note == null) return false;
-        var maxBend = note.HasBend ? note.BendPoints.Max(p => p.Value) : 0;
+        var maxBend = note.HasBend ? note.BendPoints!.Max(p => p.Value) : 0;
         return effect switch
         {
             NoteEffect.HammerPull => note.IsHammerPullOrigin,

@@ -3,6 +3,30 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.2.0 — 2026-11-14
+
+Interfaccia rifatta e prime risposte ai problemi segnalati.
+
+- **Tema scuro completo**: menu a tendina, menu, cursori, caselle di spunta, campi di testo, barre
+  di scorrimento, suggerimenti e finestre di messaggio non sono più bianchi; anche la barra del
+  titolo di Windows è scura. Tutto lo stile sta in `Themes/Dark.xaml`.
+- **Leggibilità**: caratteri minimi a 13, testi secondari più chiari, pulsanti della tavolozza
+  più grandi.
+- **Guida rapida (F1 o pulsante «?»)**: scorciatoie divise per categoria, spiegazione di come
+  funzionano gli effetti e di cosa riproduce il motore audio. Tolto il blocco di scorciatoie
+  illeggibile dalla tavolozza.
+- **Avvisi visibili** sopra lo spartito al posto delle scritte piccole nella barra di stato.
+- **Hammer-on, slide e legatura**: se manca la nota di arrivo (o di partenza) il programma lo
+  spiega, invece di non fare niente in silenzio.
+- **SoundFont a scelta**: menu ☰ → «Scegli un SoundFont…» (.sf2/.sf3), ricordato tra le sessioni.
+- **File**: file recenti, trascinamento di una tablatura sulla finestra, apertura da riga di
+  comando, esportazione MIDI. Un file non valido non chiude più la tablatura aperta.
+- **Pannelli**: tavolozza e pannello proprietà si allargano trascinando il bordo; larghezze,
+  posizione e dimensione della finestra vengono ricordate.
+- Navigazione laterale compatta con icone; zoom e vista spostati nella barra di stato;
+  intestazione del pannello tracce allineata alle colonne; pulsante per eliminare la traccia.
+- Pulizia: finestra «Nuova traccia» unificata con `InstrumentCatalog`, build senza avvisi.
+
 ## 0.1.0 — 2026-11-14
 
 Prima versione sotto controllo di versione.

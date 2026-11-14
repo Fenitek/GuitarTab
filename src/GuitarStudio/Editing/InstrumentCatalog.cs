@@ -35,7 +35,7 @@ public static class InstrumentCatalog
                 ? t.Name.StartsWith("Bass", StringComparison.OrdinalIgnoreCase) || strings == 5
                 : !t.Name.StartsWith("Bass", StringComparison.OrdinalIgnoreCase))
             .ToList();
-        if (presets.Count == 0) presets.Add(Tuning.GetDefaultTuningFor(strings));
+        if (presets.Count == 0 && Tuning.GetDefaultTuningFor(strings) is { } fallback) presets.Add(fallback);
         return presets;
     }
 

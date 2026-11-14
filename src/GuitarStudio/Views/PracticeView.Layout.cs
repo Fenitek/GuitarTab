@@ -23,12 +23,12 @@ public partial class PracticeView
     {
         ("LEGATO E SLIDE", new[]
         {
-            (NoteEffect.HammerPull, "H", "Hammer-on / pull-off verso la nota dopo (H)"),
-            (NoteEffect.Slide, "/", "Slide legato verso la nota dopo (S)"),
-            (NoteEffect.SlideShift, "S/", "Slide con nuova pennata sulla nota dopo"),
+            (NoteEffect.HammerPull, "H", "Hammer-on / pull-off (H): dalla nota sotto il cursore alla nota successiva sulla stessa corda"),
+            (NoteEffect.Slide, "/", "Slide legato (S): dalla nota sotto il cursore alla nota successiva sulla stessa corda"),
+            (NoteEffect.SlideShift, "S/", "Slide con nuova pennata: come lo slide, ma la nota di arrivo viene ripennata"),
             (NoteEffect.SlideInBelow, "↗", "Slide in entrata dal basso"),
             (NoteEffect.SlideOutDown, "↘", "Slide in uscita verso il basso"),
-            (NoteEffect.Tie, "⁀", "Legatura di valore con la nota prima (T)")
+            (NoteEffect.Tie, "⁀", "Legatura di valore (T): va messa sulla seconda nota, la unisce a quella precedente sulla stessa corda")
         }),
         ("BEND E VIBRATO", new[]
         {
@@ -79,14 +79,14 @@ public partial class PracticeView
             {
                 var t = new ToggleButton
                 {
-                    Content = new TextBlock { Text = glyph, FontFamily = (FontFamily)FindResource("MusicFont"), FontSize = glyph.Length > 2 ? 11.5 : 15 },
+                    Content = new TextBlock { Text = glyph, FontFamily = (FontFamily)FindResource("MusicFont"), FontSize = glyph.Length > 2 ? 13 : 16 },
                     ToolTip = tip,
                     Tag = effect,
                     Style = style
                 };
                 t.Click += (_, _) =>
                 {
-                    Effect(effect);
+                    ApplyEffect(effect);
                     UpdateEditUi();
                     Focus();
                 };
@@ -106,13 +106,13 @@ public partial class PracticeView
     private void SetEditMode(bool on)
     {
         PaletteToggle.IsChecked = on;
-        PalettePanel.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        ShowPalette(on);
         if (on)
         {
             // Il cursore si disegna sulla tab: se è nascosta, la mostriamo.
             if (ViewCombo.SelectedIndex == 2) ViewCombo.SelectedIndex = 0;
             if (_editor?.IsEditable == false)
-                StatusText.Text = "Questa traccia non è a corde: scegli una chitarra o un basso per modificarla.";
+                ShowToast("Questa traccia non è a corde: scegli una chitarra o un basso per modificarla.", ToastKind.Warning);
             Focus();
         }
         UpdateEditUi();
@@ -123,7 +123,8 @@ public partial class PracticeView
     {
         if (sender == PaletteToggle) SetEditMode(PaletteToggle.IsChecked == true);
         TracksPanel.Visibility = TracksToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        InspectorPanel.Visibility = InspectorToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        ShowInspectorPanel(InspectorToggle.IsChecked == true);
+        UpdateEditUi();
         Focus();
     }
 
@@ -144,8 +145,8 @@ public partial class PracticeView
     private void ZoomCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!_initialized || Tab?.Api == null || ZoomCombo.SelectedItem is not ComboBoxItem item) return;
-        Tab.Api.Settings.Display.Scale = double.Parse((string)item.Tag, CultureInfo.InvariantCulture);
-        Tab.Api.UpdateSettings();
+        Api.Settings.Display.Scale = double.Parse((string)item.Tag, CultureInfo.InvariantCulture);
+        Api.UpdateSettings();
         Render();
         Focus();
     }
@@ -156,7 +157,7 @@ public partial class PracticeView
     {
         if (_editor.Score == null) return;
         _editor.MoveTo(0, 0, _editor.Line);
-        if (Tab.Api.IsReadyForPlayback) Tab.Api.TickPosition = 0;
+        if (Api.IsReadyForPlayback) Api.TickPosition = 0;
         Focus();
     }
 
@@ -167,7 +168,7 @@ public partial class PracticeView
     {
         if (_editor.Score == null) return;
         _editor.MoveTo(_editor.BarIndex + delta, 0, _editor.Line);
-        if (_playing && _editor.CurrentBeat is { } b) Tab.Api.TickPosition = b.AbsolutePlaybackStart;
+        if (_playing && _editor.CurrentBeat is { } b) Api.TickPosition = b.AbsolutePlaybackStart;
         Focus();
     }
 
@@ -191,9 +192,9 @@ public partial class PracticeView
         {
             // Lo speed trainer lavora sul loop.
             LoopToggle.IsChecked = true;
-            Tab.Api.IsLooping = true;
+            Api.IsLooping = true;
             SetSpeed(ReadInt(TrainerStart, 60));
-            StatusText.Text = "Speed trainer attivo: seleziona il pezzo trascinando sulla tab e premi Play.";
+            ShowToast("Speed trainer attivo: trascina sulla tab per scegliere il pezzo da ripetere, poi premi Play.", ToastKind.Ok);
         }
         else
         {
@@ -247,7 +248,8 @@ public partial class PracticeView
     private void ShowInspector(RadioButton tab)
     {
         InspectorToggle.IsChecked = true;
-        InspectorPanel.Visibility = Visibility.Visible;
+        ShowInspectorPanel(true);
+        UpdateEditUi();
         tab.IsChecked = true;
     }
 
@@ -406,21 +408,21 @@ public partial class PracticeView
         {
             if (!double.TryParse(BarTempoBox.Text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var t) || t < 20 || t > 400)
             {
-                StatusText.Text = "Il BPM deve essere un numero tra 20 e 400.";
+                ShowToast("Il BPM deve essere un numero tra 20 e 400.", ToastKind.Warning);
                 return;
             }
             tempo = t;
         }
         if (!int.TryParse(BarNumBox.Text, out var num) || num < 1 || num > 32)
         {
-            StatusText.Text = "Il numero di movimenti deve essere tra 1 e 32.";
+            ShowToast("Il numero di movimenti deve essere tra 1 e 32.", ToastKind.Warning);
             return;
         }
         var den = int.Parse((string)((ComboBoxItem)BarDenCombo.SelectedItem).Content);
         var repeat = 0;
         if (BarRepeatEndCheck.IsChecked == true && (!int.TryParse(BarRepeatCountBox.Text, out repeat) || repeat < 2 || repeat > 20))
         {
-            StatusText.Text = "Le ripetizioni devono essere tra 2 e 20.";
+            ShowToast("Le ripetizioni devono essere tra 2 e 20.", ToastKind.Warning);
             return;
         }
         _editor.SetBarInfo(new BarInfo(tempo, tempo ?? 0, num, den, BarRepeatStartCheck.IsChecked == true, repeat,
@@ -454,10 +456,8 @@ public partial class PracticeView
             var color = TrackColors[i % TrackColors.Length];
             var brush = new SolidColorBrush(color);
 
-            var grid = new Grid { Height = 28 };
-            foreach (var w in new[] { 4.0, 170, 30, 30, 100, 14 })
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(w) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var grid = new Grid { Height = 34 };
+            AddTrackColumns(grid);
 
             grid.Children.Add(new Border { Background = brush });
 
@@ -465,9 +465,10 @@ public partial class PracticeView
             {
                 Content = new TextBlock { Text = $"{i + 1}. {track.Name}", TextTrimming = TextTrimming.CharacterEllipsis },
                 Style = (Style)FindResource("IconButton"),
-                FontFamily = new FontFamily("Segoe UI"),
-                FontSize = 12.5,
+                FontFamily = (FontFamily)FindResource("UiFont"),
+                FontSize = 13.5,
                 Width = double.NaN,
+                Height = 30,
                 HorizontalContentAlignment = HorizontalAlignment.Left,
                 Padding = new Thickness(8, 0, 0, 0),
                 ToolTip = InstrumentCatalog.InstrumentName((int)track.PlaybackInfo.Program)
@@ -480,7 +481,7 @@ public partial class PracticeView
             mute.Click += (_, _) =>
             {
                 track.PlaybackInfo.IsMute = mute.IsChecked == true;
-                Tab.Api.ChangeTrackMute(new List<Track> { track }, mute.IsChecked == true);
+                Api.ChangeTrackMute(new List<Track> { track }, mute.IsChecked == true);
                 Focus();
             };
             Grid.SetColumn(mute, 2);
@@ -490,7 +491,7 @@ public partial class PracticeView
             solo.Click += (_, _) =>
             {
                 track.PlaybackInfo.IsSolo = solo.IsChecked == true;
-                Tab.Api.ChangeTrackSolo(new List<Track> { track }, solo.IsChecked == true);
+                Api.ChangeTrackSolo(new List<Track> { track }, solo.IsChecked == true);
                 Focus();
             };
             Grid.SetColumn(solo, 3);
@@ -499,20 +500,20 @@ public partial class PracticeView
             var volume = new Slider
             {
                 Minimum = 0, Maximum = 2, Value = _trackVolumes.GetValueOrDefault(i, 1),
-                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 8, 0),
                 Focusable = false, ToolTip = "Volume della traccia"
             };
             volume.ValueChanged += (_, e) =>
             {
                 _trackVolumes[index] = e.NewValue;
-                Tab.Api.ChangeTrackVolume(new List<Track> { track }, e.NewValue);
+                Api.ChangeTrackVolume(new List<Track> { track }, e.NewValue);
             };
             Grid.SetColumn(volume, 4);
             grid.Children.Add(volume);
 
             // Panoramica: una casella per battuta, piena se ci sono note.
             var cells = new List<Border>();
-            var bars = new UniformGrid { Rows = 1, Columns = score.MasterBars.Count, Margin = new Thickness(0, 5, 10, 5) };
+            var bars = new UniformGrid { Rows = 1, Columns = score.MasterBars.Count, Margin = new Thickness(0, 7, 12, 7) };
             var staff = track.Staves.Count > 0 ? track.Staves[0] : null;
             for (var b = 0; b < score.MasterBars.Count; b++)
             {
@@ -521,7 +522,7 @@ public partial class PracticeView
                                staff.Bars[b].Voices.Any(v => v.Beats.Any(x => x.Notes.Count > 0));
                 var cell = new Border
                 {
-                    Background = hasNotes ? brush : new SolidColorBrush(Color.FromRgb(0x33, 0x36, 0x3F)),
+                    Background = hasNotes ? brush : new SolidColorBrush(Color.FromRgb(0x17, 0x18, 0x1C)),
                     Margin = new Thickness(0.5, 0, 0.5, 0),
                     CornerRadius = new CornerRadius(1.5),
                     BorderBrush = Brushes.White,
@@ -548,9 +549,9 @@ public partial class PracticeView
 
     private ToggleButton MakeSmallToggle(string text, string tip, bool isChecked) => new()
     {
-        Content = new TextBlock { Text = text, FontFamily = new FontFamily("Segoe UI"), FontWeight = FontWeights.SemiBold, FontSize = 11.5 },
+        Content = new TextBlock { Text = text, FontFamily = (FontFamily)FindResource("UiFont"), FontWeight = FontWeights.SemiBold, FontSize = 13 },
         Style = (Style)FindResource("IconToggle"),
-        MinWidth = 26, Height = 22, Padding = new Thickness(0),
+        MinWidth = 28, Height = 26, Padding = new Thickness(0),
         ToolTip = tip, IsChecked = isChecked
     };
 

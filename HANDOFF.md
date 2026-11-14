@@ -23,6 +23,18 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.2.0 (leggere prima del resto)
+
+Le sezioni sotto descrivono la v0.1.0; con la v0.2.0 è cambiato questo:
+
+- **Risolti** i punti 6.2 (avvisi), 6.4, 6.5 e quasi tutto il 6.6; del 6.3 è fatta la scelta del SoundFont (manca un SoundFont migliore incluso). Restano da fare: verifica a orecchio (6.1.1) e prova con mouse/tastiera veri.
+- **File nuovi**: `Themes/Dark.xaml` (tutti i colori e gli stili: non mettere stili o colori nelle viste), `Ui/WindowTheme.cs` (barra del titolo scura: chiamare `WindowTheme.Apply(this)` in ogni finestra), `Ui/Dialogs.cs` (usare questo, **mai `MessageBox`**), `AppSettings.cs` (preferenze in `%LOCALAPPDATA%\GuitarStudio\settings.json`), `AppInfo.cs` (versione), `Views/HelpWindow.cs` (guida F1: aggiornarla quando cambia una scorciatoia), `Views/PracticeView.Shell.cs` (avvisi `ShowToast`, file recenti, SoundFont, export MIDI, larghezza pannelli).
+- **Trappola scoperta**: `Score.Finish` di alphaTab **cancella in silenzio** `IsHammerPullOrigin`, lo slide legato/shift e `IsTieDestination` se manca l'altra nota sulla stessa corda. Era la causa di "legato e slide non vanno". `TabEditor.LinkWarning` lo controlla *prima* di applicare l'effetto.
+- **Apertura file**: `PracticeView.OpenPath` legge con `ScoreLoader` e poi chiama `Api.RenderScore` (non più `Api.Load`), così un file non valido non tocca la tablatura aperta.
+- `Tab.Api` è annullabile: nelle viste usare la proprietà `Api`.
+- **Autotest**: con `GS_SELFTEST_UI=1` (oltre a `GS_SELFTEST=1`) alla fine restano aperti guida, menu a tendina e avviso, per fotografarli. Se `bin/Debug` è bloccato da un'istanza aperta dell'app, compilare con `-c Release`.
+- Non verificato a schermo: l'aspetto dei menu a tendina aperti e del menu ☰ (i modelli sono in `Themes/Dark.xaml`).
+
 ## 3. Tecnologia
 
 - **C# / .NET 10 / WPF** (`net10.0-windows`). SDK installato: 10.0.204.

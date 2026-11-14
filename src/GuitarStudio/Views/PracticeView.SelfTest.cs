@@ -128,7 +128,7 @@ public partial class PracticeView
             log.AppendLine($"correggi battuta: {u1}/{t1} → {u2}/{t2}");
 
             // --- Nuova traccia di basso e accordatura Drop D con capotasto sulla chitarra.
-            var bassTuning = Tuning.GetDefaultTuningFor(4).Tunings.ToList();
+            var bassTuning = Tuning.GetDefaultTuningFor(4)!.Tunings.ToList();
             _editor.AddTrack("Basso", 33, bassTuning, true);
             await Task.Delay(400);
             log.AppendLine($"tracce: {_editor.Score!.Tracks.Count} corrente={_editor.Track?.Name} corde={_editor.StringCount} pannello tracce={TrackRows.Children.Count}");
@@ -138,11 +138,17 @@ public partial class PracticeView
             _editor.SelectTrack(0);
             var dropD = new List<double> { 64, 59, 55, 50, 45, 38 };
             _editor.SetTrackProperties("Chitarra", 30, dropD, "Drop D", 2);
-            log.AppendLine($"chitarra: accordatura={_editor.Staff!.StringTuning.Name} capo={_editor.Staff.Capo} suono={_editor.Track!.PlaybackInfo.Program}");
+            log.AppendLine($"chitarra: accordatura={_editor.Staff!.StringTuning.Name} capo={_editor.Staff!.Capo} suono={_editor.Track!.PlaybackInfo.Program}");
 
             _editor.SetTitle("Riff di prova");
             _editor.SetArtist("GuitarStudio");
             await Task.Delay(600);
+
+            // Avviso quando manca la nota di arrivo di un hammer-on, ed esportazione MIDI.
+            _editor.MoveTo(3, 0, 2);
+            await K(Key.D5); await K(Key.H);
+            log.AppendLine($"hammer senza nota di arrivo: avviso={(_editor.LinkWarning(NoteEffect.HammerPull) != null)} (atteso True) toast={Toast.Visibility} (atteso Visible) applicato={_editor.CurrentNote?.IsHammerPullOrigin} (atteso False)");
+            log.AppendLine($"midi esportato: {_editor.ExportMidi().Length} byte");
 
             log.AppendLine("--- alphaTex ---");
             log.AppendLine(_editor.ExportAlphaTex());
@@ -150,24 +156,34 @@ public partial class PracticeView
             // Salvataggio .gp e rilettura.
             var gp = Path.Combine(Path.GetTempPath(), "gs_selftest.gp");
             File.WriteAllBytes(gp, _editor.ExportGp());
-            var reloaded = ScoreLoader.LoadScoreFromBytes(new Uint8Array(File.ReadAllBytes(gp)), Tab.Api.Settings);
+            var reloaded = ScoreLoader.LoadScoreFromBytes(new Uint8Array(File.ReadAllBytes(gp)), Api.Settings);
             log.AppendLine($"--- .gp riletto: titolo={reloaded.Title} artista={reloaded.Artist} battute={reloaded.MasterBars.Count} tracce={reloaded.Tracks.Count} " +
                            $"note battuta 1={reloaded.Tracks[0].Staves[0].Bars[0].Voices[0].Beats.Sum(b => b.Notes.Count)} " +
                            $"capo={reloaded.Tracks[0].Staves[0].Capo} ritornello={reloaded.MasterBars[1].RepeatCount} sezione={reloaded.MasterBars[1].Section?.Text} " +
                            $"terzina={reloaded.Tracks[0].Staves[0].Bars[2].Voices[0].Beats[0].TupletNumerator}");
 
             // Riproduzione dopo le modifiche.
-            Tab.Api.Stop();
+            Api.Stop();
             await Task.Delay(300);
-            Tab.Api.Play();
+            Api.Play();
             await Task.Delay(2000);
             log.AppendLine($"riproduzione: stato={(_playing ? "in corso" : "ferma")} tempo={TimeText.Text}");
-            Tab.Api.Stop();
+            Api.Stop();
             _editor.MarkSaved();
             _editor.MoveTo(0, 2, 5);
             await Task.Delay(1200);
             log.AppendLine($"cursore finale: {CursorText.Text} | traccia: {LcdTrack.Text} | play: {_playing}");
             log.AppendLine("OK");
+
+            // GS_SELFTEST_UI=1: lascia aperti guida, menu e avviso per poterli fotografare.
+            if (Environment.GetEnvironmentVariable("GS_SELFTEST_UI") == "1")
+            {
+                ShowInspector(TabTrack);
+                ShowToast("Lo slide parte da questa nota e arriva alla nota successiva sulla stessa corda, che qui manca.\nScrivi prima la nota di arrivo.", ToastKind.Warning);
+                await Task.Delay(400);
+                TrackSoundCombo.IsDropDownOpen = true;
+                (Window.GetWindow(this) as MainWindow)?.ShowHelp();
+            }
         }
         catch (Exception ex)
         {
