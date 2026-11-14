@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GuitarStudio/GuitarStudio.csproj" />
+  </Folder>
+</Solution>

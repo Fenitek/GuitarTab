@@ -1,0 +1,546 @@
+<UserControl x:Class="GuitarStudio.Views.PracticeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:at="clr-namespace:AlphaTab.Wpf;assembly=AlphaTab.Windows"
+             xmlns:views="clr-namespace:GuitarStudio.Views"
+             Focusable="True" FocusVisualStyle="{x:Null}"
+             PreviewKeyDown="View_PreviewKeyDown">
+    <UserControl.Resources>
+        <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+        <FontFamily x:Key="MusicFont">Segoe UI Symbol</FontFamily>
+        <SolidColorBrush x:Key="Line" Color="#3A3D46"/>
+        <SolidColorBrush x:Key="BgDeep" Color="#17181C"/>
+
+        <!-- Pulsante icona della barra superiore -->
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{StaticResource BgHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="IconToggle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{StaticResource TextDim}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="MinWidth" Value="34"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{StaticResource BgHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                                <Setter TargetName="b" Property="Background" Value="#33E8A33D"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Casella della tavolozza -->
+        <Style x:Key="PaletteToggle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Width" Value="38"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="0,0,2,2"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="4" BorderThickness="1" BorderBrush="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{StaticResource BgHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{StaticResource Accent}"/>
+                                <Setter Property="Foreground" Value="#1E1F24"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PaletteButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Width" Value="38"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="0,0,2,2"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{StaticResource BgHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="InspectorTab" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource TextDim}"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="b" Background="#2E3139" Padding="0,6" Margin="0,0,2,0" CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{StaticResource Accent}"/>
+                                <Setter Property="Foreground" Value="#1E1F24"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextDim}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="2,12,0,5"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextDim}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,10,0,3"/>
+        </Style>
+        <Style x:Key="PanelHeader" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,14,0,2"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#2E3139"/>
+            <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+            <Setter Property="CaretBrush" Value="{StaticResource TextMain}"/>
+            <Setter Property="Padding" Value="5,4"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
+            <Setter Property="Margin" Value="0,4,0,0"/>
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+        <Style x:Key="SeparatorLine" TargetType="Border">
+            <Setter Property="Width" Value="1"/>
+            <Setter Property="Background" Value="{StaticResource Line}"/>
+            <Setter Property="Margin" Value="8,6"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ============================== BARRA SUPERIORE ============================== -->
+        <Border Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="8,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Sinistra: pannelli, file, annulla, zoom -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ToggleButton x:Name="PaletteToggle" Style="{StaticResource IconToggle}" Content="&#xE90C;" IsChecked="True"
+                                  Click="PanelToggle_Click" ToolTip="Tavolozza di modifica (F2)"/>
+                    <ToggleButton x:Name="TracksToggle" Style="{StaticResource IconToggle}" Content="&#xE90E;" IsChecked="True"
+                                  Click="PanelToggle_Click" ToolTip="Pannello tracce"/>
+                    <ToggleButton x:Name="InspectorToggle" Style="{StaticResource IconToggle}" Content="&#xE90D;" IsChecked="True"
+                                  Click="PanelToggle_Click" ToolTip="Pannello Brano / Traccia / Battuta"/>
+                    <Border Style="{StaticResource SeparatorLine}"/>
+                    <Button x:Name="FileMenuButton" Style="{StaticResource IconButton}" Content="&#xE700;" Click="FileMenu_Click" ToolTip="Menu file">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Nuova tablatura" InputGestureText="Ctrl+N" Click="New_Click"/>
+                                <MenuItem Header="Apri…" InputGestureText="Ctrl+O" Click="Open_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Salva" InputGestureText="Ctrl+S" Click="Save_Click"/>
+                                <MenuItem Header="Salva come…" InputGestureText="Ctrl+Maiusc+S" Click="SaveAs_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Apri l'esercizio demo" Click="Demo_Click"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE8A5;" Click="New_Click" ToolTip="Nuova tablatura (Ctrl+N)"/>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE8E5;" Click="Open_Click" ToolTip="Apri (Ctrl+O)"/>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE74E;" Click="Save_Click" ToolTip="Salva (Ctrl+S)"/>
+                    <Border Style="{StaticResource SeparatorLine}"/>
+                    <Button x:Name="UndoButton" Style="{StaticResource IconButton}" Content="&#xE7A7;" Click="Undo_Click" ToolTip="Annulla (Ctrl+Z)"/>
+                    <Button x:Name="RedoButton" Style="{StaticResource IconButton}" Content="&#xE7A6;" Click="Redo_Click" ToolTip="Ripeti (Ctrl+Y)"/>
+                    <Border Style="{StaticResource SeparatorLine}"/>
+                    <ComboBox x:Name="ZoomCombo" Width="70" VerticalAlignment="Center" SelectedIndex="2" Focusable="False"
+                              SelectionChanged="ZoomCombo_SelectionChanged" ToolTip="Zoom">
+                        <ComboBoxItem Content="70%" Tag="0.7"/>
+                        <ComboBoxItem Content="85%" Tag="0.85"/>
+                        <ComboBoxItem Content="100%" Tag="1"/>
+                        <ComboBoxItem Content="120%" Tag="1.2"/>
+                        <ComboBoxItem Content="150%" Tag="1.5"/>
+                    </ComboBox>
+                    <ComboBox x:Name="ViewCombo" Width="118" Margin="6,0,0,0" VerticalAlignment="Center" SelectedIndex="0" Focusable="False"
+                              SelectionChanged="ViewCombo_SelectionChanged" ToolTip="Cosa mostrare">
+                        <ComboBoxItem Content="Tab + spartito"/>
+                        <ComboBoxItem Content="Solo tab"/>
+                        <ComboBoxItem Content="Solo spartito"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Centro: trasporto e display -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0">
+                    <Button Style="{StaticResource IconButton}" Content="&#xE892;" Click="GoStart_Click" ToolTip="All'inizio"/>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE76B;" Click="PrevBar_Click" ToolTip="Battuta precedente"/>
+                    <Button x:Name="PlayButton" Style="{StaticResource IconButton}" Content="&#xE768;" FontSize="18" Width="40"
+                            Click="Play_Click" IsEnabled="False" ToolTip="Play / Pausa (Spazio)"/>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE76C;" Click="NextBar_Click" ToolTip="Battuta successiva"/>
+                    <Button x:Name="StopButton" Style="{StaticResource IconButton}" Content="&#xE71A;" Click="Stop_Click" IsEnabled="False" ToolTip="Stop"/>
+
+                    <!-- Display -->
+                    <Border Background="{StaticResource BgDeep}" CornerRadius="5" Padding="12,3" Margin="8,0" MinWidth="300"
+                            BorderBrush="{StaticResource Line}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock x:Name="LcdTrack" Text="—" Foreground="{StaticResource Accent}" FontSize="12.5" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock x:Name="LcdBar" Text="1/1" Foreground="{StaticResource TextMain}" FontFamily="Consolas" FontSize="12.5"/>
+                                <TextBlock x:Name="LcdSig" Text="4/4" Foreground="{StaticResource TextDim}" FontFamily="Consolas" FontSize="12.5" Margin="14,0,0,0"/>
+                                <TextBlock x:Name="TimeText" Text="0:00 / 0:00" Foreground="{StaticResource TextMain}" FontFamily="Consolas" FontSize="12.5" Margin="14,0,0,0"/>
+                                <TextBlock x:Name="LcdTempo" Text="♩ = 120" Foreground="{StaticResource TextDim}" FontSize="12.5" Margin="14,0,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Destra: esercizio -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <ToggleButton x:Name="LoopToggle" Style="{StaticResource IconToggle}" Content="&#xE8EE;" Click="LoopToggle_Click"
+                                  ToolTip="Loop: trascina sulla tab per scegliere il pezzo da ripetere"/>
+                    <ToggleButton x:Name="MetronomeToggle" Style="{StaticResource IconToggle}" Click="MetronomeToggle_Click" ToolTip="Metronomo">
+                        <TextBlock Text="♩" FontFamily="{StaticResource MusicFont}" FontSize="17"/>
+                    </ToggleButton>
+                    <ToggleButton x:Name="CountInToggle" Style="{StaticResource IconToggle}" Click="CountInToggle_Click" ToolTip="Una battuta di conteggio prima di partire">
+                        <TextBlock Text="1-2" FontFamily="Segoe UI" FontSize="12" FontWeight="SemiBold"/>
+                    </ToggleButton>
+                    <Border Style="{StaticResource SeparatorLine}"/>
+                    <TextBlock Text="&#xEC4A;" FontFamily="{StaticResource IconFont}" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" Margin="2,0,6,0"
+                               ToolTip="Velocità di riproduzione"/>
+                    <Slider x:Name="SpeedSlider" Width="96" Minimum="25" Maximum="150" Value="100" Focusable="False"
+                            TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center"
+                            ValueChanged="SpeedSlider_ValueChanged" ToolTip="Velocità di riproduzione"/>
+                    <TextBlock x:Name="SpeedText" Text="100%" Width="40" VerticalAlignment="Center" Margin="6,0,2,0"
+                               Foreground="{StaticResource Accent}" FontWeight="SemiBold"/>
+                    <ToggleButton x:Name="TrainerToggle" Style="{StaticResource IconToggle}" Content="&#xE916;" Click="TrainerToggle_Click"
+                                  ToolTip="Speed trainer: la velocità sale a ogni giro del loop"/>
+                    <Popup x:Name="TrainerPopup" PlacementTarget="{Binding ElementName=TrainerToggle}" Placement="Bottom" StaysOpen="False"
+                           Closed="TrainerPopup_Closed">
+                        <Border Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="6" Padding="14">
+                            <StackPanel Width="230">
+                                <TextBlock Text="Speed trainer" Style="{StaticResource PanelHeader}" Margin="0,0,0,6"/>
+                                <TextBlock Text="A ogni ripetizione del loop la velocità sale fino all'obiettivo." Foreground="{StaticResource TextDim}"
+                                           TextWrapping="Wrap" FontSize="12"/>
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition/>
+                                        <ColumnDefinition/>
+                                        <ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,6,0">
+                                        <TextBlock Text="Parti da %" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox x:Name="TrainerStart" Text="60"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="0,0,6,0">
+                                        <TextBlock Text="Arriva a %" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox x:Name="TrainerTarget" Text="100"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="+ % a giro" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox x:Name="TrainerStep" Text="5"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Button x:Name="TrainerActionButton" Style="{StaticResource ToolButton}" Margin="0,12,0,0" Content="Attiva" Click="TrainerStart_Click"
+                                        Background="{StaticResource Accent}" Foreground="#1E1F24"/>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                    <Border Style="{StaticResource SeparatorLine}"/>
+                    <ToggleButton x:Name="FretToggle" Style="{StaticResource IconToggle}" Click="FretToggle_Click" ToolTip="Manico: note scritte o in riproduzione">
+                        <TextBlock Text="Manico" FontFamily="Segoe UI" FontSize="12"/>
+                    </ToggleButton>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ============================== CORPO ============================== -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Tavolozza di modifica -->
+            <Border x:Name="PalettePanel" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0" Width="214">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+                    <StackPanel Margin="10,0,6,12">
+                        <TextBlock Text="DURATA" Style="{StaticResource SectionHeader}"/>
+                        <WrapPanel>
+                            <ToggleButton x:Name="DurWhole" Style="{StaticResource PaletteToggle}" Tag="1" Click="Duration_Click" ToolTip="Semibreve: 4 movimenti">
+                                <TextBlock Text="&#x1D15D;" FontFamily="{StaticResource MusicFont}" FontSize="19"/>
+                            </ToggleButton>
+                            <ToggleButton x:Name="DurHalf" Style="{StaticResource PaletteToggle}" Tag="2" Click="Duration_Click" ToolTip="Minima: 2 movimenti">
+                                <TextBlock Text="&#x1D15E;" FontFamily="{StaticResource MusicFont}" FontSize="19"/>
+                            </ToggleButton>
+                            <ToggleButton x:Name="DurQuarter" Style="{StaticResource PaletteToggle}" Tag="4" Click="Duration_Click" ToolTip="Semiminima: 1 movimento">
+                                <TextBlock Text="&#x1D15F;" FontFamily="{StaticResource MusicFont}" FontSize="19"/>
+                            </ToggleButton>
+                            <ToggleButton x:Name="DurEighth" Style="{StaticResource PaletteToggle}" Tag="8" Click="Duration_Click" ToolTip="Croma: ½ movimento">
+                                <TextBlock Text="&#x1D160;" FontFamily="{StaticResource MusicFont}" FontSize="19"/>
+                            </ToggleButton>
+                            <ToggleButton x:Name="DurSixteenth" Style="{StaticResource PaletteToggle}" Tag="16" Click="Duration_Click" ToolTip="Semicroma: ¼ di movimento">
+                                <TextBlock Text="&#x1D161;" FontFamily="{StaticResource MusicFont}" FontSize="19"/>
+                            </ToggleButton>
+                            <ToggleButton x:Name="DurThirtySecond" Style="{StaticResource PaletteToggle}" Tag="32" Click="Duration_Click" ToolTip="Biscroma">
+                                <TextBlock Text="&#x1D162;" FontFamily="{StaticResource MusicFont}" FontSize="19"/>
+                            </ToggleButton>
+                            <ToggleButton x:Name="DotToggle" Style="{StaticResource PaletteToggle}" Click="Dot_Click" ToolTip="Nota puntata (tasto .)">
+                                <TextBlock Text="♩." FontFamily="{StaticResource MusicFont}" FontSize="16"/>
+                            </ToggleButton>
+                            <ToggleButton x:Name="TupletToggle" Style="{StaticResource PaletteToggle}" Click="Tuplet_Click" ToolTip="Terzina (Ctrl+3)">
+                                <TextBlock Text="-3-" FontSize="12" FontWeight="SemiBold"/>
+                            </ToggleButton>
+                            <Button Style="{StaticResource PaletteButton}" Click="Rest_Click" ToolTip="Trasforma in pausa (R)">
+                                <TextBlock Text="&#x1D13D;" FontFamily="{StaticResource MusicFont}" FontSize="19"/>
+                            </Button>
+                        </WrapPanel>
+
+                        <!-- Effetti: sezioni generate dal codice -->
+                        <StackPanel x:Name="EffectsHost"/>
+
+                        <TextBlock Text="MODIFICA" Style="{StaticResource SectionHeader}"/>
+                        <WrapPanel>
+                            <Button Style="{StaticResource PaletteButton}" Content="&#xE8C8;" FontFamily="{StaticResource IconFont}" Click="Copy_Click" ToolTip="Copia: la selezione, o la battuta se non c'è selezione (Ctrl+C)"/>
+                            <Button Style="{StaticResource PaletteButton}" Content="&#xE8C6;" FontFamily="{StaticResource IconFont}" Click="Cut_Click" ToolTip="Taglia (Ctrl+X)"/>
+                            <Button x:Name="PasteButton" Style="{StaticResource PaletteButton}" Content="&#xE77F;" FontFamily="{StaticResource IconFont}" Click="Paste_Click" ToolTip="Incolla (Ctrl+V)"/>
+                            <Button Style="{StaticResource PaletteButton}" Content="&#xE8B3;" FontFamily="{StaticResource IconFont}" Click="SelectAll_Click" ToolTip="Seleziona tutta la traccia (Ctrl+A)"/>
+                        </WrapPanel>
+
+                        <TextBlock Text="BATTUTE E TEMPI" Style="{StaticResource SectionHeader}"/>
+                        <WrapPanel>
+                            <Button Style="{StaticResource PaletteButton}" Click="InsertBeat_Click" ToolTip="Inserisci un tempo prima del cursore (Ins)">
+                                <TextBlock Text="+♩" FontFamily="{StaticResource MusicFont}" FontSize="15"/>
+                            </Button>
+                            <Button Style="{StaticResource PaletteButton}" Click="DeleteBeat_Click" ToolTip="Elimina il tempo (Ctrl+Canc)">
+                                <TextBlock Text="−♩" FontFamily="{StaticResource MusicFont}" FontSize="15"/>
+                            </Button>
+                            <Button Style="{StaticResource PaletteButton}" Click="InsertBar_Click" ToolTip="Aggiungi una battuta dopo questa (Ctrl+Ins)">
+                                <TextBlock Text="+|" FontSize="15" FontWeight="SemiBold"/>
+                            </Button>
+                            <Button Style="{StaticResource PaletteButton}" Click="DeleteBar_Click" ToolTip="Elimina la battuta (Ctrl+Maiusc+Canc)">
+                                <TextBlock Text="−|" FontSize="15" FontWeight="SemiBold"/>
+                            </Button>
+                            <Button Style="{StaticResource PaletteButton}" Content="&#xE73E;" FontFamily="{StaticResource IconFont}" Click="FixBar_Click"
+                                    ToolTip="Correggi la battuta: aggiunge pause o toglie i tempi in eccesso (Ctrl+F)"/>
+                        </WrapPanel>
+
+                        <TextBlock Text="SCORCIATOIE" Style="{StaticResource SectionHeader}"/>
+                        <TextBlock Foreground="{StaticResource TextDim}" FontSize="11.5" TextWrapping="Wrap" LineHeight="17"
+                                   Text="0–9 tasto (due cifre = 10–24)&#x0a;↑↓ corda · ←→ tempo&#x0a;Maiusc+←→ seleziona · Esc annulla&#x0a;Ctrl+←→ battuta&#x0a;+ / − durata · . puntata&#x0a;Canc cancella · Ins inserisce&#x0a;Spazio play / pausa"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Spartito + manico -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Border Background="#F4F1EA" Margin="10,10,10,6" CornerRadius="4" ClipToBounds="True">
+                    <Grid>
+                        <at:AlphaTab x:Name="Tab" BarCursorFill="#22E8A33D" BeatCursorFill="#CCE8A33D" SelectionFill="#334A90E2"
+                                     PreviewMouseLeftButtonDown="Tab_PreviewMouseLeftButtonDown"/>
+                        <Canvas x:Name="Overlay" IsHitTestVisible="False" ClipToBounds="True">
+                            <Canvas x:Name="SelectionLayer"/>
+                            <Rectangle x:Name="ColumnMark" Fill="#264A90E2" RadiusX="3" RadiusY="3" Visibility="Collapsed"/>
+                            <Rectangle x:Name="CellMark" Stroke="#D9480F" StrokeThickness="2" Fill="#33D9480F" RadiusX="3" RadiusY="3" Visibility="Collapsed"/>
+                        </Canvas>
+                    </Grid>
+                </Border>
+                <Border x:Name="FretPanel" Grid.Row="1" Background="{StaticResource BgPanel}" Margin="10,0,10,6"
+                        CornerRadius="4" Padding="6,4" Visibility="Collapsed">
+                    <views:FretboardView x:Name="Fretboard"/>
+                </Border>
+            </Grid>
+
+            <!-- Pannello proprietà -->
+            <Border x:Name="InspectorPanel" Grid.Column="2" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}"
+                    BorderThickness="1,0,0,0" Width="270">
+                <DockPanel>
+                    <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="10,10,10,0">
+                        <RadioButton x:Name="TabSong" Content="BRANO" GroupName="insp" IsChecked="True" Checked="InspectorTab_Checked" Style="{StaticResource InspectorTab}"/>
+                        <RadioButton x:Name="TabTrack" Content="TRACCIA" GroupName="insp" Checked="InspectorTab_Checked" Style="{StaticResource InspectorTab}"/>
+                        <RadioButton x:Name="TabBar" Content="BATTUTA" GroupName="insp" Checked="InspectorTab_Checked" Style="{StaticResource InspectorTab}"/>
+                    </UniformGrid>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+                        <Grid Margin="14,0,14,14">
+                            <!-- Brano -->
+                            <StackPanel x:Name="SongPage">
+                                <TextBlock Text="Informazioni" Style="{StaticResource PanelHeader}"/>
+                                <TextBlock Text="Titolo" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="TitleBox" KeyDown="SongField_KeyDown" LostFocus="SongField_LostFocus"/>
+                                <TextBlock Text="Artista" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="ArtistBox" KeyDown="SongField_KeyDown" LostFocus="SongField_LostFocus"/>
+                                <TextBlock Text="Velocità iniziale (BPM)" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="TempoStartBox" Width="80" HorizontalAlignment="Left" KeyDown="SongField_KeyDown" LostFocus="SongField_LostFocus"/>
+                                <TextBlock Text="Riepilogo" Style="{StaticResource PanelHeader}"/>
+                                <TextBlock x:Name="SongSummary" Foreground="{StaticResource TextDim}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                            </StackPanel>
+
+                            <!-- Traccia -->
+                            <StackPanel x:Name="TrackPage" Visibility="Collapsed">
+                                <TextBlock Text="Traccia" Style="{StaticResource PanelHeader}"/>
+                                <TextBlock Text="Nome" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="TrackNameBox" KeyDown="TrackField_KeyDown" LostFocus="TrackField_Changed"/>
+                                <TextBlock Text="Suono" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox x:Name="TrackSoundCombo" SelectionChanged="TrackField_Changed" Focusable="False"/>
+                                <TextBlock Text="Accordatura" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox x:Name="TrackTuningCombo" SelectionChanged="TrackField_Changed" Focusable="False"/>
+                                <TextBlock Text="Capotasto" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox x:Name="TrackCapoCombo" Width="90" HorizontalAlignment="Left" SelectionChanged="TrackField_Changed" Focusable="False"/>
+                                <TextBlock x:Name="TrackInfo" Foreground="{StaticResource TextDim}" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                            </StackPanel>
+
+                            <!-- Battuta -->
+                            <StackPanel x:Name="BarPage" Visibility="Collapsed">
+                                <TextBlock x:Name="BarHeader" Text="Battuta 1" Style="{StaticResource PanelHeader}"/>
+                                <TextBlock Text="Velocità" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <CheckBox x:Name="BarTempoCheck" Content="Cambia a" VerticalAlignment="Center" Margin="0"/>
+                                    <TextBox x:Name="BarTempoBox" Width="56" Margin="8,0,6,0"/>
+                                    <TextBlock Text="BPM" Foreground="{StaticResource TextDim}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="Tempo in chiave" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBox x:Name="BarNumBox" Width="40"/>
+                                    <TextBlock Text="/" Foreground="{StaticResource TextMain}" VerticalAlignment="Center" Margin="6,0"/>
+                                    <ComboBox x:Name="BarDenCombo" Width="56" Focusable="False">
+                                        <ComboBoxItem Content="2"/>
+                                        <ComboBoxItem Content="4"/>
+                                        <ComboBoxItem Content="8"/>
+                                        <ComboBoxItem Content="16"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <TextBlock Text="Ritornello" Style="{StaticResource FieldLabel}"/>
+                                <CheckBox x:Name="BarRepeatStartCheck" Content="Inizio ritornello  ‖:"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <CheckBox x:Name="BarRepeatEndCheck" Content="Fine  :‖  ripeti" VerticalAlignment="Center" Margin="0"/>
+                                    <TextBox x:Name="BarRepeatCountBox" Width="36" Margin="8,0,6,0" Text="2"/>
+                                    <TextBlock Text="volte" Foreground="{StaticResource TextDim}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="Sezione (Intro, Strofa, Assolo…)" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="BarSectionBox"/>
+                                <Button Style="{StaticResource ToolButton}" Content="Applica alla battuta" Margin="0,16,0,0" Click="BarApply_Click"
+                                        Background="{StaticResource Accent}" Foreground="#1E1F24" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+
+        <!-- ============================== TRACCE ============================== -->
+        <Border x:Name="TracksPanel" Grid.Row="2" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <Grid DockPanel.Dock="Top" Height="28" Background="#22242A">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                        <Button Style="{StaticResource IconButton}" Content="&#xE710;" FontSize="12" Width="26" Height="24" Click="AddTrack_Click" ToolTip="Aggiungi una traccia (chitarra o basso)"/>
+                        <TextBlock Text="Tracce" Foreground="{StaticResource TextMain}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                        <TextBlock Text="nome · mute · solo · volume" Foreground="{StaticResource TextDim}" FontSize="11" VerticalAlignment="Center" Margin="70,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="Battute: clicca per andarci" Foreground="{StaticResource TextDim}" FontSize="11" VerticalAlignment="Center" Margin="432,0,0,0"/>
+                </Grid>
+                <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                    <StackPanel x:Name="TrackRows"/>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================== STATO ============================== -->
+        <Border Grid.Row="3" Background="{StaticResource BgDeep}" Padding="12,4">
+            <DockPanel>
+                <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Foreground="{StaticResource Accent}" FontSize="12" FontFamily="Consolas"/>
+                <TextBlock x:Name="StatusText" Foreground="{StaticResource TextDim}" FontSize="12" Text="Caricamento del motore audio…"
+                           TextTrimming="CharacterEllipsis"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

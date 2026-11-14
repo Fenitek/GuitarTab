@@ -1,0 +1,209 @@
+# GuitarStudio — documento di passaggio
+
+Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il progetto senza dover ricostruire niente. Contiene: obiettivo, stato attuale, architettura, trappole già scoperte, i problemi segnalati dall'utente con una prima diagnosi, e la lista del lavoro da fare.
+
+---
+
+## 1. Chi è l'utente e cosa vuole
+
+- Chitarrista (elettrica, acustica, rock e blues). Impara guardando video di tablature e rifacendole, spesso più lentamente.
+- Ha una **Blackstar ID:Core Stereo 10 V3** collegata al PC via USB (fa da scheda audio). Al momento della scrittura non era collegata: il nome esatto del dispositivo di ingresso non è noto.
+- Vuole un **vero programma Windows** (non un'app web), con un editor di tablature **all'altezza di Guitar Pro** (non ce l'ha). Le altre funzioni vanno in sezioni separate dell'app.
+- È esigente sulla **qualità dell'interfaccia**: ha bocciato una prima versione con pulsanti messi in fila senza criterio. Ha mandato come riferimento la schermata di Guitar Pro 8: barra superiore con trasporto e display, tavolozza verticale a sinistra, spartito al centro, pannello proprietà a destra (Brano/Traccia), elenco tracce con mixer e panoramica battute in basso. **Riprendere l'impostazione (convenzione comune ai programmi di notazione), non copiare la grafica o il marchio di Guitar Pro.**
+- Lingua dell'interfaccia e dei messaggi: **italiano**.
+
+## 2. Stato in breve
+
+| Sezione (barra laterale) | Stato |
+|---|---|
+| **Tab & Pratica** | Funziona: apertura file Guitar Pro / MusicXML, riproduzione, editor di tablature, pratica (velocità, loop, speed trainer, metronomo, conteggio), manico. |
+| **Allenatore** | Solo pagina segnaposto. |
+| **Trascrivi MP3** | Solo pagina segnaposto. |
+| **Libreria** | Solo pagina segnaposto. |
+
+Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
+
+## 3. Tecnologia
+
+- **C# / .NET 10 / WPF** (`net10.0-windows`). SDK installato: 10.0.204.
+- **alphaTab 1.9.0** (`AlphaTab` + `AlphaTab.Windows`, NuGet): disegno di tab e spartito, import/export Guitar Pro, sintetizzatore MIDI con SoundFont. Licenza MPL-2.0.
+- **NAudio 2.4.0**. ⚠️ Deve restare **2.4.x**: alphaTab.Windows 1.9 è compilato contro NAudio 2.4. Con NAudio 3.x l'app va in crash all'avvio della riproduzione (`TypeLoadException: Method 'Read' in type 'AlphaTab.NAudioSynthOutput'…`).
+- **SoundFont**: `Assets/sonivox.sf2` (SONiVOX GM, licenza Apache 2.0, preso dal pacchetto npm `@coderline/alphatab@1.9.0`). È piccolo (1,3 MB) e la qualità dei suoni di chitarra è bassa (vedi §6).
+
+### Compilare e avviare
+
+```bash
+dotnet build
+dotnet run --project src/GuitarStudio
+```
+
+Eseguibile: `src/GuitarStudio/bin/Debug/net10.0-windows/GuitarStudio.exe`.
+Registro errori: `%LOCALAPPDATA%\GuitarStudio\crash.log` (scritto da `App.xaml.cs`).
+
+### Autotest
+
+Con la variabile d'ambiente `GS_SELFTEST=1` l'app, dopo l'avvio, crea una tab nuova e simula la tastiera (cifre, frecce, effetti, selezione, copia/incolla, terzine, proprietà battuta, nuova traccia di basso, Drop D + capotasto, salvataggio `.gp` e rilettura, riproduzione). Il resoconto va in `%TEMP%\gs_selftest.txt` (e riga per riga in `%TEMP%\gs_selftest_live.txt`, utile se crasha). Codice: `Views/PracticeView.SelfTest.cs`.
+
+Limite: i tasti sono iniettati con `RaiseEvent` sulla vista, **non** con input reale. Il comportamento con il focus dentro lo `ScrollViewer` di alphaTab e i clic reali non è stato provato a mano.
+
+Per fotografare la finestra senza che altre finestre la coprano si è usato `PrintWindow` (user32) da PowerShell: `CopyFromScreen` cattura quello che c'è davanti.
+
+## 4. Struttura dei file
+
+```
+GuitarStudio.slnx
+src/GuitarStudio/
+  GuitarStudio.csproj          riferimenti NuGet; Assets copiati in output
+  App.xaml(.cs)                colori/stili globali (tema scuro), log degli errori non gestiti
+  MainWindow.xaml(.cs)         barra laterale con le 4 sezioni; chiede di salvare alla chiusura
+  Assets/sonivox.sf2           SoundFont (+ licenza)
+  Editing/
+    TabEditor.cs               TUTTA la logica di modifica sul modello alphaTab (nessuna UI)
+    ModelCopy.cs               copia profonda di Beat/Note via reflection (alphaTab non ha Clone pubblico)
+    InstrumentCatalog.cs       suoni MIDI chitarra/basso (programmi 24–36) e nomi delle accordature
+  Views/
+    PracticeView.xaml          layout della sezione Tab & Pratica (barra, tavolozza, spartito, pannelli)
+    PracticeView.xaml.cs       setup alphaTab, file, rendering, cursore/overlay, tastiera, trasporto
+    PracticeView.Layout.cs     tavolozza effetti, pannelli, display, ispettore Brano/Traccia/Battuta, pannello tracce
+    PracticeView.SelfTest.cs   autotest (vedi sopra)
+    FretboardView.cs           manico disegnato a mano (OnRender), cliccabile
+    TrackPropertiesWindow.*    finestra "nuova traccia" (duplica in parte InstrumentCatalog: da unificare)
+    ComingSoonView.*           segnaposto delle sezioni non fatte
+```
+
+## 5. Architettura e trappole già scoperte
+
+### alphaTab nel controllo WPF
+- Il controllo è `AlphaTab.Wpf.AlphaTab` (`x:Name="Tab"`). **Le impostazioni vanno assegnate dopo che il controllo ha applicato il template**: assegnarle in `Loaded` causa `NullReferenceException` in `WpfUiFacade.CreateCursors`. Soluzione attuale: `Dispatcher.BeginInvoke(Setup, DispatcherPriority.ContextIdle)` da `Loaded`. Servono anche `BarCursorFill`, `BeatCursorFill` e `SelectionFill` impostati in XAML.
+- Lo `ScrollViewer` interno si ottiene con `Tab.Template.FindName("PART_ScrollView", Tab)`.
+- `api.ScoreLoaded` scatta **anche a ogni `RenderScore`, in modo asincrono**. Dopo un annulla veloce può arrivare una partitura vecchia e azzerare il cursore. Soluzione: il flag `_expectingLoad`, impostato solo da Apri/Nuova/Demo; altrimenti la partitura in arrivo si ignora.
+- **Attribuzione**: alphaTab disegna "♪ alphaTab.net" sulle partiture con più di 10 battute. La licenza richiede che resti visibile; toglierla richiede il permesso dei manutentori (https://alphatab.net/docs/attribution). **Non nasconderla.**
+
+### Modello e modifiche (`TabEditor`)
+- Ogni modifica passa da `Edit(action)`: salva uno snapshot per l'annulla (export `.gp` completo, max 100), applica la modifica, chiama `Score.Finish(settings)` e lancia `Changed`. La vista allora fa `api.RenderScore(score, [trackIndex])`.
+  - ⚠️ L'export completo a ogni tasto va bene per brani piccoli, ma su file grandi sarà lento. Da ottimizzare (snapshot incrementali o comandi invertibili).
+- **Numerazione delle corde**: in alphaTab `Note.String = 1` è la corda **più grave**. Nell'editor `Line = 1` è la corda **più acuta** (in alto nella tab). Conversione: `ModelString(line) = StringCount - line + 1`.
+- Dopo inserimenti o cancellazioni di battute e tempi, `Relink()` ricostruisce a mano indici e collegamenti (MasterBar, Bar, Voice, Beat, Prev/Next). Funziona, ma dipende dai dettagli interni di alphaTab.
+- `MasterBar.KeySignature` ha un setter che scrive sulle `Bar` collegate. Impostarlo su una MasterBar nuova senza battute dà `NullReferenceException`: l'armatura si copia sulle singole `Bar`.
+- Tempo (BPM): `MasterBar.TempoAutomations` con `Automation.BuildTempoAutomation(false, 0, bpm, 0, true)`.
+- Ritornelli: `IsRepeatStart`, `RepeatCount`, poi `Score.RebuildRepeatGroups()`. Sezioni: `MasterBar.Section = new Section { Text, Marker = "" }`.
+- Nuova traccia: `Track` + `Staff` (`StringTuning`, `DisplayTranspositionPitch = -12`), canali MIDI liberi (evitando il 9, quello della batteria), battute di pause, `Score.AddTrack`.
+
+### Audio
+- ⚠️ **Crash del sintetizzatore**: suonare un'anteprima (`api.PlayNote`) su una traccia appena creata, prima che alphaTab abbia rigenerato il MIDI, causa `IndexOutOfRangeException` in `AlphaTab.Synth.Synthesis.Voice.Render`. Siccome avviene su un thread interno, **chiude il programma**. Soluzione attuale: `_midiReady = false` quando cambiano le tracce, torna `true` su `api.MidiLoaded`, e l'anteprima viene saltata finché non è pronto. Qualsiasi nuova funzione che cambia canali o programmi deve rispettare questa regola.
+
+### Cursore dell'editor sopra lo spartito
+- Si usa `api.BoundsLookup`. Per ogni battuta, `MasterBarBounds.Bars` contiene i riquadri dei pentagrammi; l'**ultimo** relativo allo staff corrente è la tab. Il suo `VisualBounds` va esattamente dalla prima all'ultima corda, quindi `y(corda) = Y + (line-1) * H/(n-1)`.
+- Le coordinate sono relative al contenuto dello ScrollViewer. Si convertono con `content.TranslatePoint(..., Overlay)` e il ridisegno avviene su `ScrollChanged` e su `PostRenderFinished`.
+
+## 6. Problemi segnalati dall'utente (da sistemare per primi)
+
+### 6.1 "Non capisco se la riproduzione è fedele (bend ecc.)"
+- **Diagnosi**: il sintetizzatore di alphaTab traduce bend, vibrato, slide e hammer-on in pitch bend e articolazioni MIDI, quindi le **note** e gli **effetti** vengono riprodotti. Non è stato verificato a orecchio. Il **timbro** invece è scarso per via del SoundFont SONiVOX (vedi 6.3).
+- **Da fare**:
+  1. Verificare a orecchio bend, release, vibrato, slide, hammer, palm mute, dead note e armonici con un file di prova.
+  2. Rendere visibile all'utente cosa viene riprodotto (es. il manico che mostra le note in tempo reale c'è già: renderlo più evidente).
+  3. Mettere una nota nella UI su cosa il motore audio supporta.
+
+### 6.2 "Legato e slide non vanno / non capisco come funzionano"
+- **Diagnosi**: H/P e Slide si applicano alla nota di **partenza** e la collegano alla **nota successiva sulla stessa corda**. Se dopo non c'è una nota sulla stessa corda, non compare né si sente niente. Se il cursore non è su una nota, l'unico avviso è una scritta piccola nella barra di stato, facile da non vedere.
+- **Da fare**:
+  - feedback chiaro e visibile quando l'effetto non si può applicare (messaggio vicino al cursore o toast);
+  - descrizioni che spiegano "dalla nota sotto il cursore alla prossima sulla stessa corda";
+  - opzionale: se il cursore è sulla nota di arrivo, applicare automaticamente alla nota precedente sulla stessa corda;
+  - un'anteprima che suoni le due note collegate;
+  - verificare che lo slide (`SlideOutType.Legato`/`Shift`) sia disegnato e suonato correttamente.
+
+### 6.3 "I suoni delle chitarre non vanno"
+- **Diagnosi**: SONiVOX è un General MIDI minimale. I programmi 24–36 (nylon, acciaio, pulita, distorta, basso…) esistono ma suonano quasi uguali e poco realistici. Non è un bug di codice: mancano campioni migliori.
+- **Da fare**:
+  - inserire un SoundFont GM migliore **con licenza che permetta di ridistribuirlo** (da verificare caso per caso: per esempio FluidR3_GM è MIT; GeneralUser GS ha una licenza permissiva);
+  - in alternativa, far scegliere all'utente un `.sf2/.sf3` suo (impostazione persistente; `api.LoadSoundFont(bytes, append)`);
+  - a lungo termine, per una distorsione credibile serve elaborazione audio (amp sim): fuori dalla portata del SoundFont.
+
+### 6.4 "Le scorciatoie a sinistra sono illeggibili"
+- Testo da 11,5 pt grigio su fondo scuro, nella tavolozza. Lo schermo dell'utente è ad alta risoluzione: la finestra catturata era 3862×2110.
+- **Da fare**:
+  - togliere il blocco "SCORCIATOIE" dalla tavolozza;
+  - creare un pannello d'aiuto leggibile (F1 o pulsante "?") con le scorciatoie divise per categoria;
+  - mettere la scorciatoia nei tooltip di ogni pulsante (in parte c'è già);
+  - in generale alzare i caratteri minimi a 13–14 e aumentare il contrasto.
+
+### 6.5 "Alcuni menu a tendina sono bianchi, vecchissimi"
+- **Diagnosi**: `ComboBox`, `ContextMenu`/`MenuItem`, `Slider`, `CheckBox`, `ScrollBar`, `ToolTip` e il popup delle ComboBox usano ancora lo stile WPF predefinito (chiaro, aspetto Windows 7). Solo i pulsanti hanno template personalizzati.
+- **Da fare**, una delle due strade:
+  - (a) il **tema Fluent integrato di .NET 9/10** (`Application.ThemeMode = Dark`; API sperimentale, va soppressa la diagnostica `WPF0001`);
+  - (b) una libreria di controlli moderna (es. **WPF-UI** di lepoco, licenza MIT, stile Windows 11), con i colori del progetto: sfondo `#1E1F24`, pannelli `#26282F`, accento `#E8A33D`.
+  - In entrambi i casi controllare tutte le viste e le finestre di dialogo e togliere gli stili fatti a mano che entrano in conflitto.
+
+### 6.6 Altro da sistemare
+- Provare con mouse e tastiera **veri**: frecce con il focus nella partitura, clic su tab e manico, Maiusc+clic, e la finestra a dimensioni normali, non ingrandita.
+- `PracticeView.xaml`: l'intestazione del pannello tracce usa un margine fisso (`Margin="432,0,0,0"`) per allinearsi alle colonne. Va legata alle colonne vere.
+- Le larghezze di tavolozza (214) e ispettore (270) sono fisse: renderle ridimensionabili con `GridSplitter`.
+- `TrackPropertiesWindow` duplica `InstrumentCatalog`: unificare.
+- I nomi delle tracce nel pannello in basso sono stati allineati a sinistra dopo l'ultima foto, ma il risultato non è stato verificato a schermo.
+
+## 7. Funzioni dell'editor già presenti
+
+- Cursore battuta/tempo/corda disegnato sopra la tab; clic per posizionarlo; Maiusc+clic o Maiusc+frecce per selezionare.
+- Cifre per il tasto (due cifre veloci = 10–24), anteprima audio della nota.
+- Durate da 1 a 1/32, punto, terzina, pausa.
+- Effetti:
+  - legato e slide: hammer/pull, slide legato e shift, slide in/out, legatura di valore;
+  - bend (1, ½, con rilascio, pre-bend) e vibrato (normale e largo);
+  - tecniche: palm mute, nota stoppata, ghost note, let ring, staccato, accenti, tapping mano sinistra;
+  - armonici naturali, artificiali e pinch;
+  - sul tempo: tapping, pennata su/giù, tremolo picking.
+- Copia, taglia e incolla (battute intere o tempi), seleziona tutto.
+- Battute e tempi: inserisci/elimina tempo e battuta, "Correggi battuta".
+- Proprietà della battuta: cambio BPM, tempo in chiave, ritornelli con numero di ripetizioni, sezione.
+- Brano: titolo, artista, BPM iniziale.
+- Tracce: aggiungi/elimina (chitarra 6/7, basso 4/5), suono, accordatura, capotasto, mute/solo/volume, panoramica battute cliccabile.
+- Annulla/ripeti (100 passi); salvataggio `.gp` (Guitar Pro 7/8) e `.atex`; lettura di `.gp3/.gp4/.gp5/.gpx/.gp/MusicXML/.capx`.
+- Pratica: velocità 25–150% senza cambiare l'intonazione, loop su selezione (trascinando sulla tab), speed trainer, metronomo, conteggio, zoom, vista tab/spartito.
+
+### Scorciatoie attuali
+| Tasto | Azione |
+|---|---|
+| 0–9 | tasto sulla corda (due cifre veloci = 10–24) |
+| ↑ ↓ / ← → | corda / tempo |
+| Maiusc+frecce, Maiusc+clic | selezione |
+| Ctrl+← → | battuta precedente/successiva |
+| Esc | annulla la selezione |
+| + / − | durata più lunga / più corta |
+| . | punto |
+| Ctrl+3 | terzina |
+| R | pausa |
+| Canc / Backspace | cancella la nota (o la selezione) |
+| Ins / Ctrl+Ins | inserisci tempo / battuta |
+| Ctrl+Canc / Ctrl+Maiusc+Canc | elimina tempo / battuta |
+| H S B V P X L T G A N | hammer, slide, bend, vibrato, palm mute, stoppata, let ring, legatura, ghost, accento, armonico |
+| Ctrl+C / X / V / A | copia, taglia, incolla, seleziona tutto |
+| Ctrl+Z / Y | annulla / ripeti |
+| Ctrl+F | correggi battuta |
+| Ctrl+B / Ctrl+T | pannello Battuta / Traccia |
+| Ctrl+N / O / S, Ctrl+Maiusc+S | nuova, apri, salva, salva come |
+| F2 | mostra/nascondi la tavolozza (= modalità modifica) |
+| Spazio | play/pausa |
+
+## 8. Cosa manca rispetto a Guitar Pro (backlog dell'editor)
+
+In ordine di utilità indicativo:
+1. Tema scuro completo e coerente (6.5) e leggibilità (6.4).
+2. SoundFont migliore e scelta del SoundFont (6.3).
+3. Seconda voce nella stessa traccia.
+4. Diagrammi degli accordi e nomi degli accordi; testo della canzone.
+5. Grace note, leva (whammy), dinamiche (p, mf, f…), crescendo.
+6. Finali alternativi dei ritornelli (prima/seconda volta), cambio d'armatura.
+7. Traccia di batteria modificabile.
+8. Stampa/PDF; export MIDI e audio (alphaTab ha `ExportAudio` e la generazione MIDI).
+9. Mixer più completo (pan, riverbero) e pannelli ridimensionabili.
+10. Prestazioni dell'annulla su brani lunghi (§5).
+
+## 9. Le altre sezioni (da fare)
+
+- **Allenatore**: ingresso audio dalla Blackstar ID:Core V3 (WASAPI; meglio ASIO se c'è il driver Blackstar, per avere poca latenza) con NAudio 2.4. Riconoscimento dell'intonazione per le linee a nota singola (YIN o simili), cromagramma per gli accordi. Confronto con la tab aperta: note giuste o sbagliate, anticipo o ritardo in millisecondi, punteggio, storico.
+- **Trascrivi MP3**: separazione delle tracce (Demucs), trascrizione in note (Basic Pitch di Spotify), riconoscimento accordi. Da MIDI a tab con un algoritmo di diteggiatura (minimizzare i salti sul manico). Il risultato si apre nell'editor come bozza. Si può usare ONNX in C# oppure un motore Python incluso.
+- **Libreria**: SQLite locale con brani, file, BPM originale, BPM raggiunto, sessioni di pratica, note personali.
+
+Non scaricare l'audio dei video di YouTube (è contro i loro termini d'uso): lavorare su file che l'utente possiede o che registra.

@@ -1,0 +1,793 @@
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
+using Rectangle = System.Windows.Shapes.Rectangle;
+using Path = System.IO.Path;
+using Color = System.Windows.Media.Color;
+using AlphaTab.Rendering.Utils;
+using AlphaTab;
+using AlphaTab.Model;
+using AlphaTab.Synth;
+using GuitarStudio.Editing;
+using Microsoft.Win32;
+using Duration = AlphaTab.Model.Duration;
+
+namespace GuitarStudio.Views;
+
+public partial class PracticeView : UserControl
+{
+    // Esercizio originale: pentatonica di La minore in quinta posizione, su e giù, poi due accordi.
+    private const string DemoTex = """
+        \title "Esercizio: pentatonica di La minore"
+        \subtitle "Posizione 5 - pennata alternata"
+        \tempo 90
+        .
+        :8 5.6 8.6 5.5 7.5 5.4 7.4 5.3 7.3 |
+        5.2 8.2 5.1 8.1 8.1 5.1 8.2 5.2 |
+        7.3 5.3 7.4 5.4 7.5 5.5 8.6 5.6 |
+        :2 (5.6 7.5 7.4) (3.5 5.4 5.3)
+        """;
+
+    // Tablatura vuota: 4 battute in 4/4 piene di pause da un quarto.
+    private const string NewTex = """
+        \title "Nuova tablatura"
+        \tempo 120
+        .
+        \track "Chitarra"
+        r.4 r.4 r.4 r.4 | r.4 r.4 r.4 r.4 | r.4 r.4 r.4 r.4 | r.4 r.4 r.4 r.4
+        """;
+
+    private bool _initialized;
+    private bool _playing;
+    private bool _soundFontReady;
+    private double _lastTick;
+
+    private TabEditor _editor = null!;
+    private string? _currentPath;
+    private ScrollViewer? _scrollViewer;
+    private bool _expectingLoad;
+    private bool _midiReady;
+
+    // Per scrivere tasti a due cifre (es. 1 poi 2 = 12).
+    private int? _lastDigit;
+    private DateTime _lastDigitTime;
+    private (int Bar, int Beat, int Line) _lastDigitPos;
+
+    public PracticeView()
+    {
+        InitializeComponent();
+        Loaded += OnLoaded;
+    }
+
+    private bool EditMode => PaletteToggle.IsChecked == true;
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_initialized) return;
+        _initialized = true;
+        // Lascia finire al controllo alphaTab la sua inizializzazione prima di configurarlo.
+        Dispatcher.BeginInvoke(Setup, System.Windows.Threading.DispatcherPriority.ContextIdle);
+    }
+
+    private void Setup()
+    {
+        var settings = new Settings();
+        settings.Core.EnableLazyLoading = false;
+        settings.Display.LayoutMode = LayoutMode.Page;
+        settings.Display.StaveProfile = StaveProfile.ScoreTab;
+        settings.Display.Scale = 1.0;
+        settings.Player.PlayerMode = PlayerMode.EnabledSynthesizer;
+        settings.Player.EnableCursor = true;
+        settings.Player.EnableAnimatedBeatCursor = true;
+        settings.Player.EnableSeekToClick = true;
+        settings.Player.EnablePlaybackRangeSelection = true;
+        settings.Player.ScrollMode = ScrollMode.Continuous;
+        Tab.Settings = settings;
+
+        var api = Tab.Api;
+        _editor = new TabEditor(api.Settings);
+        _editor.Changed += OnEditorChanged;
+        _editor.CursorMoved += OnEditorCursorMoved;
+        _editor.TracksChanged += () =>
+        {
+            // I canali audio della traccia nuova esistono solo dopo che alphaTab ha rigenerato il MIDI:
+            // suonare un'anteprima prima fa andare in crash il sintetizzatore.
+            _midiReady = false;
+            RebuildTracksPanel();
+        };
+        api.MidiLoaded.On(_ => Ui(() => _midiReady = true));
+        Fretboard.FretClicked += OnFretClicked;
+        BuildEffectButtons();
+        api.PlayedBeatChanged.On(beat => Ui(() => OnPlayedBeat(beat)));
+
+        api.Error.On(err => Ui(() => StatusText.Text = "Errore: " + err.Message));
+
+        api.SoundFontLoaded.On(() => Ui(() =>
+        {
+            _soundFontReady = true;
+            StatusText.Text = "Motore audio pronto.";
+        }));
+
+        api.PlayerReady.On(() => Ui(() =>
+        {
+            PlayButton.IsEnabled = true;
+            StopButton.IsEnabled = true;
+        }));
+
+        api.ScoreLoaded.On(score => Ui(() => OnScoreLoaded(score)));
+        api.PostRenderFinished.On(() => Ui(UpdateOverlay));
+
+        api.PlayerStateChanged.On(args => Ui(() =>
+        {
+            _playing = args.State == PlayerState.Playing;
+            PlayButton.Content = _playing ? "" : "";
+        }));
+
+        api.PlayerPositionChanged.On(args => Ui(() =>
+        {
+            TimeText.Text = $"{Fmt(args.CurrentTime)} / {Fmt(args.EndTime)}";
+
+            // Il loop è ricominciato: la posizione è tornata indietro.
+            if (_playing && api.IsLooping && args.CurrentTick + 10 < _lastTick)
+                OnLoopRestarted();
+            _lastTick = args.CurrentTick;
+        }));
+
+        var sf = Path.Combine(AppContext.BaseDirectory, "Assets", "sonivox.sf2");
+        if (File.Exists(sf))
+            api.LoadSoundFont(File.ReadAllBytes(sf), false);
+        else
+            StatusText.Text = "SoundFont non trovato: la riproduzione non funzionerà.";
+
+        api.Tex(DemoTex, null);
+    }
+
+    private ScrollViewer? ScrollView
+    {
+        get
+        {
+            if (_scrollViewer == null && Tab.Template?.FindName("PART_ScrollView", Tab) is ScrollViewer sv)
+            {
+                _scrollViewer = sv;
+                sv.ScrollChanged += (_, _) => UpdateOverlay();
+            }
+            return _scrollViewer;
+        }
+    }
+
+    private void OnScoreLoaded(Score score)
+    {
+        // alphaTab segnala ScoreLoaded anche a ogni RenderScore, in modo asincrono: dopo un
+        // annulla rapido potrebbe arrivare una versione vecchia. Si accetta una partitura nuova
+        // solo se è stata aperta/creata esplicitamente.
+        if (score != _editor.Score && (_expectingLoad || _editor.Score == null))
+        {
+            _expectingLoad = false;
+            var track = Tab.Api.Tracks.Count > 0 ? (int)Tab.Api.Tracks[0].Index : 0;
+            _editor.Attach(score, track);
+            RebuildTracksPanel();
+        }
+        UpdateTitle();
+        UpdateEditUi();
+        MaybeRunSelfTest();
+    }
+
+    // ================================================================ file
+
+    private void Open_Click(object sender, RoutedEventArgs e) => OpenFile();
+
+    private void OpenFile()
+    {
+        if (!ConfirmDiscard()) return;
+        var dlg = new OpenFileDialog
+        {
+            Title = "Apri una tablatura",
+            Filter = "Tablature (*.gp;*.gp3;*.gp4;*.gp5;*.gpx;*.xml;*.musicxml;*.mxl;*.capx)|*.gp;*.gp3;*.gp4;*.gp5;*.gpx;*.xml;*.musicxml;*.mxl;*.capx|Tutti i file|*.*"
+        };
+        if (dlg.ShowDialog() != true) return;
+
+        try
+        {
+            Tab.Api.Stop();
+            var bytes = File.ReadAllBytes(dlg.FileName);
+            _expectingLoad = true;
+            Tab.Api.Load(bytes, new List<double> { 0 });
+            _currentPath = dlg.FileName;
+            StatusText.Text = "Aperto: " + Path.GetFileName(dlg.FileName);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Non riesco ad aprire questo file:\n" + ex.Message, "GuitarStudio",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void New_Click(object sender, RoutedEventArgs e) => NewFile();
+
+    private void NewFile()
+    {
+        if (!ConfirmDiscard()) return;
+        Tab.Api.Stop();
+        _currentPath = null;
+        _expectingLoad = true;
+        Tab.Api.Tex(NewTex, null);
+        SetEditMode(true);
+        StatusText.Text = "Nuova tablatura: scrivi i numeri dei tasti, muoviti con le frecce.";
+    }
+
+    private void Demo_Click(object sender, RoutedEventArgs e)
+    {
+        if (!ConfirmDiscard()) return;
+        Tab.Api.Stop();
+        _currentPath = null;
+        _expectingLoad = true;
+        Tab.Api.Tex(DemoTex, null);
+    }
+
+    private void Save_Click(object sender, RoutedEventArgs e) => Save(false);
+    private void SaveAs_Click(object sender, RoutedEventArgs e) => Save(true);
+
+    private bool Save(bool askPath)
+    {
+        if (_editor.Score == null) return false;
+        var path = _currentPath;
+        var ext = path != null ? Path.GetExtension(path).ToLowerInvariant() : "";
+
+        // I formati vecchi (.gp5, .gpx…) si possono leggere ma non scrivere: si salva in .gp.
+        if (askPath || path == null || (ext != ".gp" && ext != ".atex"))
+        {
+            var suggested = string.IsNullOrWhiteSpace(_editor.Score.Title) ? "Tablatura" : _editor.Score.Title;
+            foreach (var c in Path.GetInvalidFileNameChars()) suggested = suggested.Replace(c, '_');
+            var dlg = new SaveFileDialog
+            {
+                Title = "Salva tablatura",
+                FileName = suggested,
+                Filter = "Guitar Pro 7/8 (*.gp)|*.gp|alphaTex, testo (*.atex)|*.atex",
+                InitialDirectory = path != null ? Path.GetDirectoryName(path) : null
+            };
+            if (dlg.ShowDialog() != true) return false;
+            path = dlg.FileName;
+            ext = Path.GetExtension(path).ToLowerInvariant();
+        }
+
+        try
+        {
+            if (ext == ".atex")
+                File.WriteAllText(path, _editor.ExportAlphaTex());
+            else
+                File.WriteAllBytes(path, _editor.ExportGp());
+            _currentPath = path;
+            _editor.MarkSaved();
+            UpdateTitle();
+            StatusText.Text = "Salvato: " + path;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+            MessageBox.Show("Salvataggio non riuscito:\n" + ex.Message, "GuitarStudio",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+    }
+
+    /// <summary>Chiede se salvare le modifiche. Restituisce false se l'utente annulla.</summary>
+    public bool ConfirmDiscard()
+    {
+        if (_editor == null || !_editor.IsDirty) return true;
+        var title = string.IsNullOrWhiteSpace(_editor.Score?.Title) ? "la tablatura" : $"«{_editor.Score!.Title}»";
+        var r = MessageBox.Show($"Vuoi salvare le modifiche a {title}?", "GuitarStudio",
+            MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+        return r switch
+        {
+            MessageBoxResult.Yes => Save(false),
+            MessageBoxResult.No => true,
+            _ => false
+        };
+    }
+
+    // ================================================================ vista e tracce
+
+    private void ViewCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (Tab?.Api == null || !_initialized) return;
+        Tab.Api.Settings.Display.StaveProfile = ViewCombo.SelectedIndex switch
+        {
+            1 => StaveProfile.Tab,
+            2 => StaveProfile.Score,
+            _ => StaveProfile.ScoreTab
+        };
+        Tab.Api.UpdateSettings();
+        Tab.Api.Render();
+    }
+
+    private void Render()
+    {
+        if (_editor.Score == null) return;
+        Tab.Api.RenderScore(_editor.Score, new List<double> { _editor.TrackIndex }, null);
+    }
+
+    // ================================================================ editor
+
+    private void OnEditorChanged()
+    {
+        _revision++;
+        Render();
+        UpdateTitle();
+        UpdateEditUi();
+        RebuildTracksPanel();
+    }
+
+    private void OnEditorCursorMoved()
+    {
+        UpdateEditUi();
+        UpdateOverlay();
+
+        // Come in Guitar Pro: il punto di partenza della riproduzione segue il cursore.
+        if (!_playing && _editor.CurrentBeat is { } beat && Tab.Api.IsReadyForPlayback)
+            Tab.Api.TickPosition = beat.AbsolutePlaybackStart;
+    }
+
+    private void UpdateEditUi()
+    {
+        if (_editor?.Score == null) return;
+        UndoButton.IsEnabled = _editor.CanUndo;
+        RedoButton.IsEnabled = _editor.CanRedo;
+        PasteButton.IsEnabled = _editor.HasClipboard;
+
+        var beat = _editor.CurrentBeat;
+        var duration = beat?.Duration ?? _editor.CurrentDuration;
+        foreach (var t in new[] { DurWhole, DurHalf, DurQuarter, DurEighth, DurSixteenth, DurThirtySecond })
+            t.IsChecked = int.Parse((string)t.Tag) == (int)duration;
+        DotToggle.IsChecked = beat?.Dots > 0;
+        TupletToggle.IsChecked = beat?.HasTuplet == true;
+
+        var note = _editor.CurrentNote;
+        foreach (var t in _effectToggles)
+            t.IsChecked = TabEditor.HasEffect(beat, note, (NoteEffect)t.Tag);
+
+        UpdateFretboard();
+        UpdateLcd();
+        UpdateInspector();
+        RefreshTrackHighlight();
+
+        if (!EditMode || !_editor.IsEditable)
+        {
+            CursorText.Text = "";
+            return;
+        }
+
+        var staff = _editor.Staff!;
+        var stringName = Tuning.GetTextForTuning(Note.GetStringTuning(staff, _editor.ModelString(_editor.Line)), false);
+        var fret = note == null ? "—" : note.IsDead ? "X" : note.Fret.ToString("0");
+        var text = $"Battuta {_editor.BarIndex + 1}/{staff.Bars.Count} · Tempo {_editor.BeatIndex + 1} · Corda {_editor.Line} ({stringName}) · Tasto {fret}";
+        if (_editor.HasSelection) text = $"{_editor.SelectedBeats().Count} tempi selezionati  ·  " + text;
+
+        if (_editor.BarFill(out var used, out var total) && Math.Abs(used - total) > 0.5)
+        {
+            var diff = Math.Abs(total - used) / 960.0; // 960 tick = un movimento da 1/4
+            text += used < total
+                ? $"  ·  ⚠ mancano {diff:0.##} mov."
+                : $"  ·  ⚠ {diff:0.##} mov. in più";
+        }
+        CursorText.Text = text;
+    }
+
+    // Manico --------------------------------------------------------
+
+    private void UpdateFretboard(Beat? playing = null)
+    {
+        if (FretPanel.Visibility != Visibility.Visible || _editor?.Staff is not { } staff || !_editor.IsEditable) return;
+        var n = _editor.StringCount;
+        var names = Enumerable.Range(1, n)
+            .Select(l => Tuning.GetTextForTuning(Note.GetStringTuning(staff, _editor.ModelString(l)), false))
+            .ToList();
+        var beat = playing ?? _editor.CurrentBeat;
+        var notes = beat == null
+            ? new List<(int, int)>()
+            : beat.Notes.Where(x => !x.IsDead).Select(x => (_editor.LineOf((int)x.String), (int)x.Fret)).ToList();
+        Fretboard.Show(n, names, (int)staff.Capo, _editor.Line, notes, playing != null);
+    }
+
+    private void OnPlayedBeat(Beat beat)
+    {
+        if (!_playing || beat.Voice?.Bar?.Staff != _editor.Staff) return;
+        UpdateFretboard(beat);
+    }
+
+    private void OnFretClicked(int line, int fret)
+    {
+        if (!_editor.IsEditable) return;
+        if (!EditMode) SetEditMode(true);
+        _editor.ToggleFretAt(line, fret);
+        PreviewCurrentNote();
+        Focus();
+    }
+
+    // Cursore e selezione sopra la tab -------------------------------
+
+    private readonly List<Rectangle> _selectionRects = new();
+
+    /// <summary>Disegna cursore (colonna + casella della corda) e selezione sopra la tab.</summary>
+    private void UpdateOverlay()
+    {
+        ColumnMark.Visibility = CellMark.Visibility = Visibility.Collapsed;
+        foreach (var r in _selectionRects) r.Visibility = Visibility.Collapsed;
+        if (!EditMode || _editor?.IsEditable != true || _editor.CurrentBeat is not { } beat) return;
+
+        var lookup = Tab.Api.BoundsLookup;
+        var sv = ScrollView;
+        if (lookup == null || sv?.Content is not FrameworkElement content) return;
+
+        var lines = Math.Max(2, _editor.StringCount);
+
+        // Selezione: un rettangolo per ogni tempo selezionato.
+        if (_editor.HasSelection)
+        {
+            var i = 0;
+            foreach (var sel in _editor.SelectedBeats())
+            {
+                var tb = TabBarBounds(lookup, (int)sel.Voice.Bar.Index);
+                var sb = tb?.Beats.FirstOrDefault(x => x.Beat == sel);
+                if (tb == null || sb == null) continue;
+                var sp = tb.VisualBounds.H / (lines - 1);
+                if (i == _selectionRects.Count)
+                {
+                    var rect = new Rectangle { Fill = new SolidColorBrush(Color.FromArgb(0x40, 0x4A, 0x90, 0xE2)) };
+                    _selectionRects.Add(rect);
+                    SelectionLayer.Children.Add(rect);
+                }
+                var r = _selectionRects[i++];
+                var p = content.TranslatePoint(new Point(sb.RealBounds.X, tb.VisualBounds.Y - sp * 0.6), Overlay);
+                Canvas.SetLeft(r, p.X);
+                Canvas.SetTop(r, p.Y);
+                r.Width = sb.RealBounds.W;
+                r.Height = tb.VisualBounds.H + sp * 1.2;
+                r.Visibility = Visibility.Visible;
+            }
+        }
+
+        var tabBar = TabBarBounds(lookup, _editor.BarIndex);
+        var bb = tabBar?.Beats.FirstOrDefault(x => x.Beat == beat);
+        if (tabBar == null || bb == null) return;
+
+        var area = tabBar.VisualBounds;
+        var spacing = area.H / (lines - 1);
+        var w = Math.Max(22, bb.VisualBounds.W + 10);
+        var x = bb.OnNotesX - w / 2;
+        var y = area.Y + (_editor.Line - 1) * spacing;
+
+        var colTop = content.TranslatePoint(new Point(x, area.Y - spacing * 0.6), Overlay);
+        Canvas.SetLeft(ColumnMark, colTop.X);
+        Canvas.SetTop(ColumnMark, colTop.Y);
+        ColumnMark.Width = w;
+        ColumnMark.Height = area.H + spacing * 1.2;
+
+        var cell = content.TranslatePoint(new Point(x, y - spacing * 0.55), Overlay);
+        Canvas.SetLeft(CellMark, cell.X);
+        Canvas.SetTop(CellMark, cell.Y);
+        CellMark.Width = w;
+        CellMark.Height = spacing * 1.1;
+
+        ColumnMark.Visibility = CellMark.Visibility = Visibility.Visible;
+
+        // Tiene il cursore dentro la parte visibile.
+        var inView = content.TranslatePoint(new Point(x, y), sv);
+        if (inView.Y < 30 || inView.Y > sv.ViewportHeight - 30)
+            sv.ScrollToVerticalOffset(Math.Max(0, sv.VerticalOffset + inView.Y - sv.ViewportHeight / 3));
+    }
+
+    /// <summary>Riquadro del pentagramma della tab della battuta (l'ultimo disegnato per lo staff).</summary>
+    private BarBounds? TabBarBounds(BoundsLookup lookup, int barIndex)
+    {
+        var mbb = lookup.FindMasterBarByIndex(barIndex);
+        return mbb?.Bars.LastOrDefault(b => b.Bar.Staff == _editor.Staff) ?? mbb?.Bars.LastOrDefault();
+    }
+
+    private void Tab_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!EditMode || _editor?.IsEditable != true) return;
+        var lookup = Tab.Api.BoundsLookup;
+        if (lookup == null || ScrollView?.Content is not FrameworkElement content) return;
+
+        var p = e.GetPosition(content);
+        foreach (var sys in lookup.StaffSystems)
+        {
+            var sb = sys.RealBounds;
+            if (p.Y < sb.Y || p.Y > sb.Y + sb.H) continue;
+            foreach (var mbb in sys.Bars)
+            {
+                var mb = mbb.RealBounds;
+                if (p.X < mb.X || p.X > mb.X + mb.W) continue;
+
+                var tabBar = mbb.Bars.LastOrDefault(b => b.Bar.Staff == _editor.Staff) ?? mbb.Bars.LastOrDefault();
+                if (tabBar == null) return;
+                var beat = tabBar.Beats
+                    .Where(b => b.Beat.Voice.Index == 0)
+                    .OrderBy(b => Math.Abs(b.OnNotesX - p.X))
+                    .FirstOrDefault();
+                if (beat == null) return;
+
+                var line = _editor.Line;
+                var area = tabBar.VisualBounds;
+                var spacing = area.H / Math.Max(1, _editor.StringCount - 1);
+                if (p.Y >= area.Y - spacing && p.Y <= area.Y + area.H + spacing)
+                    line = (int)Math.Round((p.Y - area.Y) / spacing) + 1;
+
+                // Maiusc+clic estende la selezione, come in Guitar Pro.
+                var extend = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+                _editor.MoveTo((int)mbb.Index, (int)beat.Beat.Index, line, extend);
+                Dispatcher.BeginInvoke(() => Focus());
+                return;
+            }
+        }
+    }
+
+    // Tastiera -------------------------------------------------------
+
+    private void View_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (_editor == null || e.OriginalSource is TextBox) return;
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        var ctrl = CurrentModifiers.HasFlag(ModifierKeys.Control);
+        var shift = CurrentModifiers.HasFlag(ModifierKeys.Shift);
+        e.Handled = true;
+
+        // Scorciatoie sempre attive.
+        if (ctrl)
+        {
+            switch (key)
+            {
+                case Key.O: OpenFile(); return;
+                case Key.N: NewFile(); return;
+                case Key.S: Save(shift); return;
+            }
+        }
+        if (key == Key.F2) { SetEditMode(!EditMode); return; }
+        if (key == Key.Space) { Play_Click(this, new RoutedEventArgs()); return; }
+
+        if (!EditMode || !_editor.IsEditable)
+        {
+            e.Handled = false;
+            return;
+        }
+
+        if (ctrl)
+        {
+            switch (key)
+            {
+                case Key.Z: _editor.Undo(); return;
+                case Key.Y: _editor.Redo(); return;
+                case Key.C: Copy_Click(this, e); return;
+                case Key.X: _editor.Cut(); return;
+                case Key.V: _editor.Paste(); return;
+                case Key.A: _editor.SelectAll(); return;
+                case Key.B: ShowInspector(TabBar); return;
+                case Key.T: ShowInspector(TabTrack); return;
+                case Key.F: _editor.FixBar(); return;
+                case Key.D3 or Key.NumPad3: _editor.ToggleTuplet(); return;
+            }
+        }
+
+        var digit = DigitOf(key);
+        if (digit >= 0 && !ctrl)
+        {
+            TypeDigit(digit);
+            return;
+        }
+
+        switch (key)
+        {
+            case Key.Escape: _editor.ClearSelection(); break;
+            case Key.Left when ctrl: _editor.PreviousBar(shift); break;
+            case Key.Right when ctrl: _editor.NextBar(shift); break;
+            case Key.Left: _editor.MoveLeft(shift); break;
+            case Key.Right: _editor.MoveRight(shift); break;
+            case Key.Up: _editor.MoveUp(); break;
+            case Key.Down: _editor.MoveDown(); break;
+            case Key.Home: _editor.FirstBeat(shift); break;
+            case Key.End: _editor.LastBeat(shift); break;
+
+            case Key.Delete when ctrl && shift: _editor.DeleteBar(); break;
+            case Key.Delete when ctrl: _editor.DeleteBeat(); break;
+            case Key.Delete:
+            case Key.Back: _editor.DeleteAtCursor(); break;
+            case Key.Insert when ctrl: _editor.InsertBarAfter(); break;
+            case Key.Insert: _editor.InsertBeat(); break;
+
+            case Key.Add:
+            case Key.OemPlus: _editor.LongerDuration(); break;
+            case Key.Subtract:
+            case Key.OemMinus: _editor.ShorterDuration(); break;
+            case Key.OemPeriod:
+            case Key.Decimal: _editor.ToggleDot(); break;
+            case Key.R: _editor.MakeRest(); break;
+
+            case Key.H: Effect(NoteEffect.HammerPull); break;
+            case Key.S: Effect(NoteEffect.Slide); break;
+            case Key.B: Effect(NoteEffect.Bend); break;
+            case Key.V: Effect(NoteEffect.Vibrato); break;
+            case Key.P: Effect(NoteEffect.PalmMute); break;
+            case Key.X: Effect(NoteEffect.Dead); break;
+            case Key.L: Effect(NoteEffect.LetRing); break;
+            case Key.T: Effect(NoteEffect.Tie); break;
+            case Key.G: Effect(NoteEffect.Ghost); break;
+            case Key.A: Effect(NoteEffect.Accent); break;
+            case Key.N: Effect(NoteEffect.HarmonicNatural); break;
+
+            default: e.Handled = false; break;
+        }
+    }
+
+    private static int DigitOf(Key key) => key switch
+    {
+        >= Key.D0 and <= Key.D9 => key - Key.D0,
+        >= Key.NumPad0 and <= Key.NumPad9 => key - Key.NumPad0,
+        _ => -1
+    };
+
+    private void TypeDigit(int digit)
+    {
+        var pos = (_editor.BarIndex, _editor.BeatIndex, _editor.Line);
+        var now = DateTime.Now;
+        var fret = digit;
+
+        if (_lastDigit is > 0 && pos == _lastDigitPos && (now - _lastDigitTime).TotalMilliseconds < 900
+            && _lastDigit.Value * 10 + digit <= 24)
+        {
+            fret = _lastDigit.Value * 10 + digit;
+            _lastDigit = null;
+        }
+        else
+        {
+            _lastDigit = digit;
+        }
+        _lastDigitTime = now;
+        _lastDigitPos = pos;
+
+        _editor.SetFret(fret);
+        PreviewCurrentNote();
+    }
+
+    /// <summary>Fa sentire la nota appena scritta.</summary>
+    private void PreviewCurrentNote()
+    {
+        if (_playing || !_soundFontReady || !_midiReady || _editor.CurrentNote is not { } note) return;
+        try { Tab.Api.PlayNote(note); }
+        catch (Exception ex) { App.Log(ex); }
+    }
+
+    private void Effect(NoteEffect effect)
+    {
+        if (!_editor.ToggleEffect(effect))
+            StatusText.Text = "Metti prima una nota (o seleziona dei tempi con note), poi aggiungi l'effetto.";
+    }
+
+    // Pulsanti della barra dell'editor --------------------------------
+
+    private void Duration_Click(object sender, RoutedEventArgs e)
+    {
+        var d = (Duration)int.Parse((string)((FrameworkElement)sender).Tag);
+        _editor.SetDuration(d);
+        UpdateEditUi();
+        Focus();
+    }
+
+    private void Dot_Click(object sender, RoutedEventArgs e) { _editor.ToggleDot(); UpdateEditUi(); Focus(); }
+    private void Tuplet_Click(object sender, RoutedEventArgs e) { _editor.ToggleTuplet(); UpdateEditUi(); Focus(); }
+
+    private void Copy_Click(object sender, RoutedEventArgs e)
+    {
+        var n = _editor.Copy();
+        StatusText.Text = n > 0 ? $"Copiati {n} tempi." : "Niente da copiare.";
+        UpdateEditUi();
+        Focus();
+    }
+
+    private void Cut_Click(object sender, RoutedEventArgs e) { _editor.Cut(); Focus(); }
+    private void Paste_Click(object sender, RoutedEventArgs e) { _editor.Paste(); Focus(); }
+    private void Undo_Click(object sender, RoutedEventArgs e) { _editor.Undo(); Focus(); }
+    private void Redo_Click(object sender, RoutedEventArgs e) { _editor.Redo(); Focus(); }
+    private void InsertBeat_Click(object sender, RoutedEventArgs e) { _editor.InsertBeat(); Focus(); }
+    private void DeleteBeat_Click(object sender, RoutedEventArgs e) { _editor.DeleteBeat(); Focus(); }
+    private void InsertBar_Click(object sender, RoutedEventArgs e) { _editor.InsertBarAfter(); Focus(); }
+    private void DeleteBar_Click(object sender, RoutedEventArgs e) { _editor.DeleteBar(); Focus(); }
+    private void FixBar_Click(object sender, RoutedEventArgs e) { _editor.FixBar(); Focus(); }
+
+    private void AddTrack_Click(object sender, RoutedEventArgs e)
+    {
+        if (_editor.Score == null) return;
+        var dlg = new TrackPropertiesWindow { Owner = Window.GetWindow(this) };
+        if (dlg.ShowDialog() == true && dlg.Result is { } r)
+        {
+            _editor.AddTrack(r.Name, r.Program, r.Tuning, r.IsBass);
+            if (r.Capo > 0) _editor.SetTrackProperties(r.Name, r.Program, r.Tuning, r.TuningName, r.Capo);
+            StatusText.Text = $"Aggiunta la traccia «{r.Name}».";
+        }
+        Focus();
+    }
+
+    private void DeleteTrack_Click(object sender, RoutedEventArgs e)
+    {
+        if (_editor.Score is not { } score || score.Tracks.Count <= 1)
+        {
+            StatusText.Text = "Una canzone deve avere almeno una traccia.";
+            return;
+        }
+        var name = _editor.Track?.Name;
+        if (MessageBox.Show($"Eliminare la traccia «{name}»? (Puoi annullare con Ctrl+Z)", "GuitarStudio",
+                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        _editor.DeleteTrack();
+        Focus();
+    }
+
+    // ================================================================ trasporto
+
+    private void Play_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_soundFontReady) return;
+        if (TrainerToggle.IsChecked == true && !_playing && Tab.Api.TickPosition == 0)
+            SetSpeed(ReadInt(TrainerStart, 60));
+        Tab.Api.PlayPause();
+    }
+
+    private void Stop_Click(object sender, RoutedEventArgs e) => Tab.Api.Stop();
+
+    private void SpeedSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (SpeedText == null) return;
+        SpeedText.Text = $"{(int)e.NewValue}%";
+        if (_initialized && Tab.Api != null) Tab.Api.PlaybackSpeed = e.NewValue / 100.0;
+    }
+
+    private void SetSpeed(int percent)
+    {
+        SpeedSlider.Value = Math.Clamp(percent, (int)SpeedSlider.Minimum, (int)SpeedSlider.Maximum);
+    }
+
+    private void LoopToggle_Click(object sender, RoutedEventArgs e) => Tab.Api.IsLooping = LoopToggle.IsChecked == true;
+
+    private void MetronomeToggle_Click(object sender, RoutedEventArgs e) =>
+        Tab.Api.MetronomeVolume = MetronomeToggle.IsChecked == true ? 1 : 0;
+
+    private void CountInToggle_Click(object sender, RoutedEventArgs e) =>
+        Tab.Api.CountInVolume = CountInToggle.IsChecked == true ? 1 : 0;
+
+    // ================================================================ speed trainer
+
+    private void OnLoopRestarted()
+    {
+        if (TrainerToggle.IsChecked != true) return;
+        var target = ReadInt(TrainerTarget, 100);
+        var step = Math.Max(1, ReadInt(TrainerStep, 5));
+        var current = (int)SpeedSlider.Value;
+        if (current >= target)
+        {
+            StatusText.Text = $"Obiettivo raggiunto: {target}% 🎉";
+            return;
+        }
+        var next = Math.Min(target, current + step);
+        SetSpeed(next);
+        StatusText.Text = $"Giro completato, velocità → {next}%";
+    }
+
+    // ================================================================ utilità
+
+    private static int ReadInt(TextBox box, int fallback) =>
+        int.TryParse(box.Text.Trim(), out var v) ? v : fallback;
+
+    private static string Fmt(double ms)
+    {
+        var t = TimeSpan.FromMilliseconds(Math.Max(0, ms));
+        return $"{(int)t.TotalMinutes}:{t.Seconds:00}";
+    }
+
+    private void Ui(Action a)
+    {
+        if (Dispatcher.CheckAccess()) a();
+        else Dispatcher.BeginInvoke(a);
+    }
+}
