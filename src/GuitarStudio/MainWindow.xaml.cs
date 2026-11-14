@@ -25,6 +25,7 @@ public partial class MainWindow : Window
             }
             SaveBounds();
         };
+        Closed += (_, _) => PracticePage.CompleteAutosave();
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key != Key.F1) return;

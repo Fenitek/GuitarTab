@@ -99,6 +99,11 @@ Raggio dei controlli 5 px, pannelli 6 px; niente nuovi ornamenti per una singola
 | Form | PracticeView.Layout.cs / ispettori | Campi e risorse del tema, lingua italiana |
 | Dialoghi | Ui/Dialogs.cs | Salvataggio prima della chiusura, pulsanti espliciti e focus |
 
+Il recupero automatico usa lo stesso dialogo: Recupera apre una copia da salvare con un
+nome scelto dall'utente; Elimina copia la scarta; Più tardi, Esc e chiusura del dialogo la
+conservano. La copia locale aggiornata ogni 60 secondi non toglie il segno delle modifiche
+non salvate. Solo Salva o la chiusura pulita eliminano la copia della sessione.
+
 Le voci hanno tempi e selezioni indipendenti. Cambiare voce mantiene la posizione ritmica
 quando possibile. Attivare una voce vuota crea pause modificabili ed è annullabile.
 Copia, taglia e cancella agiscono sulla voce attiva; il comando esplicito Elimina battuta

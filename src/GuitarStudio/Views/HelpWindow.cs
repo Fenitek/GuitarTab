@@ -72,6 +72,7 @@ public sealed class HelpWindow : Window
             ("Ctrl+N / O", "nuova tablatura / apri"),
             ("Ctrl+S", "salva"),
             ("Ctrl+Maiusc+S", "salva come"),
+            ("Ogni 60 secondi", "copia locale di recupero delle modifiche; all'avvio puoi recuperarla dopo un'interruzione. Salva e la chiusura pulita la eliminano"),
             ("F2", "mostra o nasconde la tavolozza (modalità modifica)"),
             ("F1", "questa guida")
         })

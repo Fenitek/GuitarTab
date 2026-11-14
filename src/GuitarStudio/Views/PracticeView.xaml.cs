@@ -158,6 +158,9 @@ public partial class PracticeView : UserControl
         RebuildRecentMenu();
         LoadSoundFont(AppSettings.Current.SoundFontPath, announce: false);
 
+        StartAutosave();
+        if (TryRecoverAutosave()) return;
+
         // Un file passato sulla riga di comando ha la precedenza sull'esercizio demo.
         if (App.StartupFile is { } startup && OpenPath(startup, confirm: false)) return;
         api.Tex(DemoTex, null);
@@ -218,6 +221,7 @@ public partial class PracticeView : UserControl
             // Si legge prima il file: se non è valido, la tablatura aperta resta al suo posto.
             var score = ScoreLoader.LoadScoreFromBytes(new Uint8Array(File.ReadAllBytes(path)), Api.Settings);
             Api.Stop();
+            ClearAutosave();
             _expectingLoad = true;
             _currentPath = path;
             Api.RenderScore(score, new List<double> { 0 }, null);
@@ -241,6 +245,7 @@ public partial class PracticeView : UserControl
     private void NewFile()
     {
         if (!ConfirmDiscard()) return;
+        ClearAutosave();
         Api.Stop();
         _currentPath = null;
         _expectingLoad = true;
@@ -252,6 +257,7 @@ public partial class PracticeView : UserControl
     private void Demo_Click(object sender, RoutedEventArgs e)
     {
         if (!ConfirmDiscard()) return;
+        ClearAutosave();
         Api.Stop();
         _currentPath = null;
         _expectingLoad = true;
@@ -295,6 +301,7 @@ public partial class PracticeView : UserControl
             AppSettings.Current.AddRecent(path);
             RebuildRecentMenu();
             ShowToast("Salvato: " + Path.GetFileName(path), ToastKind.Ok);
+            ClearAutosave();
             return true;
         }
         catch (Exception ex)

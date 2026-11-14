@@ -188,6 +188,7 @@ public partial class PracticeView
             _editor.MoveTo(0, 2, 5);
             await Task.Delay(1200);
             log.AppendLine($"cursore finale: {CursorText.Text} | traccia: {LcdTrack.Text} | play: {_playing}");
+            await VerifyAutosave(log);
             if (App.UnhandledErrorCount != initialErrors)
                 throw new InvalidOperationException("Errori non gestiti durante l'autotest: controllare crash.log.");
             log.AppendLine("OK");
@@ -207,6 +208,58 @@ public partial class PracticeView
             log.AppendLine("ECCEZIONE: " + ex);
         }
         File.WriteAllText(report, log.ToString());
+        if (Environment.GetEnvironmentVariable("GS_SELFTEST_EXIT") == "1")
+        {
+            Focus();
+            _editor.MarkSaved();
+            Application.Current.Shutdown();
+        }
+    }
+
+    private async Task VerifyAutosave(LiveLog log)
+    {
+        void Require(bool condition, string message)
+        {
+            if (!condition) throw new InvalidOperationException(message);
+            log.AppendLine("autosave OK: " + message);
+        }
+
+        Require(_autosaveTimer is { IsEnabled: true } && _autosaveTimer.Interval == TimeSpan.FromSeconds(60),
+            "timer attivo ogni 60 secondi");
+        _autosave ??= new Recovery.AutosaveStore();
+        _editor.SetTitle("Verifica recupero automatico");
+        var revision = _revision;
+        log.AppendLine("autosave: attesa del timer reale (fino a 65 secondi)");
+        var deadline = DateTime.UtcNow.AddSeconds(65);
+        while (_autosavedRevision != revision && DateTime.UtcNow < deadline) await Task.Delay(250);
+        Require(_autosavedRevision == revision && File.Exists(_autosave.FilePath), "copia creata dal timer reale");
+        var recovered = ScoreLoader.LoadScoreFromBytes(new Uint8Array(File.ReadAllBytes(_autosave.FilePath)), Api.Settings);
+        Require(recovered.Title == _editor.Score!.Title && recovered.Tracks.Count == _editor.Score.Tracks.Count,
+            "copia Guitar Pro leggibile con titolo e tracce attuali");
+        Require(_editor.IsDirty, "la copia di recupero non sostituisce Salva");
+
+        var path = Path.Combine(Path.GetTempPath(), $"gs_autosave_selftest_{Guid.NewGuid():N}.gp");
+        var recent = AppSettings.Current.RecentFiles.ToList();
+        try
+        {
+            _currentPath = path;
+            Require(Save(false), "salvataggio esplicito riuscito");
+            Require(!File.Exists(_autosave.FilePath) && !_editor.IsDirty, "Salva elimina la copia di recupero");
+            _editor.SetFret(17);
+            AutosaveTick(null, EventArgs.Empty);
+            Require(File.Exists(_autosave.FilePath), "una nuova modifica ricrea la copia");
+            log.AppendLine("autosave chiusura: " + _autosave.FilePath);
+            // Closed chiamerà CompleteAutosave: il controllo finale avviene anche dall'esterno.
+            _editor.MarkSaved();
+        }
+        finally
+        {
+            _currentPath = null;
+            AppSettings.Current.RecentFiles = recent;
+            AppSettings.Current.Save();
+            RebuildRecentMenu();
+            File.Delete(path);
+        }
     }
 
     private async Task VerifyVoiceEdits(LiveLog log)

@@ -23,6 +23,35 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.4.0
+
+- `Recovery/AutosaveStore.cs`: una copia `.gp` per sessione in
+  `%LOCALAPPDATA%\GuitarStudio\autosave\`; lease `.lock` esclusivo, temporaneo `.tmp`,
+  flush e sostituzione atomica sullo stesso volume. Le sessioni attive vengono escluse dal recupero.
+  Dispose rilascia il lease ma conserva il `.gp`; Delete lo elimina esplicitamente.
+- `PracticeView.Autosave.cs`: DispatcherTimer ogni 60 secondi, solo se IsDirty e la revisione
+  è cambiata dall'ultima copia. Export e scrittura sul dispatcher per evitare corse col modello.
+  Se fallisce, avviso e nuovo tentativo al giro seguente; non viene mai chiamato MarkSaved.
+- Il recupero precede demo/file da riga di comando; dialogo canonico Ui/Dialogs.cs con
+  Recupera / Elimina copia / Più tardi. Chiudere o premere Esc equivale a Più tardi.
+  Più tardi e copie illeggibili restano sul disco; ogni copia orfana viene proposta dalla più recente.
+  Una copia accettata mantiene il proprio lease e diventa documento senza percorso, IsDirty=true.
+- Salvataggio riuscito, apertura/nuova/demo dopo conferma e Closed eliminano solo la copia
+  della sessione; chiusura annullata e salvataggio fallito la conservano. Il timer si ferma in Closed.
+- `TabEditor.Attach(..., isDirty: true)` serve al recupero; il comportamento predefinito resta pulito.
+- Test xUnit per scrittura/rilettura, sessioni attive, lease orfani, recupero e guasti I/O.
+  Parallelismo tra classi disattivato: alphaTab inizializza metadati SMuFL globali senza
+  sincronizzazione e i primi Settings costruiti in parallelo possono dare Collection modified.
+  L'autotest WPF aspetta un tick reale, verifica il salvataggio esplicito e prepara una copia
+  da controllare dopo Closed. `GS_SELFTEST_EXIT=1` chiude pulitamente dopo il report;
+  usarlo insieme a `GS_SELFTEST=1` per verifiche non interattive (durata circa un minuto).
+- Verifica v0.4.0: `dotnet build` 0 avvisi/0 errori, `dotnet test` 37/37;
+  autotest con tick reale e `GS_SELFTEST_EXIT=1` terminato con OK, copia e lease rimossi
+  dopo la chiusura. Nessuna nuova eccezione nel crash.log. Audit statico UI senza rilievi.
+  Il controllo manuale delle finestre è stato interrotto con Esc dall'utente; il nuovo
+  dialogo di recupero non è stato provato manualmente. La logica di persistenza/recupero
+  è coperta dai test senza UI.
+
 ### Aggiornamento v0.3.1
 
 - `tests/GuitarStudio.Tests`: xUnit, `net10.0-windows`, incluso nella soluzione.

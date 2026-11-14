@@ -3,6 +3,17 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.4.0 — 2026-11-14
+
+- **Salvataggio automatico di recupero**: ogni 60 secondi le nuove modifiche vengono copiate
+  in formato Guitar Pro in `%LOCALAPPDATA%\GuitarStudio\autosave\`, senza cambiare il file originale.
+- Dopo un'interruzione, all'avvio puoi recuperare la copia, eliminarla oppure decidere più tardi.
+  Una tablatura recuperata resta da salvare: scegli tu dove conservarla.
+- Salva e la chiusura pulita eliminano la copia della sessione; annullare la chiusura la conserva.
+  Le istanze aperte usano copie separate e non interferiscono tra loro.
+- Scrittura atomica per conservare la copia precedente se l'aggiornamento non riesce;
+  test aggiunti per copie, recupero, errori di scrittura e isolamento tra sessioni.
+
 ## 0.3.1 — 2026-11-14
 
 - Aggiunta una suite di test automatici per note, durate, battute, appunti, voci, tracce,

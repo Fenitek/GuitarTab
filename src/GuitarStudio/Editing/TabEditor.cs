@@ -132,7 +132,7 @@ public sealed class TabEditor
 
     // ---------------------------------------------------------------- caricamento
 
-    public void Attach(Score score, int trackIndex)
+    public void Attach(Score score, int trackIndex, bool isDirty = false)
     {
         Score = score;
         TrackIndex = Math.Clamp(trackIndex, 0, Math.Max(0, score.Tracks.Count - 1));
@@ -141,7 +141,7 @@ public sealed class TabEditor
         VoiceIndex = 0;
         Line = 1;
         _anchor = null;
-        IsDirty = false;
+        IsDirty = isDirty;
         _undo.Clear();
         _redo.Clear();
         ClampCursor();
