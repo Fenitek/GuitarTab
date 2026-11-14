@@ -87,6 +87,14 @@ internal static class EditorFixture
 
     internal static void AssertModel(Score score)
     {
+        var bars = score.Tracks.SelectMany(t => t.Staves).SelectMany(s => s.Bars).ToList();
+        var voices = bars.SelectMany(b => b.Voices).ToList();
+        var beats = voices.SelectMany(v => v.Beats).ToList();
+        Assert.Equal(bars.Count, bars.Select(b => b.Id).Distinct().Count());
+        Assert.Equal(voices.Count, voices.Select(v => v.Id).Distinct().Count());
+        Assert.Equal(beats.Count, beats.Select(b => b.Id).Distinct().Count());
+        var notes = beats.SelectMany(b => b.Notes).ToList();
+        Assert.Equal(notes.Count, notes.Select(n => n.Id).Distinct().Count());
         for (var i = 0; i < score.MasterBars.Count; i++)
         {
             var master = score.MasterBars[i];

@@ -62,6 +62,7 @@ public partial class PracticeView
     /// <summary>Solo dopo Closed: annullare la chiusura deve conservare timer e copia.</summary>
     public void CompleteAutosave()
     {
+        CancelPendingMidiReload();
         _autosaveTimer?.Stop();
         ClearAutosave();
         _autosave?.Dispose();

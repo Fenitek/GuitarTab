@@ -109,6 +109,11 @@ quando possibile. Attivare una voce vuota crea pause modificabili ed è annullab
 Copia, taglia e cancella agiscono sulla voce attiva; il comando esplicito Elimina battuta
 rimuove la battuta in tutte le tracce. Salvare .gp conserva tutte le voci.
 
+Gli edit aggiornano subito stato, cursore e celle della panoramica. Il mixer riusa i suoi
+controlli finché tracce e numero battute non cambiano. Il ridisegno completo è accorpato
+dopo circa 16 ms; il MIDI dopo circa 300 ms dall'ultimo tasto. Durante l'attesa le anteprime
+sono bloccate. Il renderer resta sincrono sul dispatcher, senza worker.
+
 ## Do's and Don'ts
 
 - Riutilizzare ToolToggle, SectionHeader e le risorse del tema, come le durate accanto.

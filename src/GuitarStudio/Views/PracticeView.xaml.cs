@@ -1,4 +1,5 @@
 using System.IO;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -112,14 +113,8 @@ public partial class PracticeView : UserControl
         {
             RebuildTracksPanel();
         };
-        api.MidiLoad.On(_ => Ui(() => _midiReady = false));
-        api.MidiLoaded.On(_ => Ui(() =>
-        {
-            _midiReady = true;
-            // Il ricaricamento del MIDI azzera la posizione: torna alla nota dell'editor.
-            if (!_playing && _editor.CurrentBeat is { } beat)
-                api.TickPosition = beat.AbsolutePlaybackStart;
-        }));
+        api.MidiLoad.On(_ => Ui(OnMidiLoad));
+        api.MidiLoaded.On(_ => Ui(OnMidiLoaded));
         Fretboard.FretClicked += OnFretClicked;
         BuildEffectButtons();
         api.PlayedBeatChanged.On(beat => Ui(() => OnPlayedBeat(beat)));
@@ -194,6 +189,7 @@ public partial class PracticeView : UserControl
         UpdateTitle();
         UpdateEditUi();
         MaybeRunSelfTest();
+        MaybeRunPerformanceBenchmark();
     }
 
     // ================================================================ file
@@ -221,6 +217,7 @@ public partial class PracticeView : UserControl
             // Si legge prima il file: se non è valido, la tablatura aperta resta al suo posto.
             var score = ScoreLoader.LoadScoreFromBytes(new Uint8Array(File.ReadAllBytes(path)), Api.Settings);
             Api.Stop();
+            CancelPendingMidiReload();
             ClearAutosave();
             _expectingLoad = true;
             _currentPath = path;
@@ -247,6 +244,7 @@ public partial class PracticeView : UserControl
         if (!ConfirmDiscard()) return;
         ClearAutosave();
         Api.Stop();
+        CancelPendingMidiReload();
         _currentPath = null;
         _expectingLoad = true;
         Api.Tex(NewTex, null);
@@ -259,6 +257,7 @@ public partial class PracticeView : UserControl
         if (!ConfirmDiscard()) return;
         ClearAutosave();
         Api.Stop();
+        CancelPendingMidiReload();
         _currentPath = null;
         _expectingLoad = true;
         Api.Tex(DemoTex, null);
@@ -345,6 +344,7 @@ public partial class PracticeView : UserControl
 
     private void Render()
     {
+        CancelPendingEditorRender();
         if (_editor.Score == null) return;
         Api.RenderScore(_editor.Score, new List<double> { _editor.TrackIndex }, null);
     }
@@ -353,6 +353,9 @@ public partial class PracticeView : UserControl
 
     private void OnEditorChanged()
     {
+        var total = Stopwatch.StartNew();
+        _lastDeferredRenderMs = 0;
+        _lastDeferredMidiMs = 0;
         _revision++;
         // RenderScore rigenera il MIDI solo quando cambia l'istanza di Score (es. Annulla).
         // Scrivere note o cambiare BPM/suono modifica invece lo stesso oggetto: senza questo
@@ -360,12 +363,21 @@ public partial class PracticeView : UserControl
         var reloadMidi = ReferenceEquals(Api.Score, _editor.Score);
         Api.Stop();
         // Mai suonare anteprime con i canali del vecchio MIDI, soprattutto dopo nuove tracce.
-        _midiReady = false;
-        Render();
-        if (reloadMidi) Api.LoadMidiForScore();
+        ScheduleMidiReload();
+        var step = Stopwatch.StartNew();
+        if (reloadMidi) ScheduleEditorRender();
+        else Render();
+        var renderMs = step.Elapsed.TotalMilliseconds;
+        step.Restart();
+        // Una nuova istanza di Score avvia già un caricamento interno ad alphaTab.
+        // Per gli edit nello stesso modello raggruppa le cifre prima di rigenerare il MIDI.
+        if (!reloadMidi) _midiReloadTimer?.Stop();
+        var midiMs = step.Elapsed.TotalMilliseconds;
         UpdateTitle();
         UpdateEditUi();
+        step.Restart();
         RebuildTracksPanel();
+        _lastChangeTiming = new EditorChangeTiming(total.Elapsed.TotalMilliseconds, renderMs, midiMs, step.Elapsed.TotalMilliseconds);
     }
 
     private void OnEditorCursorMoved()

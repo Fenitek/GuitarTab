@@ -23,6 +23,45 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.4.1
+
+- Misure/limiti in `docs/PERFORMANCE.md`, campioni in `docs/benchmarks/v0.4.1.csv`.
+  AlphaTex generato: 200 battute, 4 tracce, 6.400 tempi e 8.000 note, Release.
+  Modello SetFret 697,48 → 3,81 ms; Undo locale 978,69 → 3,67 ms.
+  App cifra 849,27 → 8,28 ms (massimo 17,76); Undo locale 1.170,04 → 6,32 ms.
+  Il budget è del gestore, non tasto → immagine: render differito ancora 86,24 ms.
+  InsertBarAfter resta strutturale, circa 650 ms nell'app; il brano non è stato paginato.
+- `Editing/HistorySnapshot.cs`: snapshot lossless delle battute locali (tutte le voci),
+  più confinanti/estremi di collegamenti. Struttura, attivazione voci, proprietà traccia,
+  brano e tempo in chiave conservano lo snapshot `.gp` completo. Undo/Redo catturano
+  l'inverso dello stesso tipo; per gli edit locali l'istanza Score resta viva.
+- Adattatore reflection isolato per BarSerializer e MapObjectReader/Writer **interni ad
+  alphaTab 1.9**: conserva anche automazioni, testi e stili. Non fare Finish su una battuta
+  isolata: perde legature esterne. Ripristino: Relink, lookup note per indirizzo, Chain,
+  Finish dell'intero Score. `ChangedBars` espone le battute locali; null per cambiamenti globali.
+- **Trappole**: gli importer azzerano i contatori statici degli ID; con snapshot locali
+  possono creare collisioni, corrette prima di Changed. Finish non elimina sempre un vecchio
+  SlideTarget: prima di Finish si puliscono i riferimenti a note staccate. Test dedicati.
+- `PracticeView.Playback.cs`: debounce MIDI 300 ms. Ogni edit blocca `_midiReady`;
+  caricamenti associati a Score/revisione, MidiLoaded vecchi non abilitano anteprime.
+  Apri/Nuova/Demo e Closed annullano il timer. Un nuovo Score (Undo strutturale) genera
+  ancora MIDI implicitamente in alphaTab.RenderScore; gli edit locali non cambiano Score.
+- `PracticeView.Rendering.cs`: render dopo 16 ms a priorità Background, accorpato sul
+  dispatcher. **UseWorkers resta false** in entrambi i punti di inizializzazione. WPF
+  impone lazy loading disabilitato: non forzarlo per usare RenderHints incrementali.
+  Render espliciti/cambio documento cancellano la richiesta pendente; il callback usa
+  il modello corrente. Il ridisegno completo rimane costoso e può bloccare brevemente la UI.
+- Pannello tracce: chiave su riferimenti/nome/suono tracce e numero battute. Edit locali
+  aggiornano solo celle/tooltip coinvolti. Il cambio Score strutturale ricrea i controlli
+  per ricollegare gli handler al modello nuovo, senza closure su vecchi Track.
+- `GS_BENCHMARK=1` avvia la misura nell'app, `GS_PERF_APP_REPORT` sceglie il JSON;
+  l'istanza si chiude da sola. `GS_PERF_MODEL_REPORT` registra PerformanceTests.
+  Non usare GS_BENCHMARK con GS_SELFTEST. Stopwatch separa Render, LoadMidiForScore,
+  pannello e lavoro differito. Una raffica di 12 edit verifica 1 render, 1 MIDI,
+  0 ricostruzioni pannello e anteprime bloccate fino al MIDI pronto.
+- Verifiche: 45 test verdi (37 precedenti più 8 nuovi), autotest OK anche per audio e
+  autosave reale; benchmark nell'app concluso senza nuove eccezioni.
+
 ### Aggiornamento v0.4.0
 
 - `Recovery/AutosaveStore.cs`: una copia `.gp` per sessione in
@@ -175,8 +214,11 @@ src/GuitarStudio/
 - **Attribuzione**: alphaTab disegna "♪ alphaTab.net" sulle partiture con più di 10 battute. La licenza richiede che resti visibile; toglierla richiede il permesso dei manutentori (https://alphatab.net/docs/attribution). **Non nasconderla.**
 
 ### Modello e modifiche (`TabEditor`)
-- Ogni modifica passa da `Edit(action)`: salva uno snapshot per l'annulla (export `.gp` completo, max 100), applica la modifica, chiama `Score.Finish(settings)` e lancia `Changed`. La vista allora fa `api.RenderScore(score, [trackIndex])`.
-  - ⚠️ L'export completo a ogni tasto va bene per brani piccoli, ma su file grandi sarà lento. Da ottimizzare (snapshot incrementali o comandi invertibili).
+- Ogni modifica passa da `Edit(action)`: snapshot locale per note/tempi/appunti locali,
+  `.gp` completo per operazioni strutturali (max 100 passi). Pulisce collegamenti staccati,
+  chiama `Score.Finish(settings)`, corregge ID duplicati e lancia Changed. La vista aggiorna
+  subito i controlli, accorpa il render dopo 16 ms e il MIDI dopo 300 ms. Restano costosi
+  esportazione, annulla strutturale e render completo (vedi v0.4.1).
 - **Numerazione delle corde**: in alphaTab `Note.String = 1` è la corda **più grave**. Nell'editor `Line = 1` è la corda **più acuta** (in alto nella tab). Conversione: `ModelString(line) = StringCount - line + 1`.
 - Dopo inserimenti o cancellazioni di battute e tempi, `Relink()` ricostruisce a mano indici e collegamenti (MasterBar, Bar, Voice, Beat, Prev/Next). Funziona, ma dipende dai dettagli interni di alphaTab.
 - `MasterBar.KeySignature` ha un setter che scrive sulle `Bar` collegate. Impostarlo su una MasterBar nuova senza battute dà `NullReferenceException`: l'armatura si copia sulle singole `Bar`.

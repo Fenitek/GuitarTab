@@ -341,25 +341,31 @@ public partial class PracticeView
         Api.MidiLoad.On(CaptureMidi);
         try
         {
+            async Task WaitForMidi(Func<bool> condition)
+            {
+                var deadline = DateTime.UtcNow.AddSeconds(4);
+                while ((!_midiReady || !condition()) && DateTime.UtcNow < deadline) await Task.Delay(25);
+            }
             _editor.MoveTo(0, 0, 6);
             _editor.SetFret(5);
-            await Task.Delay(300);
+            Require(!_midiReady, "anteprime bloccate durante l'attesa del MIDI aggiornato");
+            await WaitForMidi(() => loadedMidi?.Events.OfType<NoteOnEvent>().Any(n => n.NoteKey == 45) == true);
             Require(loadedMidi?.Events.OfType<NoteOnEvent>().Any(n => n.NoteKey == 45) == true,
                 "la nota scritta nella tablatura vuota arriva al MIDI del lettore");
 
             _editor.SetStartTempo(75);
-            await Task.Delay(300);
+            await WaitForMidi(() => Math.Abs(Api.EndTime - 12800) < 2);
             Require(Math.Abs(Api.EndTime - 12800) < 2, "il lettore usa il nuovo BPM (4 battute a 75 BPM = 12,8 s)");
 
             _editor.SetFret(7);
-            await Task.Delay(300);
+            await WaitForMidi(() => loadedMidi?.Events.OfType<NoteOnEvent>().Any(n => n.NoteKey == 47) == true);
             Require(loadedMidi!.Events.OfType<NoteOnEvent>().Any(n => n.NoteKey == 47) &&
                     !loadedMidi.Events.OfType<NoteOnEvent>().Any(n => n.NoteKey == 45),
                 "il lettore sostituisce la vecchia nota dopo una modifica");
 
             var staff = _editor.Staff!;
             _editor.SetTrackProperties("Chitarra", 25, staff.Tuning.ToList(), staff.StringTuning.Name, 0);
-            await Task.Delay(300);
+            await WaitForMidi(() => loadedMidi?.Events.OfType<ProgramChangeEvent>().Any(p => p.Program == 25) == true);
             Require(loadedMidi.Events.OfType<ProgramChangeEvent>().Any(p => p.Program == 25),
                 "il cambio di suono raggiunge il sintetizzatore");
 

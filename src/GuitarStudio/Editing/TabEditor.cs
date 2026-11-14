@@ -71,8 +71,8 @@ public sealed class TabEditor
     private const int DrumChannel = 9;
 
     private readonly Settings _settings;
-    private readonly List<byte[]> _undo = new();
-    private readonly List<byte[]> _redo = new();
+    private readonly List<HistorySnapshot> _undo = new();
+    private readonly List<HistorySnapshot> _redo = new();
 
     // Selezione: punto d'ancoraggio (battuta, tempo); l'altro estremo è il cursore.
     private (int Bar, int Beat)? _anchor;
@@ -97,6 +97,8 @@ public sealed class TabEditor
 
     public Duration CurrentDuration { get; private set; } = Duration.Quarter;
     public bool IsDirty { get; private set; }
+    /// <summary>Battute interessate dall'ultimo edit locale; null per un cambiamento globale.</summary>
+    public IReadOnlyList<int>? ChangedBars { get; private set; }
     public bool CanUndo => _undo.Count > 0;
     public bool CanRedo => _redo.Count > 0;
     public bool HasSelection => _anchor != null && _anchor != (BarIndex, BeatIndex);
@@ -142,6 +144,7 @@ public sealed class TabEditor
         Line = 1;
         _anchor = null;
         IsDirty = isDirty;
+        ChangedBars = null;
         _undo.Clear();
         _redo.Clear();
         ClampCursor();
@@ -286,7 +289,7 @@ public sealed class TabEditor
 
     private void AppendRestInBar(Voice voice)
     {
-        Edit(() =>
+        EditLocal(() =>
         {
             voice.AddBeat(NewRest(CurrentDuration));
             Relink();
@@ -451,7 +454,7 @@ public sealed class TabEditor
                 BeatIndex = Math.Min(insertAt, voice.Beats.Count - 1);
             }
             _anchor = null;
-        });
+        }, _clipboardWholeBars ? null : HistorySnapshot.Bars.Capture([CurrentBar!]));
     }
 
     /// <summary>Elimina i tempi della sola voce selezionata, preservando le altre voci.</summary>
@@ -461,7 +464,7 @@ public sealed class TabEditor
         var beats = SelectedBeats();
         if (beats.Count == 0) return;
         var (from, _) = SelectionRange();
-        Edit(() =>
+        EditSelected(() =>
         {
             foreach (var beat in beats)
             {
@@ -483,7 +486,7 @@ public sealed class TabEditor
     {
         if (!IsEditable || CurrentBeat is not { } beat) return;
         fret = Math.Clamp(fret, 0, MaxFret);
-        Edit(() =>
+        EditLocal(() =>
         {
             var str = ModelString(Line);
             var note = beat.GetNoteOnString(str);
@@ -507,7 +510,7 @@ public sealed class TabEditor
         Line = Math.Clamp(line, 1, StringCount);
         var existing = beat.GetNoteOnString(ModelString(Line));
         if (existing != null && (int)existing.Fret == fret)
-            Edit(() => beat.RemoveNote(existing));
+            EditLocal(() => beat.RemoveNote(existing));
         else
             SetFret(fret);
     }
@@ -523,7 +526,7 @@ public sealed class TabEditor
         }
         var note = CurrentNote;
         if (note != null)
-            Edit(() => beat.RemoveNote(note));
+            EditLocal(() => beat.RemoveNote(note));
         else
             DeleteBeat();
     }
@@ -533,7 +536,7 @@ public sealed class TabEditor
         if (!IsEditable) return;
         var beats = SelectedBeats().Where(b => b.Notes.Count > 0).ToList();
         if (beats.Count == 0) return;
-        Edit(() =>
+        EditSelected(() =>
         {
             foreach (var beat in beats)
                 foreach (var n in beat.Notes.ToList()) beat.RemoveNote(n);
@@ -553,7 +556,7 @@ public sealed class TabEditor
             var beats = SelectedBeats().Where(b => b.Notes.Count > 0).ToList();
             if (beats.Count == 0) return false;
             var on = !HasEffect(beats[0], null, effect);
-            Edit(() => { foreach (var b in beats) SetBeatEffect(b, effect, on); });
+            EditSelected(() => { foreach (var b in beats) SetBeatEffect(b, effect, on); });
             return true;
         }
 
@@ -562,7 +565,7 @@ public sealed class TabEditor
             : CurrentNote is { } n ? new List<Note> { n } : new List<Note>();
         if (notes.Count == 0) return false;
         var enable = !HasEffect(notes[0].Beat, notes[0], effect);
-        Edit(() => { foreach (var note in notes) SetNoteEffect(note, effect, enable); });
+        EditSelected(() => { foreach (var note in notes) SetNoteEffect(note, effect, enable); });
         return true;
     }
 
@@ -716,7 +719,7 @@ public sealed class TabEditor
         if (!IsEditable) return;
         var beats = SelectedBeats().Where(b => b.Duration != duration).ToList();
         if (beats.Count == 0) { CursorMoved?.Invoke(); return; }
-        Edit(() => { foreach (var b in beats) b.Duration = duration; });
+        EditSelected(() => { foreach (var b in beats) b.Duration = duration; });
     }
 
     public void LongerDuration() => StepDuration(-1);
@@ -735,7 +738,7 @@ public sealed class TabEditor
         var beats = SelectedBeats();
         if (!IsEditable || beats.Count == 0) return;
         var on = beats[0].Dots == 0;
-        Edit(() => { foreach (var b in beats) b.Dots = on ? 1 : 0; });
+        EditSelected(() => { foreach (var b in beats) b.Dots = on ? 1 : 0; });
     }
 
     /// <summary>Terzina (3 nel tempo di 2), o altro gruppo irregolare.</summary>
@@ -744,7 +747,7 @@ public sealed class TabEditor
         var beats = SelectedBeats();
         if (!IsEditable || beats.Count == 0) return;
         var on = !(beats[0].TupletNumerator == numerator && beats[0].TupletDenominator == denominator);
-        Edit(() =>
+        EditSelected(() =>
         {
             foreach (var b in beats)
             {
@@ -762,7 +765,7 @@ public sealed class TabEditor
     public void InsertBeat()
     {
         if (!IsEditable || CurrentVoice is not { } voice) return;
-        Edit(() =>
+        EditLocal(() =>
         {
             var b = NewRest(CurrentDuration);
             b.Voice = voice;
@@ -780,7 +783,7 @@ public sealed class TabEditor
             MakeRest();
             return;
         }
-        Edit(() =>
+        EditLocal(() =>
         {
             voice.Beats.RemoveAt(BeatIndex);
             Relink();
@@ -818,7 +821,7 @@ public sealed class TabEditor
     {
         if (!IsEditable || CurrentVoice is not { } voice) return;
         if (!BarFill(out var used, out var total) || Math.Abs(used - total) < 0.5) return;
-        Edit(() =>
+        EditLocal(() =>
         {
             if (used > total)
             {
@@ -1164,7 +1167,7 @@ public sealed class TabEditor
     public void Undo()
     {
         if (_undo.Count == 0 || Score == null) return;
-        _redo.Add(ExportGp());
+        _redo.Add(_undo[^1].CaptureCurrent(this));
         Restore(_undo[^1]);
         _undo.RemoveAt(_undo.Count - 1);
     }
@@ -1172,36 +1175,100 @@ public sealed class TabEditor
     public void Redo()
     {
         if (_redo.Count == 0 || Score == null) return;
-        _undo.Add(ExportGp());
+        _undo.Add(_redo[^1].CaptureCurrent(this));
         Restore(_redo[^1]);
         _redo.RemoveAt(_redo.Count - 1);
     }
 
-    private void Restore(byte[] snapshot)
+    private void Restore(HistorySnapshot snapshot)
     {
         var trackCount = Score?.Tracks.Count;
-        Score = Import(snapshot);
+        snapshot.Restore(this);
+        EnsureUniqueIds();
+        ChangedBars = snapshot.BarIndices;
         IsDirty = true;
         _anchor = null;
         ClampCursor();
         Changed?.Invoke();
-        if (trackCount != Score.Tracks.Count) TracksChanged?.Invoke();
+        if (trackCount != Score!.Tracks.Count) TracksChanged?.Invoke();
     }
 
+    internal void RestoreScore(byte[] bytes) => Score = Import(bytes);
+
+    internal void FinishRestoredBars(Action chain)
+    {
+        Relink();
+        chain();
+        Score!.Finish(_settings);
+    }
+
+    private void EditSelected(Action change) => EditLocal(change, SelectedBeats().Select(b => b.Voice.Bar));
+
+    private void EditLocal(Action change, IEnumerable<Bar>? bars = null) =>
+        Edit(change, HistorySnapshot.Bars.Capture(bars ?? [CurrentBar!]));
+
     /// <summary>Esegue una modifica: salva lo stato per l'annulla, applica, ricalcola il modello.</summary>
-    private void Edit(Action change)
+    private void Edit(Action change, HistorySnapshot? snapshot = null)
     {
         if (Score == null) return;
-        _undo.Add(ExportGp());
+        _undo.Add(snapshot ?? new HistorySnapshot.Full(ExportGp()));
         if (_undo.Count > MaxUndo) _undo.RemoveAt(0);
         _redo.Clear();
 
         change();
 
+        RemoveDetachedNoteLinks();
         Score.Finish(_settings);
+        EnsureUniqueIds();
+        ChangedBars = snapshot?.BarIndices;
         IsDirty = true;
         ClampCursor();
         Changed?.Invoke();
+    }
+
+    private void RemoveDetachedNoteLinks()
+    {
+        var notes = Score!.Tracks.SelectMany(t => t.Staves).SelectMany(s => s.Bars)
+            .SelectMany(b => b.Voices).SelectMany(v => v.Beats).SelectMany(b => b.Notes).ToHashSet();
+        Note? Live(Note? note) => note != null && notes.Contains(note) ? note : null;
+        foreach (var note in notes)
+        {
+            note.SlideTarget = Live(note.SlideTarget);
+            note.SlideOrigin = Live(note.SlideOrigin);
+            note.TieOrigin = Live(note.TieOrigin);
+            note.TieDestination = Live(note.TieDestination);
+            note.HammerPullOrigin = Live(note.HammerPullOrigin);
+            note.HammerPullDestination = Live(note.HammerPullDestination);
+            note.SlurOrigin = Live(note.SlurOrigin);
+            note.SlurDestination = Live(note.SlurDestination);
+            note.EffectSlurOrigin = Live(note.EffectSlurOrigin);
+            note.EffectSlurDestination = Live(note.EffectSlurDestination);
+            note.BendOrigin = Live(note.BendOrigin);
+            note.LetRingDestination = Live(note.LetRingDestination);
+            note.PalmMuteDestination = Live(note.PalmMuteDestination);
+        }
+    }
+
+    // Gli importer alphaTab azzerano i contatori statici degli ID. Dopo un ripristino locale
+    // possono quindi coesistere vecchi ID alti e nuove note con ID già presenti.
+    // I riferimenti del modello restano oggetti; correggi solo le collisioni prima del rendering.
+    private void EnsureUniqueIds()
+    {
+        var bars = Score!.Tracks.SelectMany(t => t.Staves).SelectMany(s => s.Bars).ToList();
+        var voices = bars.SelectMany(b => b.Voices).ToList();
+        var beats = voices.SelectMany(v => v.Beats).ToList();
+        Unique(bars, b => b.Id, (b, id) => b.Id = id);
+        Unique(voices, v => v.Id, (v, id) => v.Id = id);
+        Unique(beats, b => b.Id, (b, id) => b.Id = id);
+        Unique(beats.SelectMany(b => b.Notes).ToList(), n => n.Id, (n, id) => n.Id = id);
+    }
+
+    private static void Unique<T>(IList<T> items, Func<T, double> get, Action<T, double> set)
+    {
+        var seen = new HashSet<double>();
+        var next = items.Count == 0 ? 0 : items.Max(get) + 1;
+        foreach (var item in items)
+            if (!seen.Add(get(item))) { set(item, next); seen.Add(next++); }
     }
 
     /// <summary>Velocità iniziale del brano (BPM della prima battuta).</summary>

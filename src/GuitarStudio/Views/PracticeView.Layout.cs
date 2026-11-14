@@ -442,9 +442,28 @@ public partial class PracticeView
 
     private readonly List<(Border Row, List<Border> Cells)> _trackRows = new();
     private readonly Dictionary<int, double> _trackVolumes = new();
+    private sealed record TrackPanelEntry(Track Track, string Name, double Program);
+    private TrackPanelEntry[] _trackPanelEntries = [];
+    private int _trackPanelBars = -1;
+    private int _tracksPanelBuildCount;
+    private (int Track, int Bar) _trackHighlight = (-1, -1);
 
     private void RebuildTracksPanel()
     {
+        if (_editor?.Score is { } current)
+        {
+            var entries = current.Tracks.Select(t => new TrackPanelEntry(t, t.Name, t.PlaybackInfo.Program)).ToArray();
+            if (_trackPanelBars == current.MasterBars.Count && _trackPanelEntries.SequenceEqual(entries))
+            {
+                RefreshTrackCells();
+                RefreshTrackHighlight();
+                return;
+            }
+            _trackPanelEntries = entries;
+            _trackPanelBars = current.MasterBars.Count;
+        }
+        _tracksPanelBuildCount++;
+        _trackHighlight = (-1, -1);
         TrackRows.Children.Clear();
         _trackRows.Clear();
         if (_editor?.Score is not { } score) return;
@@ -522,7 +541,8 @@ public partial class PracticeView
                                staff.Bars[b].Voices.Any(v => v.Beats.Any(x => x.Notes.Count > 0));
                 var cell = new Border
                 {
-                    Background = hasNotes ? brush : new SolidColorBrush(Color.FromRgb(0x17, 0x18, 0x1C)),
+                    Background = hasNotes ? brush : (Brush)FindResource("BgDeep"),
+                    Tag = hasNotes,
                     Margin = new Thickness(0.5, 0, 0.5, 0),
                     CornerRadius = new CornerRadius(1.5),
                     BorderBrush = Brushes.White,
@@ -547,6 +567,28 @@ public partial class PracticeView
         RefreshTrackHighlight();
     }
 
+    private void RefreshTrackCells()
+    {
+        if (_editor.Score is not { } score) return;
+        var bars = _editor.ChangedBars ?? Enumerable.Range(0, score.MasterBars.Count).ToArray();
+        for (var t = 0; t < _trackRows.Count; t++)
+        {
+            var staff = score.Tracks[t].Staves.FirstOrDefault();
+            foreach (var b in bars)
+            {
+                var cell = _trackRows[t].Cells[b];
+                var hasNotes = staff != null && staff.Bars[b].Voices.Any(v => v.Beats.Any(beat => beat.Notes.Count > 0));
+                if (cell.Tag is not bool previous || previous != hasNotes)
+                {
+                    cell.Background = hasNotes ? new SolidColorBrush(TrackColors[t % TrackColors.Length]) : (Brush)FindResource("BgDeep");
+                    cell.Tag = hasNotes;
+                }
+                var tip = $"Battuta {b + 1}" + (score.MasterBars[b].Section is { } sec ? $" — {sec.Text}" : "");
+                if (!Equals(cell.ToolTip, tip)) cell.ToolTip = tip;
+            }
+        }
+    }
+
     private ToggleButton MakeSmallToggle(string text, string tip, bool isChecked) => new()
     {
         Content = new TextBlock { Text = text, FontFamily = (FontFamily)FindResource("UiFont"), FontWeight = FontWeights.SemiBold, FontSize = 13 },
@@ -557,13 +599,19 @@ public partial class PracticeView
 
     private void RefreshTrackHighlight()
     {
+        var next = (_editor.TrackIndex, _editor.BarIndex);
+        if (_trackHighlight == next) return;
+        var previous = _trackHighlight;
+        _trackHighlight = next;
         for (var i = 0; i < _trackRows.Count; i++)
         {
             var (row, cells) = _trackRows[i];
             var current = i == _editor.TrackIndex;
             row.Background = current ? new SolidColorBrush(Color.FromRgb(0x33, 0x36, 0x3F)) : Brushes.Transparent;
-            for (var b = 0; b < cells.Count; b++)
-                cells[b].BorderThickness = new Thickness(current && b == _editor.BarIndex ? 1.5 : 0);
+            if (previous.Track == i && previous.Bar >= 0 && previous.Bar < cells.Count)
+                cells[previous.Bar].BorderThickness = new Thickness(0);
+            if (current && _editor.BarIndex < cells.Count)
+                cells[_editor.BarIndex].BorderThickness = new Thickness(1.5);
         }
     }
 

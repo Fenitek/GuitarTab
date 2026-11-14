@@ -3,6 +3,19 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.4.1 — 2026-11-14
+
+- Scrivere note e annullarle è più rapido sui brani lunghi: le modifiche locali conservano
+  le battute coinvolte, invece di esportare tutto il brano a ogni cifra.
+- Aggiornamenti audio dopo circa 300 ms dall'ultima modifica e ridisegno accorpato delle
+  cifre ravvicinate; le anteprime attendono sempre il MIDI aggiornato.
+- Il pannello tracce riusa i controlli e aggiorna le celle interessate; si ricostruisce
+  quando cambiano le tracce o il numero di battute.
+- Test aggiunti su 200 battute e 4 tracce, annulla/ripeti misti ed effetti tra battute.
+  Corrette collisioni degli identificatori e riferimenti a note eliminate.
+- Misure in `docs/PERFORMANCE.md`: cifra nell'app da circa 849 a 8 ms per il gestore.
+  Il ridisegno completo resta differito e può ancora provocare una pausa visiva.
+
 ## 0.4.0 — 2026-11-14
 
 - **Salvataggio automatico di recupero**: ogni 60 secondi le nuove modifiche vengono copiate
