@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
     <AssemblyTitle>GuitarStudio</AssemblyTitle>
     <!-- Unica fonte della versione: aumentala a ogni modifica (vedi AGENTS.md) -->
-    <Version>0.2.1</Version>
+    <Version>0.3.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

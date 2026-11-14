@@ -87,6 +87,8 @@ public partial class PracticeView : UserControl
         settings.Display.StaveProfile = StaveProfile.ScoreTab;
 #pragma warning restore CS0618
         settings.Display.Scale = 1.0;
+        // Entrambe le linee devono essere leggibili sulla carta, anche sullo schermo ad alta risoluzione.
+        settings.Display.Resources.SecondaryGlyphColor = settings.Display.Resources.MainGlyphColor;
         settings.Player.PlayerMode = PlayerMode.EnabledSynthesizer;
         settings.Player.EnableCursor = true;
         settings.Player.EnableAnimatedBeatCursor = true;
@@ -370,6 +372,9 @@ public partial class PracticeView : UserControl
         PasteButton.IsEnabled = _editor.HasClipboard;
 
         var beat = _editor.CurrentBeat;
+        VoiceOne.IsChecked = _editor.VoiceIndex == 0;
+        VoiceTwo.IsChecked = _editor.VoiceIndex == 1;
+        VoiceOne.IsEnabled = VoiceTwo.IsEnabled = _editor.IsEditable;
         var duration = beat?.Duration ?? _editor.CurrentDuration;
         foreach (var t in new[] { DurWhole, DurHalf, DurQuarter, DurEighth, DurSixteenth, DurThirtySecond })
             t.IsChecked = int.Parse((string)t.Tag) == (int)duration;
@@ -394,7 +399,7 @@ public partial class PracticeView : UserControl
         var staff = _editor.Staff!;
         var stringName = Tuning.GetTextForTuning(Note.GetStringTuning(staff, _editor.ModelString(_editor.Line)), false);
         var fret = note == null ? "—" : note.IsDead ? "X" : note.Fret.ToString("0");
-        var text = $"Battuta {_editor.BarIndex + 1}/{staff.Bars.Count} · Tempo {_editor.BeatIndex + 1} · Corda {_editor.Line} ({stringName}) · Tasto {fret}";
+        var text = $"Battuta {_editor.BarIndex + 1}/{staff.Bars.Count} · Voce {_editor.VoiceIndex + 1} · Tempo {_editor.BeatIndex + 1} · Corda {_editor.Line} ({stringName}) · Tasto {fret}";
         if (_editor.HasSelection) text = $"{_editor.SelectedBeats().Count} tempi selezionati  ·  " + text;
 
         if (_editor.BarFill(out var used, out var total) && Math.Abs(used - total) > 0.5)
@@ -537,7 +542,7 @@ public partial class PracticeView : UserControl
                 var tabBar = mbb.Bars.LastOrDefault(b => b.Bar.Staff == _editor.Staff) ?? mbb.Bars.LastOrDefault();
                 if (tabBar == null) return;
                 var beat = tabBar.Beats
-                    .Where(b => b.Beat.Voice.Index == 0)
+                    .Where(b => b.Beat.Voice.Index == _editor.VoiceIndex)
                     .OrderBy(b => Math.Abs(b.OnNotesX - p.X))
                     .FirstOrDefault();
                 if (beat == null) return;
@@ -583,6 +588,13 @@ public partial class PracticeView : UserControl
         if (!EditMode || !_editor.IsEditable)
         {
             e.Handled = false;
+            return;
+        }
+
+        if (ctrl && CurrentModifiers.HasFlag(ModifierKeys.Alt) && key is Key.D1 or Key.NumPad1 or Key.D2 or Key.NumPad2)
+        {
+            _editor.SelectVoice(key is Key.D1 or Key.NumPad1 ? 0 : 1);
+            _lastDigit = null;
             return;
         }
 
@@ -712,6 +724,14 @@ public partial class PracticeView : UserControl
         var d = (Duration)int.Parse((string)((FrameworkElement)sender).Tag);
         _editor.SetDuration(d);
         UpdateEditUi();
+        Focus();
+    }
+
+    private void Voice_Click(object sender, RoutedEventArgs e)
+    {
+        if (_editor == null) return;
+        _editor.SelectVoice(int.Parse((string)((FrameworkElement)sender).Tag));
+        _lastDigit = null;
         Focus();
     }
 

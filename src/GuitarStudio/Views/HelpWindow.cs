@@ -22,6 +22,12 @@ public sealed class HelpWindow : Window
             ("Canc / Backspace", "cancella la nota (o la selezione)"),
             ("R", "trasforma il tempo in pausa")
         }),
+        ("Due voci nella stessa battuta", new[]
+        {
+            ("Ctrl+Alt+1 / 2", "seleziona voce 1 (melodia) o voce 2 (accompagnamento)"),
+            ("Voce → Durata → Tasto", "ogni voce ha le proprie note, pause e durate: una melodia lunga può continuare sopra un arpeggio"),
+            ("Copia / Taglia / Canc", "agiscono sulla voce selezionata; Elimina battuta rimuove tutte le voci")
+        }),
         ("Durata", new[]
         {
             ("+ / −", "durata più lunga / più corta"),

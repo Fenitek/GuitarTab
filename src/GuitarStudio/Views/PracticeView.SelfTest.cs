@@ -8,6 +8,7 @@ using AlphaTab.Model;
 using AlphaTab.Midi;
 using AlphaTab.Synth;
 using GuitarStudio.Editing;
+using Duration = AlphaTab.Model.Duration;
 
 namespace GuitarStudio.Views;
 
@@ -47,6 +48,10 @@ public partial class PracticeView
                 await Task.Delay(wait);
             }
 
+            await VerifyVoiceEdits(log);
+            _editor.MarkSaved();
+            NewFile();
+            await Task.Delay(800);
             await VerifyAudioEdits(log);
             _editor.MarkSaved();
             NewFile();
@@ -199,6 +204,72 @@ public partial class PracticeView
             log.AppendLine("ECCEZIONE: " + ex);
         }
         File.WriteAllText(report, log.ToString());
+    }
+
+    private async Task VerifyVoiceEdits(LiveLog log)
+    {
+        void Require(bool condition, string message)
+        {
+            if (!condition) throw new InvalidOperationException(message);
+            log.AppendLine("voci OK: " + message);
+        }
+
+        // Terza battuta del riferimento: melodia lunga sopra un arpeggio indipendente.
+        _editor.MoveTo(0, 0, 2);
+        _editor.SetFret(3);
+        _editor.SetDuration(Duration.Half);
+        _editor.MoveTo(0, 3, 2);
+        _editor.DeleteBeat();
+        _editor.MoveTo(0, 1, 2); _editor.SetFret(0);
+        _editor.MoveTo(0, 2, 2); _editor.SetFret(3);
+        _editor.SetDuration(Duration.Eighth); _editor.ToggleDot();
+        _editor.MoveRight(); _editor.SetDuration(Duration.Sixteenth); _editor.SetFret(2);
+        var melody = _editor.CurrentBar!.Voices[0];
+        Require(melody.CalculateDuration() == 3840, "la melodia occupa 4/4 (minima, quarto, croma puntata, semicroma)");
+
+        _editor.SelectVoice(1);
+        Require(VoiceTwo.IsChecked == true && VoiceOne.IsChecked == false, "il selettore mostra la voce attiva");
+        var accompaniment = new[] { (5, 2), (4, 4), (3, 4), (4, 4), (6, 3), (4, 0), (3, 0) };
+        _editor.MoveTo(0, 0, 5);
+        for (var i = 0; i < accompaniment.Length; i++)
+        {
+            if (i > 0) _editor.MoveRight();
+            _editor.MoveTo(0, _editor.BeatIndex, accompaniment[i].Item1);
+            _editor.SetDuration(i == 6 ? Duration.Quarter : Duration.Eighth);
+            _editor.SetFret(accompaniment[i].Item2);
+        }
+        Require(_editor.BarIndex == 0 && _editor.CurrentVoice!.CalculateDuration() == 3840,
+            "sette posizioni dell'accompagnamento stanno nella stessa battuta della melodia");
+        Require(melody.Beats.Count == 4 && melody.Beats[0].Duration == Duration.Half,
+            "scrivere nella voce 2 conserva le durate della voce 1");
+
+        _editor.Copy();
+        _editor.Cut();
+        Require(_editor.CurrentBar!.Voices[0].Beats.Sum(b => b.Notes.Count) == 4 &&
+                _editor.CurrentVoice!.Beats.All(b => b.Notes.Count == 0),
+            "tagliare l'accompagnamento conserva la melodia e la battuta");
+        _editor.Undo();
+        Require(_editor.VoiceIndex == 1 && _editor.CurrentVoice!.Beats.Sum(b => b.Notes.Count) == 7,
+            "Annulla ripristina la voce 2");
+        _editor.Redo();
+        _editor.Paste();
+        Require(_editor.Score!.MasterBars.Count == 4 && _editor.CurrentBar!.Voices[0].Beats.Count == 4 &&
+                _editor.CurrentVoice!.Beats.Count == 7, "incollare nella voce vuota conserva entrambe le linee senza aggiungere battute");
+
+        var restored = ScoreLoader.LoadScoreFromBytes(new Uint8Array(_editor.ExportGp()), Api.Settings);
+        var bar = restored.Tracks[0].Staves[0].Bars[0];
+        Require(bar.Voices.Count == 2 && bar.Voices[0].Beats[0].Duration == Duration.Half &&
+                bar.Voices[1].Beats[0].Duration == Duration.Eighth,
+            "salvataggio e rilettura .gp mantengono due durate sulla stessa posizione");
+        var midi = new MidiFile();
+        new MidiFileGenerator(restored, Api.Settings, new AlphaSynthMidiFileHandler(midi, true)).Generate();
+        var highStart = midi.Events.OfType<NoteOnEvent>().First(n => n.NoteKey == 62).Tick;
+        var highEnd = midi.Events.OfType<NoteOffEvent>().First(n => n.NoteKey == 62).Tick;
+        var lowStart = midi.Events.OfType<NoteOnEvent>().First(n => n.NoteKey == 47).Tick;
+        var lowEnd = midi.Events.OfType<NoteOffEvent>().First(n => n.NoteKey == 47).Tick;
+        Require(highStart == lowStart && highEnd - highStart > 3 * (lowEnd - lowStart),
+            "il MIDI tiene la melodia mentre l'accompagnamento continua");
+        await Task.Delay(400);
     }
 
     private async Task VerifyAudioEdits(LiveLog log)

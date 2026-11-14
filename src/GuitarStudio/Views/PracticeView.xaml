@@ -154,6 +154,15 @@
             <Border x:Name="PalettePanel" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
                     <StackPanel Margin="12,0,6,14">
+                        <TextBlock Text="VOCE" Style="{StaticResource SectionHeader}"/>
+                        <WrapPanel>
+                            <ToggleButton x:Name="VoiceOne" Style="{StaticResource ToolToggle}" Content="1 ↑" Tag="0" Width="76"
+                                          Click="Voice_Click" ToolTip="Voce 1: melodia (Ctrl+Alt+1)" AutomationProperties.Name="Voce 1, melodia"/>
+                            <ToggleButton x:Name="VoiceTwo" Style="{StaticResource ToolToggle}" Content="2 ↓" Tag="1" Width="76"
+                                          Click="Voice_Click" ToolTip="Voce 2: accompagnamento (Ctrl+Alt+2)" AutomationProperties.Name="Voce 2, accompagnamento"/>
+                        </WrapPanel>
+                        <TextBlock Text="Durate indipendenti nella stessa battuta." Foreground="{StaticResource TextDim}"
+                                   FontSize="13" TextWrapping="Wrap" Margin="0,6,6,2"/>
                         <TextBlock Text="DURATA" Style="{StaticResource SectionHeader}"/>
                         <WrapPanel>
                             <ToggleButton x:Name="DurWhole" Style="{StaticResource PaletteToggle}" Tag="1" Click="Duration_Click" ToolTip="Semibreve: 4 movimenti">

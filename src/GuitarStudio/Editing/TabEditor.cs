@@ -90,6 +90,7 @@ public sealed class TabEditor
     public int TrackIndex { get; private set; }
     public int BarIndex { get; private set; }
     public int BeatIndex { get; private set; }
+    public int VoiceIndex { get; private set; }
 
     /// <summary>Corda selezionata come la vede il chitarrista: 1 = la più acuta (in alto nella tab).</summary>
     public int Line { get; private set; } = 1;
@@ -117,7 +118,7 @@ public sealed class TabEditor
     public int StringCount => Staff?.Tuning.Count ?? 0;
     public bool IsEditable => Staff is { IsStringed: true } && !Track!.IsPercussion && StringCount > 0;
     public Bar? CurrentBar => Staff != null && BarIndex < Staff.Bars.Count ? Staff.Bars[BarIndex] : null;
-    public Voice? CurrentVoice => CurrentBar?.Voices.Count > 0 ? CurrentBar.Voices[0] : null;
+    public Voice? CurrentVoice => CurrentBar is { } bar && bar.Voices.Count > VoiceIndex ? bar.Voices[VoiceIndex] : null;
     public Beat? CurrentBeat => CurrentVoice is { } v && BeatIndex < v.Beats.Count ? v.Beats[BeatIndex] : null;
     public Note? CurrentNote => CurrentBeat?.GetNoteOnString(ModelString(Line));
 
@@ -137,6 +138,7 @@ public sealed class TabEditor
         TrackIndex = Math.Clamp(trackIndex, 0, Math.Max(0, score.Tracks.Count - 1));
         BarIndex = 0;
         BeatIndex = 0;
+        VoiceIndex = 0;
         Line = 1;
         _anchor = null;
         IsDirty = false;
@@ -150,12 +152,52 @@ public sealed class TabEditor
     {
         if (Score == null) return;
         TrackIndex = Math.Clamp(trackIndex, 0, Score.Tracks.Count - 1);
+        VoiceIndex = 0;
         _anchor = null;
         ClampCursor();
         CursorMoved?.Invoke();
     }
 
     public void MarkSaved() => IsDirty = false;
+
+    /// <summary>Seleziona una voce indipendente, mantenendo la posizione ritmica quando possibile.</summary>
+    public void SelectVoice(int index)
+    {
+        if (!IsEditable) return;
+        index = Math.Clamp(index, 0, 1);
+        var tick = CurrentBeat?.PlaybackStart ?? 0;
+        VoiceIndex = index;
+        _anchor = null;
+        ActivateVoice();
+        var beats = CurrentVoice!.Beats;
+        BeatIndex = Enumerable.Range(0, beats.Count).LastOrDefault(i => beats[i].PlaybackStart <= tick);
+        ClampCursor();
+        CursorMoved?.Invoke();
+    }
+
+    private void ActivateVoice()
+    {
+        if (Staff == null || (Staff.Bars.All(b => b.Voices.Count > VoiceIndex) &&
+                             CurrentVoice is { } voice && voice.Beats.Any(b => !b.IsEmpty))) return;
+        Edit(() =>
+        {
+            foreach (var bar in Staff.Bars)
+            {
+                while (bar.Voices.Count <= VoiceIndex)
+                {
+                    var added = new Voice();
+                    bar.AddVoice(added);
+                    foreach (var rest in RestsFor(bar.MasterBar, Duration.Quarter))
+                    {
+                        rest.IsEmpty = true;
+                        added.AddBeat(rest);
+                    }
+                }
+            }
+            foreach (var beat in CurrentVoice!.Beats) beat.IsEmpty = false;
+            Relink();
+        });
+    }
 
     public byte[] ExportGp() => ToBytes(new Gp7Exporter().Export(Score!, _settings));
 
@@ -186,9 +228,10 @@ public sealed class TabEditor
     {
         if (extendSelection) _anchor ??= (BarIndex, BeatIndex);
         else _anchor = null;
-        BarIndex = barIndex;
+        BarIndex = Staff == null ? 0 : Math.Clamp(barIndex, 0, Staff.Bars.Count - 1);
         BeatIndex = beatIndex;
         Line = line;
+        if (VoiceIndex > 0) ActivateVoice();
         ClampCursor();
         CursorMoved?.Invoke();
     }
@@ -284,6 +327,7 @@ public sealed class TabEditor
             return;
         }
         BarIndex = Math.Clamp(BarIndex, 0, Staff.Bars.Count - 1);
+        VoiceIndex = Math.Clamp(VoiceIndex, 0, Math.Max(0, CurrentBar!.Voices.Count - 1));
         var beats = CurrentVoice?.Beats.Count ?? 1;
         BeatIndex = Math.Clamp(BeatIndex, 0, Math.Max(0, beats - 1));
         Line = Math.Clamp(Line, 1, Math.Max(1, StringCount));
@@ -291,7 +335,7 @@ public sealed class TabEditor
         if (_anchor is { } a)
         {
             var bar = Math.Clamp(a.Bar, 0, Staff.Bars.Count - 1);
-            var count = Staff.Bars[bar].Voices.Count > 0 ? Staff.Bars[bar].Voices[0].Beats.Count : 1;
+            var count = Staff.Bars[bar].Voices.Count > VoiceIndex ? Staff.Bars[bar].Voices[VoiceIndex].Beats.Count : 1;
             _anchor = (bar, Math.Clamp(a.Beat, 0, Math.Max(0, count - 1)));
         }
     }
@@ -309,7 +353,7 @@ public sealed class TabEditor
     private static int Compare((int Bar, int Beat) x, (int Bar, int Beat) y) =>
         x.Bar != y.Bar ? x.Bar.CompareTo(y.Bar) : x.Beat.CompareTo(y.Beat);
 
-    /// <summary>Tempi selezionati (prima voce della traccia corrente), o quello sotto il cursore.</summary>
+    /// <summary>Tempi selezionati della voce corrente, o quello sotto il cursore.</summary>
     public List<Beat> SelectedBeats()
     {
         var result = new List<Beat>();
@@ -318,8 +362,8 @@ public sealed class TabEditor
         for (var b = from.Bar; b <= to.Bar && b < Staff.Bars.Count; b++)
         {
             var bar = Staff.Bars[b];
-            if (bar.Voices.Count == 0) continue;
-            var beats = bar.Voices[0].Beats;
+            if (bar.Voices.Count <= VoiceIndex) continue;
+            var beats = bar.Voices[VoiceIndex].Beats;
             var start = b == from.Bar ? from.Beat : 0;
             var end = b == to.Bar ? to.Beat : beats.Count - 1;
             for (var i = start; i <= end && i < beats.Count; i++) result.Add(beats[i]);
@@ -334,7 +378,7 @@ public sealed class TabEditor
         fromBar = from.Bar;
         toBar = to.Bar;
         if (!HasSelection || Staff == null) return false;
-        var lastBeat = Staff.Bars[to.Bar].Voices[0].Beats.Count - 1;
+        var lastBeat = Staff.Bars[to.Bar].Voices[VoiceIndex].Beats.Count - 1;
         return from.Beat == 0 && to.Beat == lastBeat;
     }
 
@@ -351,7 +395,7 @@ public sealed class TabEditor
             if (HasSelection) (fromBar, toBar) = (SelectionRange().From.Bar, SelectionRange().To.Bar);
             var (from, to) = ((Bar: fromBar, Beat: 0), (Bar: toBar, Beat: 0));
             for (var b = from.Bar; b <= to.Bar; b++)
-                clip.Add(Staff!.Bars[b].Voices[0].Beats.Select(ModelCopy.CloneBeat).ToList());
+                clip.Add(Staff!.Bars[b].Voices[VoiceIndex].Beats.Select(ModelCopy.CloneBeat).ToList());
             _clipboardWholeBars = true;
         }
         else
@@ -366,10 +410,8 @@ public sealed class TabEditor
     public void Cut()
     {
         if (Copy() == 0) return;
-        if (_clipboardWholeBars && !HasSelection)
-            DeleteBar();
-        else
-            DeleteSelection();
+        if (!HasSelection) { _anchor = (BarIndex, 0); BeatIndex = CurrentVoice!.Beats.Count - 1; }
+        DeleteSelection();
     }
 
     /// <summary>
@@ -383,12 +425,12 @@ public sealed class TabEditor
         {
             if (_clipboardWholeBars)
             {
-                var target = CurrentBar!.IsRestOnly ? BarIndex : BarIndex + 1;
+                var target = voice.Beats.All(b => b.Notes.Count == 0) ? BarIndex : BarIndex + 1;
                 for (var i = 0; i < clip.Count; i++)
                 {
                     var index = target + i;
                     if (!(i == 0 && target == BarIndex)) InsertBarAt(index);
-                    var v = Staff!.Bars[index].Voices[0];
+                    var v = Staff!.Bars[index].Voices[VoiceIndex];
                     v.Beats.Clear();
                     foreach (var beat in clip[i]) v.AddBeat(ModelCopy.CloneBeat(beat));
                 }
@@ -412,23 +454,10 @@ public sealed class TabEditor
         });
     }
 
-    /// <summary>Elimina i tempi selezionati (o le battute intere selezionate).</summary>
+    /// <summary>Elimina i tempi della sola voce selezionata, preservando le altre voci.</summary>
     public void DeleteSelection()
     {
         if (!IsEditable) return;
-        if (SelectionIsWholeBars(out var fromBar, out var toBar) && toBar - fromBar + 1 < Score!.MasterBars.Count)
-        {
-            Edit(() =>
-            {
-                for (var b = toBar; b >= fromBar; b--) RemoveBarAt(b);
-                Relink();
-                BarIndex = fromBar;
-                BeatIndex = 0;
-                _anchor = null;
-            });
-            return;
-        }
-
         var beats = SelectedBeats();
         if (beats.Count == 0) return;
         var (from, _) = SelectionRange();
@@ -438,7 +467,8 @@ public sealed class TabEditor
             {
                 var v = beat.Voice;
                 v.Beats.Remove(beat);
-                if (v.Beats.Count == 0) v.AddBeat(NewRest(Duration.Whole));
+                if (v.Beats.Count == 0)
+                    foreach (var rest in RestsFor(v.Bar.MasterBar, Duration.Quarter)) v.AddBeat(rest);
             }
             Relink();
             BarIndex = from.Bar;
@@ -863,12 +893,12 @@ public sealed class TabEditor
                 };
                 staff.Bars.Insert(index, bar);
 
-                var voices = Math.Max(1, prev.Voices.Count);
+                var voices = Math.Max(track.Index == TrackIndex ? VoiceIndex + 1 : 1, prev.Voices.Count);
                 for (var v = 0; v < voices; v++)
                 {
                     var voice = new Voice();
                     bar.AddVoice(voice);
-                    if (v == 0)
+                    if (v == 0 || (track.Index == TrackIndex && v == VoiceIndex))
                     {
                         var duration = track.Index == TrackIndex ? CurrentDuration : Duration.Quarter;
                         foreach (var r in RestsFor(mb, duration)) voice.AddBeat(r);
@@ -920,7 +950,7 @@ public sealed class TabEditor
                 var staff = track.Staves[s];
                 staff.Index = s;
                 staff.Track = track;
-                Beat? lastBeat = null;
+                var lastBeats = new Dictionary<int, Beat>();
                 for (var i = 0; i < staff.Bars.Count; i++)
                 {
                     var bar = staff.Bars[i];
@@ -944,17 +974,17 @@ public sealed class TabEditor
                         }
                     }
 
-                    // Catena dei tempi della prima voce attraverso le battute (legature, hammer, slide).
-                    if (bar.Voices.Count > 0)
+                    // Ogni voce ha la propria catena, anche tra battute (legature, hammer, slide).
+                    for (var v = 0; v < bar.Voices.Count; v++)
                     {
-                        foreach (var beat in bar.Voices[0].Beats)
+                        foreach (var beat in bar.Voices[v].Beats)
                         {
-                            if (lastBeat != null)
+                            if (lastBeats.TryGetValue(v, out var lastBeat))
                             {
                                 lastBeat.NextBeat = beat;
                                 beat.PreviousBeat = lastBeat;
                             }
-                            lastBeat = beat;
+                            lastBeats[v] = beat;
                         }
                     }
                 }

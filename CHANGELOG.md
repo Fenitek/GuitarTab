@@ -3,6 +3,16 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.3.0 — 2026-11-14
+
+- **Due voci indipendenti nella stessa traccia**: con «1 ↑» e «2 ↓» nella tavolozza
+  puoi scrivere una melodia lunga mentre sotto continua un arpeggio più breve.
+  Scorciatoie: Ctrl+Alt+1 e Ctrl+Alt+2. La barra di stato indica la voce selezionata.
+- Durate, note, pause, effetti, selezione e copia/incolla seguono la voce scelta.
+  Taglia e Canc conservano le note dell'altra voce; «Elimina battuta» elimina tutta la battuta.
+- Salvataggio Guitar Pro e riproduzione mantengono le durate indipendenti delle due linee.
+- Guida F1 aggiornata con il procedimento per scrivere melodia e accompagnamento.
+
 ## 0.2.1 — 2026-11-14
 
 - **Riproduzione dopo le modifiche**: Play usa le note, le durate, i BPM e il suono attuali.

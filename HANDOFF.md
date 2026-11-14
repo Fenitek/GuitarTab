@@ -23,6 +23,24 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.3.0
+
+- Due voci modificabili: `TabEditor.VoiceIndex`, `SelectVoice(0/1)`; `CurrentVoice`, selezione,
+  appunti, durate e hit test seguono la voce attiva. La selezione si azzera cambiando voce.
+- Attivare una voce inesistente crea pause vuote nelle altre battute e pause visibili in quella
+  corrente. La prima attivazione di una battuta vuota è annullabile. I file importati con voci
+  aggiuntive vengono preservati; il selettore espone le prime due.
+- `Relink` mantiene una catena di beat distinta per ogni voce. Taglia/Canc su una selezione
+  non rimuovono più battute globali: agiscono soltanto sui beat della voce selezionata.
+  Eliminare una battuta in tutte le voci richiede il comando esplicito corrispondente.
+- L'autotest verifica una minima sopra un arpeggio, taglia/annulla/ripeti/incolla senza perdita
+  dell'altra voce, esportazione/rilettura .gp e durate MIDI sovrapposte.
+- Contesto visivo e mappa dei componenti canonici in `DESIGN.md`; i token restano in Dark.xaml.
+- **Avvio dal sandbox**: un'istanza lanciata con i permessi limitati degli strumenti può leggere
+  uno spartito sul Desktop ma non salvarlo. Per uso interattivo avviare l'eseguibile con normali
+  permessi utente fuori dal sandbox (non serve modificare ACL o avviare come amministratore).
+  Non chiudere un'istanza con modifiche non salvate prima di averle recuperate.
+
 ### Aggiornamento v0.2.1
 
 - **Audio dopo le modifiche**: `RenderScore` rigenera il MIDI solo se cambia l'istanza di `Score`.
@@ -218,7 +236,7 @@ src/GuitarStudio/
 In ordine di utilità indicativo:
 1. Tema scuro completo e coerente (6.5) e leggibilità (6.4).
 2. SoundFont migliore e scelta del SoundFont (6.3).
-3. Seconda voce nella stessa traccia.
+3. Voci: prime due modificabili dalla v0.3.0; eventuale estensione del selettore a quattro voci.
 4. Diagrammi degli accordi e nomi degli accordi; testo della canzone.
 5. Grace note, leva (whammy), dinamiche (p, mf, f…), crescendo.
 6. Finali alternativi dei ritornelli (prima/seconda volta), cambio d'armatura.
