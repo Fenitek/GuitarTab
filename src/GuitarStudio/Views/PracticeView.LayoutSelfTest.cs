@@ -36,6 +36,8 @@ public partial class PracticeView
             var visible = Api.BoundsLookup!.StaffSystems.Count(s => s.RealBounds.Y >= sv.VerticalOffset - 1 &&
                 s.RealBounds.Y + s.RealBounds.H <= sv.VerticalOffset + sv.ViewportHeight + 1);
             log.AppendLine($"{name}: barra={ToolbarLayout.ActualWidth:0.0} px, compatta={_compactToolbar}, viewport={sv.ViewportHeight:0.0} px, sistemi interi={visible}");
+            log.AppendLine("sistemi: " + string.Join("; ", Api.BoundsLookup.StaffSystems.Select(s => $"Y={s.RealBounds.Y:0.0} H={s.RealBounds.H:0.0}")));
+            _visualCapture!.Save(main, name + "-misura-sistemi");
             metrics.Add(new { Profile = name, Width = width, Height = height, EffectiveDpi = 192, Compact = _compactToolbar,
                 ToolbarWidth = ToolbarLayout.ActualWidth, ScoreViewportHeight = sv.ViewportHeight, FullSystems = visible });
             RequireLayout(_compactToolbar == (name != "1920"), "priorità della barra alla larghezza richiesta");
@@ -46,6 +48,7 @@ public partial class PracticeView
             RequireLayout(owner.Cast<object>().SequenceEqual(_fileCommands), "tutti i comandi File conservano identità e ordine");
             RequireLayout(TracksRow.ActualHeight >= 34 && TracksRow.ActualHeight < 35, "tracce ridotte a una riga");
             _visualCapture!.Save(main, name + "-predefinita");
+            if (name == "1920") await VerifyTabRhythmVisual(main, log);
 
             FretToggle.IsChecked = true;
             FretToggle_Click(FretToggle, new RoutedEventArgs());

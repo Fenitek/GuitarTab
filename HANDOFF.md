@@ -23,7 +23,23 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
-### Aggiornamento v0.5.0 — modifiche nell'albero di lavoro
+### Aggiornamento v0.5.1
+
+- Ritmo esplicito: `Notation.RhythmMode = TabRhythmMode.ShowWithBars` in Solo tab,
+  `Hidden` nelle viste con pentagramma. Verificato nella documentazione ufficiale
+  https://alphatab.net/docs/reference/settings/notation/rhythmmode e nell'XML NuGet 1.9.0.
+- `RhythmSelfTest.cs`: foto Solo tab con durate/punto e Tab + spartito al 200%,
+  controllo di almeno due sistemi interi. Foto esterne in GuitarStudio-v0.5.1.
+- Margini esterni verticali 10 DIP, separazione sistemi 5+5 DIP: il ritmo occupa
+  spazio reale senza ridurre caratteri o scala. Foto e bounds confermano due sistemi
+  interi nel viewport di 295,3 DIP a 1920×1080/200%.
+- Verifiche v0.5.1: build 0 avvisi/0 errori; 61/61 xUnit in-process; autotest completo
+  e visivo OK. VSTest resta in timeout prima dell'esecuzione. Git add negato su
+  `.git/index.lock`; nessuna forzatura. Commit previsto `v0.5.1: ritmo nella vista Solo tab`.
+- Il precedente lavoro v0.5.0 è ora presente nel commit 8c6e94c; al suo tempo il sandbox
+  aveva negato le operazioni Git. Le note sotto documentano quella sessione.
+
+### Aggiornamento v0.5.0
 
 - `PracticeView.Toolbar.cs`: prima riga con Play, Stop, display e velocità. Da 820 DIP
   interni mostra tutti i gruppi nella seconda riga; sotto li trasferisce in Altro.

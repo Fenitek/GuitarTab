@@ -87,7 +87,7 @@ public sealed class HelpWindow : Window
         }),
         ("Spazio per scrivere", new[]
         {
-            ("Solo tab", "vista iniziale per lasciare almeno due sistemi leggibili; dal selettore in basso puoi scegliere Tab + spartito"),
+            ("Solo tab", "vista iniziale con durate, punti e travature sotto le corde; in Tab + spartito il ritmo appare solo sul pentagramma"),
             ("Divisori orizzontali", "trascina il bordo tra partitura, manico e tracce: le altezze vengono ricordate"),
             ("Tab → frecce", "con il divisore selezionato, su e giù regolano l'altezza senza trascinare"),
             ("Altro → Spazio partitura", "riduci le tracce a una riga, regola il manico o ripristina le altezze predefinite"),

@@ -95,6 +95,11 @@ public partial class PracticeView : UserControl
         settings.Display.StaveProfile = StaveProfile.Tab;
 #pragma warning restore CS0618
         settings.Display.Scale = 1.0;
+        // Mantiene due sistemi interi anche con la linea ritmica, senza ridurre i glifi.
+        settings.Display.Padding = new List<double> { 35, 10 };
+        settings.Display.SystemPaddingTop = 5;
+        settings.Display.SystemPaddingBottom = 5;
+        settings.Notation.RhythmMode = TabRhythmMode.ShowWithBars;
         // Nell'editor lo spazio è per le note; titolo e accordatura sono già nelle proprietà.
         settings.Notation.Elements.Set(NotationElement.ScoreTitle, false);
         settings.Notation.Elements.Set(NotationElement.GuitarTuning, false);
@@ -346,6 +351,9 @@ public partial class PracticeView : UserControl
             _ => StaveProfile.ScoreTab
         };
 #pragma warning restore CS0618
+        // Il pentagramma ha già le durate: evita una seconda linea ritmica nella tab.
+        Api.Settings.Notation.RhythmMode = ViewCombo.SelectedIndex == 1
+            ? TabRhythmMode.ShowWithBars : TabRhythmMode.Hidden;
         Api.UpdateSettings();
         Api.Render();
     }

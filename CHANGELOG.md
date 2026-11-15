@@ -3,6 +3,12 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.5.1 — 2026-11-15
+
+- In «Solo tab» le durate e i punti si leggono sotto le corde, con le travature del ritmo.
+  In «Tab + spartito» il ritmo rimane soltanto sul pentagramma.
+- Scena visiva dedicata e controllo dei due sistemi interi a 1920×1080 con contenuti al 200%.
+
 ## 0.5.0 — 2026-11-15
 
 - Barra di trasporto adattiva: Play, Stop, display e velocità rimangono visibili.
