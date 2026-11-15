@@ -23,6 +23,22 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.6.2
+
+- `Diagnostics/SoundStartupProbe.cs`: con `GS_PERF_SOUND_REPORT` registra tempo e memoria
+  (privata, working set, gestita) prima del caricamento, a lettore pronto, ad anteprime pronte,
+  a «suoni pronti» e dopo GC; `GS_PERF_SOUND_EXIT=1` chiude l'istanza. Anche questa modalità
+  isola dati e preferenze in `GS_SELFTEST_DATA_DIR` (AppPaths). Senza variabile non fa nulla.
+- Sei avvii: suoni pronti 570,8 ms mediana (max 604,6) dall'inizio del caricamento,
+  memoria privata max 345,9 MB: sotto 400 MB, nessuna condivisione dei campioni proposta.
+  Il lettore alphaTab pesa circa 137 MB, le anteprime circa 63. Dettagli in docs/PERFORMANCE.md.
+- Icona: `Assets/GuitarStudio.ico` (10 dimensioni PNG, 16–256) generata da
+  `tools/make-icon.ps1` con i valori di Dark.xaml; `ApplicationIcon` nel csproj e `Icon`
+  in MainWindow (Resource). Le finestre figlie usano l'icona dell'eseguibile.
+  Test xUnit sulle dimensioni e sull'icona incorporata; l'autotest visivo controlla i frame.
+- Trappola: docs/PERFORMANCE.md conteneva un byte Windows-1252 («à»), che impediva agli
+  strumenti UTF-8 di modificarlo. Corretto; mantenere i documenti in UTF-8.
+
 ### Aggiornamento v0.6.1
 
 - `Audio/PreviewRenderer.cs`: istanza privata dell'API pubblica AlphaSynthAudioExporter,

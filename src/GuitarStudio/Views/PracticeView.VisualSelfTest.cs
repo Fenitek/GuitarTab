@@ -51,6 +51,9 @@ public partial class PracticeView
         // Conserva anche lo stato iniziale: mostra la precedenza tra recupero e file richiesto.
         _visualCapture!.Save(main, "avvio-recuperato");
         log.AppendLine("avvio: " + StatusText.Text);
+        if (main.Icon is not System.Windows.Media.Imaging.BitmapFrame { Decoder.Frames.Count: >= 5 } icon)
+            throw new InvalidOperationException("La finestra principale non ha l'icona dell'applicazione.");
+        log.AppendLine($"icona finestra: {string.Join(",", icon.Decoder.Frames.Select(f => f.PixelWidth))} px");
         if (App.StartupFile is { } requested)
         {
             if (_currentPath == null)

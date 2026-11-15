@@ -3,6 +3,15 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.6.2 — 2026-11-15
+
+- Nuova icona del programma, disegnata apposta: le corde di una tablatura con il cursore
+  dell'editor e due note ambra. Compare nella barra del titolo, nella barra delle applicazioni
+  e sull'eseguibile; leggibile anche a 16 pixel.
+- Misurati memoria e tempi del caricamento dei suoni nei due sintetizzatori: «suoni pronti»
+  in circa 0,57 s dall'inizio del caricamento, memoria massima circa 346 MB (sotto 400 MB).
+  Numeri e metodo in `docs/PERFORMANCE.md`.
+
 ## 0.6.1 — 2026-11-15
 
 - La nota appena scritta suona con un sintetizzatore dedicato, senza attendere il MIDI del brano.

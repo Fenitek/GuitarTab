@@ -7,6 +7,7 @@ using GuitarStudio.Ui;
 using Microsoft.Win32;
 using Path = System.IO.Path;
 using GuitarStudio.Audio;
+using GuitarStudio.Diagnostics;
 
 namespace GuitarStudio.Views;
 
@@ -98,6 +99,7 @@ public partial class PracticeView
     private async void LoadSoundFont(string? customPath, bool announce)
     {
         var generation = ++_soundFontLoadGeneration;
+        SoundStartupProbe.LoadStarted();
         _previewFontReady = false;
         _previewPlayer?.Stop();
         _soundFontReady = false;
@@ -149,6 +151,7 @@ public partial class PracticeView
                 _previewPlayer ??= new NotePreviewPlayer();
                 _previewPlayer.SetRenderer(renderer);
                 _previewFontReady = true;
+                SoundStartupProbe.PreviewReady();
                 TryPlayPendingPreview();
             }
             catch (Exception ex)
@@ -170,6 +173,7 @@ public partial class PracticeView
     {
         if (!_soundFontLoads.TryDequeue(out var generation) || generation != _soundFontLoadGeneration) return;
         _soundFontReady = true;
+        SoundStartupProbe.PlayerReady();
         TryPlayPendingPreview();
         if (_announceSoundFont) ShowToast($"Suoni caricati: {_soundFontName}", ToastKind.Ok);
         else StatusText.Text = $"Motore audio pronto · suoni: {_soundFontName}";

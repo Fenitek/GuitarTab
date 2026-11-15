@@ -8,7 +8,9 @@
     <UseWPF>true</UseWPF>
     <AssemblyTitle>GuitarStudio</AssemblyTitle>
     <!-- Unica fonte della versione: aumentala a ogni modifica (vedi AGENTS.md) -->
-    <Version>0.6.1</Version>
+    <Version>0.6.2</Version>
+    <!-- Icona originale, generata da tools/make-icon.ps1 -->
+    <ApplicationIcon>Assets\GuitarStudio.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +21,7 @@
 
   <ItemGroup>
     <None Update="Assets\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Resource Include="Assets\GuitarStudio.ico" />
   </ItemGroup>
 
 </Project>

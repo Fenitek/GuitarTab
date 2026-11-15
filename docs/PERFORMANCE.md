@@ -1,11 +1,49 @@
 # Prestazioni dell'editor
 
+## v0.6.2 — memoria e tempo fino a «suoni pronti»
+
+15 novembre 2026, .NET 10.0.204 Release, stessa macchina delle misure precedenti.
+SoundFont incluso GeneralUser GS 1.471 (31.281.186 byte), caricato nei due sintetizzatori:
+il lettore del brano di alphaTab (`Api.LoadSoundFont`) e il motore privato delle anteprime
+(`PreviewRenderer`, v0.6.1). Sei avvii a freddo consecutivi del solo programma, con dati
+e preferenze isolati in una cartella di prova (nessun SoundFont personale, nessun recupero),
+senza autotest concorrenti e senza toccare mouse o tastiera. Campioni completi in
+[benchmarks/v0.6.2-suoni.csv](benchmarks/v0.6.2-suoni.csv).
+
+| Punto | Tempo dall'inizio del caricamento, mediana / max (ms) | Memoria privata, mediana / max (MB) | Gestita (MB) |
+|---|---:|---:|---:|
+| Prima del caricamento (finestra e demo pronte) | 0 | 144,5 / 146,0 | 11,9 |
+| Lettore del brano pronto (`SoundFontLoaded`) | 280,5 / 404,8 | 281,7 / 286,9 | ~115 |
+| Anteprime pronte (renderer impostato) | 563,5 / 597,6 | 344,8 / 345,9 | ~183 |
+| **Suoni pronti** (entrambi i motori) | **570,8 / 604,6** | 344,8 / 345,9 | ~183 |
+| Suoni pronti, dopo una garbage collection completa | — | 340,1 / 340,9 | 147,9 |
+
+Dall'avvio del processo «suoni pronti» arriva in 1.333 ms di mediana (massimo 1.495 ms);
+il caricamento parte circa 0,65–0,89 s dopo l'avvio. Working set massimo 351,8 MB.
+I due motori aggiungono circa 200 MB di memoria privata: circa 137 MB il lettore del
+brano e circa 63 MB le anteprime (le due quote sono indicative, perché i caricamenti si
+sovrappongono). Circa 35 MB gestiti si liberano con la garbage collection: sono il
+buffer letto dal disco e le strutture temporanee della lettura del SoundFont.
+
+**Soglia di 400 MB non superata** (massimo 345,9 MB privati): nessuna proposta di
+condivisione dei campioni tra i due motori è necessaria per ora. Margine circa 54 MB.
+
+Limiti: misura del processo con `Process.PrivateMemorySize64`/`WorkingSet64` e
+`GC.GetTotalMemory`, non della memoria condivisa con altri processi. Non misura un
+secondo caricamento dal menu (scelta di un altro SoundFont), durante il quale i vecchi
+campioni restano in memoria finché la garbage collection non li raccoglie, né brani lunghi
+aperti o la riproduzione in corso. Il primo punto dipende dall'avvio di WPF e della demo.
+
+Per riprodurre: `GS_PERF_SOUND_REPORT` con il percorso del JSON, `GS_PERF_SOUND_EXIT=1`
+per chiudere l'istanza alla fine e `GS_SELFTEST_DATA_DIR` per isolare preferenze e copie
+di recupero (`Diagnostics/SoundStartupProbe.cs`). Senza la variabile la sonda non fa nulla.
+
 ## v0.6.1 — anteprima indipendente dal MIDI del brano
 
 15 novembre 2026, .NET 10.0.204 Release, Windows, stessa macchina delle misure precedenti.
 SoundFont GeneralUser GS 1.471 (31.281.186 byte). L'autotest genera 200 battute × 4 tracce,
 scrive 12 tasti nella battuta 101 e misura ogni richiesta. La preparazione invalida il vecchio MIDI e attende esplicitamente Score e MIDI correnti
-prima di spostarsi nella battuta 101; una prova che leggeva la disponibilit� del vecchio
+prima di spostarsi nella battuta 101; una prova che leggeva la disponibilità del vecchio
 documento contava erroneamente anche il caricamento. Nessuna prova concorrente
 durante i campioni; nessun controllo di mouse o tastiera dell'utente.
 
