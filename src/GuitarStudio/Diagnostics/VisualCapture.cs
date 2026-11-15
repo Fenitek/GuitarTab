@@ -20,6 +20,7 @@ internal sealed class VisualCapture(string directory)
     [DllImport("user32.dll")] private static extern nint GetDC(nint hwnd);
     [DllImport("user32.dll")] private static extern int ReleaseDC(nint hwnd, nint dc);
     [DllImport("user32.dll")] private static extern bool PrintWindow(nint hwnd, nint dc, uint flags);
+    [DllImport("user32.dll")] private static extern nint GetForegroundWindow();
     [DllImport("gdi32.dll")] private static extern nint CreateCompatibleDC(nint dc);
     [DllImport("gdi32.dll")] private static extern nint CreateCompatibleBitmap(nint dc, int width, int height);
     [DllImport("gdi32.dll")] private static extern nint SelectObject(nint dc, nint obj);
@@ -59,10 +60,38 @@ internal sealed class VisualCapture(string directory)
         window.UpdateLayout();
     }
 
+    internal static void SizeAtScale(Window window, int width, int height, double scale)
+    {
+        window.WindowState = WindowState.Normal;
+        var dpi = VisualTreeHelper.GetDpi(window);
+        // Scala solo i contenuti della finestra di prova: nessuna preferenza dello schermo viene modificata.
+        if (window.Content is FrameworkElement content)
+            content.LayoutTransform = new ScaleTransform(scale / dpi.DpiScaleX, scale / dpi.DpiScaleY);
+        window.MinWidth = Math.Min(window.MinWidth, width / dpi.DpiScaleX);
+        window.MinHeight = Math.Min(window.MinHeight, height / dpi.DpiScaleY);
+        window.Width = width / dpi.DpiScaleX;
+        window.Height = height / dpi.DpiScaleY;
+        window.Left = 24; window.Top = 24;
+        window.UpdateLayout();
+    }
+
+    internal static void ScalePopup(FrameworkElement root, double scale)
+    {
+        if (PresentationSource.FromVisual(root) is not HwndSource source) return;
+        var current = root.TransformToAncestor(source.RootVisual).TransformBounds(new Rect(0, 0, 1, 1));
+        var dpi = VisualTreeHelper.GetDpi(root);
+        var previous = root.LayoutTransform is ScaleTransform transform ? transform.ScaleX : 1;
+        root.LayoutTransform = new ScaleTransform(previous * scale / (dpi.DpiScaleX * current.Width),
+            previous * scale / (dpi.DpiScaleY * current.Height));
+        root.UpdateLayout();
+    }
+
     internal void Save(Window frame, string name, params Visual[] overlays)
     {
         Directory.CreateDirectory(directory);
         var handle = new WindowInteropHelper(frame).Handle;
+        if (Environment.GetEnvironmentVariable("GS_SELFTEST_LAYOUT") == "1" && GetForegroundWindow() == handle)
+            throw new InvalidOperationException("La finestra di prova non deve prendere il focus dell'utente.");
         var bitmap = Capture(handle, out var bounds);
         var drawing = new DrawingVisual();
         using (var dc = drawing.RenderOpen())
@@ -86,6 +115,8 @@ internal sealed class VisualCapture(string directory)
             File = name + ".png", Width = bitmap.PixelWidth, Height = bitmap.PixelHeight,
             LogicalWidth = frame.ActualWidth, LogicalHeight = frame.ActualHeight,
             Dpi = VisualTreeHelper.GetDpi(frame).PixelsPerInchX,
+            EffectiveDpi = VisualTreeHelper.GetDpi(frame).PixelsPerInchX *
+                ((frame.Content as FrameworkElement)?.LayoutTransform is ScaleTransform scale ? scale.ScaleX : 1),
             SmallText = text.Where(t => t.FontSize < 13).Select(t => new { t.Text, t.FontSize }).ToArray()
         });
         File.WriteAllText(Path.Combine(directory, "manifest.json"), JsonSerializer.Serialize(_shots, new JsonSerializerOptions { WriteIndented = true }));

@@ -92,9 +92,12 @@ public partial class PracticeView : UserControl
         settings.Core.UseWorkers = false;
         settings.Display.LayoutMode = LayoutMode.Page;
 #pragma warning disable CS0618 // StaveProfile è deprecato ma resta il modo più semplice per scegliere tab/spartito
-        settings.Display.StaveProfile = StaveProfile.ScoreTab;
+        settings.Display.StaveProfile = StaveProfile.Tab;
 #pragma warning restore CS0618
         settings.Display.Scale = 1.0;
+        // Nell'editor lo spazio è per le note; titolo e accordatura sono già nelle proprietà.
+        settings.Notation.Elements.Set(NotationElement.ScoreTitle, false);
+        settings.Notation.Elements.Set(NotationElement.GuitarTuning, false);
         // Entrambe le linee devono essere leggibili sulla carta, anche sullo schermo ad alta risoluzione.
         settings.Display.Resources.SecondaryGlyphColor = settings.Display.Resources.MainGlyphColor;
         settings.Player.PlayerMode = PlayerMode.EnabledSynthesizer;
@@ -131,7 +134,7 @@ public partial class PracticeView : UserControl
         }));
 
         api.ScoreLoaded.On(score => Ui(() => OnScoreLoaded(score)));
-        api.PostRenderFinished.On(() => Ui(UpdateOverlay));
+        api.PostRenderFinished.On(() => Ui(() => UpdateOverlay()));
 
         api.PlayerStateChanged.On(args => Ui(() =>
         {
@@ -173,7 +176,7 @@ public partial class PracticeView : UserControl
             if (_scrollViewer == null && Tab.Template?.FindName("PART_ScrollView", Tab) is ScrollViewer sv)
             {
                 _scrollViewer = sv;
-                sv.ScrollChanged += (_, _) => UpdateOverlay();
+                sv.ScrollChanged += (_, _) => UpdateOverlay(ensureVisible: false);
             }
             return _scrollViewer;
         }
@@ -458,6 +461,7 @@ public partial class PracticeView : UserControl
             ? new List<(int, int)>()
             : beat.Notes.Where(x => !x.IsDead).Select(x => (_editor.LineOf((int)x.String), (int)x.Fret)).ToList();
         Fretboard.Show(n, names, (int)staff.Capo, _editor.Line, notes, playing != null);
+        ApplyPanelHeights();
     }
 
     private void OnPlayedBeat(Beat beat)
@@ -478,9 +482,11 @@ public partial class PracticeView : UserControl
     // Cursore e selezione sopra la tab -------------------------------
 
     private readonly List<Rectangle> _selectionRects = new();
+    private bool _overlayScrollPending;
+    private int _overlayAutoScrollCount;
 
     /// <summary>Disegna cursore (colonna + casella della corda) e selezione sopra la tab.</summary>
-    private void UpdateOverlay()
+    private void UpdateOverlay(bool ensureVisible = true)
     {
         ColumnMark.Visibility = CellMark.Visibility = Visibility.Collapsed;
         foreach (var r in _selectionRects) r.Visibility = Visibility.Collapsed;
@@ -544,8 +550,20 @@ public partial class PracticeView : UserControl
 
         // Tiene il cursore dentro la parte visibile.
         var inView = content.TranslatePoint(new Point(x, y), sv);
-        if (inView.Y < 30 || inView.Y > sv.ViewportHeight - 30)
-            sv.ScrollToVerticalOffset(Math.Max(0, sv.VerticalOffset + inView.Y - sv.ViewportHeight / 3));
+        // ScrollChanged richiama UpdateOverlay: una sola correzione per giro del dispatcher,
+        // nessuna correzione se non esiste una zona interna stabile, né per frazioni di pixel.
+        if (ensureVisible && !_overlayScrollPending && sv.ViewportHeight >= 90 && (inView.Y < 30 || inView.Y > sv.ViewportHeight - 30))
+        {
+            var offset = Math.Clamp(sv.VerticalOffset + inView.Y - sv.ViewportHeight / 3, 0, sv.ScrollableHeight);
+            if (Math.Abs(offset - sv.VerticalOffset) > 1)
+            {
+                _overlayScrollPending = true;
+                _overlayAutoScrollCount++;
+                sv.ScrollToVerticalOffset(offset);
+                Dispatcher.BeginInvoke(() => _overlayScrollPending = false,
+                    System.Windows.Threading.DispatcherPriority.ContextIdle);
+            }
+        }
     }
 
     /// <summary>Riquadro del pentagramma della tab della battuta (l'ultimo disegnato per lo staff).</summary>
@@ -598,7 +616,9 @@ public partial class PracticeView : UserControl
 
     private void View_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (_editor == null || e.OriginalSource is TextBox || e.Key == Key.F1) return;
+        if (_editor == null || e.OriginalSource is TextBox or ComboBox or ComboBoxItem or Slider or MenuItem || e.Key == Key.F1) return;
+        if (TryHandleToolbarShortcut(e)) return;
+        if (e.OriginalSource is GridSplitter) return;
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         var ctrl = CurrentModifiers.HasFlag(ModifierKeys.Control);
         var shift = CurrentModifiers.HasFlag(ModifierKeys.Shift);
@@ -614,8 +634,7 @@ public partial class PracticeView : UserControl
                 case Key.S: Save(shift); return;
             }
         }
-        if (key == Key.F2) { SetEditMode(!EditMode); return; }
-        if (key == Key.Space) { Play_Click(this, new RoutedEventArgs()); return; }
+        if (key == Key.Space) { if (shift) Stop_Click(this, new RoutedEventArgs()); else Play_Click(this, new RoutedEventArgs()); return; }
 
         if (!EditMode || !_editor.IsEditable)
         {

@@ -33,6 +33,7 @@ public sealed class FretboardView : FrameworkElement
     private IReadOnlyList<(int Line, int Fret)> _notes = Array.Empty<(int, int)>();
     private bool _isPlaying;
     private (int Line, int Fret)? _hover;
+    internal IReadOnlyList<(int Fret, Rect Bounds)> RenderedLabels { get; private set; } = [];
 
     public int StringCount { get; private set; } = 6;
     public int CursorLine { get; private set; } = 1;
@@ -44,7 +45,7 @@ public sealed class FretboardView : FrameworkElement
 
     public FretboardView()
     {
-        Height = 150;
+        MinHeight = 142;
         Cursor = Cursors.Hand;
         ToolTip = "Clicca su un tasto per scrivere la nota nel tempo selezionato; clicca di nuovo per toglierla";
     }
@@ -53,6 +54,7 @@ public sealed class FretboardView : FrameworkElement
         IReadOnlyList<(int Line, int Fret)> notes, bool isPlaying)
     {
         StringCount = Math.Max(1, stringCount);
+        MinHeight = Math.Max(120, (StringCount - 1) * 20 + BottomLabels + 22);
         StringNames = names;
         Capo = capo;
         CursorLine = cursorLine;
@@ -105,9 +107,28 @@ public sealed class FretboardView : FrameworkElement
         for (var f = 1; f <= Frets; f++)
         {
             dc.DrawLine(FretPen, new Point(FretX(f), top), new Point(FretX(f), bottom));
-            if (f is 3 or 5 or 7 or 9 or 12 or 15 or 17 or 19 or 21 or 24)
-                DrawText(dc, f.ToString(), NoteX(f), ActualHeight - BottomLabels / 2 - 1, 13, LabelBrush);
         }
+        // Si diradano solo le etichette: tutte le 24 posizioni restano disegnate e cliccabili.
+        // Il 24 è sempre riservato prima di accettare le etichette intermedie.
+        var labels = new List<(int Fret, Rect Bounds)>();
+        var labelY = ActualHeight - BottomLabels / 2 - 1;
+        Rect LabelBounds(int fret)
+        {
+            var text = MakeText(fret.ToString(), 13, LabelBrush, false);
+            return new Rect(NoteX(fret) - text.Width / 2, labelY - text.Height / 2, text.Width, text.Height);
+        }
+        var last = LabelBounds(Frets);
+        var previousRight = LeftLabels;
+        foreach (var fret in new[] { 3, 5, 7, 9, 12, 15, 17, 19, 21 })
+        {
+            var bounds = LabelBounds(fret);
+            if (bounds.Left < previousRight + 4 || bounds.Right > last.Left - 4) continue;
+            labels.Add((fret, bounds)); previousRight = bounds.Right;
+        }
+        labels.Add((Frets, last));
+        RenderedLabels = labels;
+        foreach (var (fret, bounds) in labels)
+            DrawText(dc, fret.ToString(), bounds.Left + bounds.Width / 2, labelY, 13, LabelBrush);
         if (Capo > 0)
         {
             var x = (FretX(Capo - 1) + FretX(Capo)) / 2;
@@ -143,11 +164,14 @@ public sealed class FretboardView : FrameworkElement
 
     private void DrawText(DrawingContext dc, string text, double cx, double cy, double size, Brush brush, bool bold = false)
     {
-        var ft = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-            bold ? new Typeface(Face.FontFamily, FontStyles.Normal, FontWeights.Bold, FontStretches.Normal) : Face,
-            size, brush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        var ft = MakeText(text, size, brush, bold);
         dc.DrawText(ft, new Point(cx - ft.Width / 2, cy - ft.Height / 2));
     }
+
+    private FormattedText MakeText(string text, double size, Brush brush, bool bold) =>
+        new(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            bold ? new Typeface(Face.FontFamily, FontStyles.Normal, FontWeights.Bold, FontStretches.Normal) : Face,
+            size, brush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
     private (int Line, int Fret)? HitTest(Point p)
     {
@@ -178,6 +202,9 @@ public sealed class FretboardView : FrameworkElement
         if (h != _hover)
         {
             _hover = h;
+            ToolTip = h is { } fret
+                ? $"Corda {fret.Line} · tasto {fret.Fret}. Clicca per scrivere la nota; clicca di nuovo per toglierla."
+                : "Clicca su un tasto per scrivere la nota nel tempo selezionato";
             InvalidateVisual();
         }
     }

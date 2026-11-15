@@ -14,6 +14,10 @@ public static class WindowTheme
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    private static extern nint GetWindowLongPtr(nint hwnd, int index);
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+    private static extern nint SetWindowLongPtr(nint hwnd, int index, nint value);
 
     public static void Apply(Window window)
     {
@@ -21,6 +25,7 @@ public static class WindowTheme
         window.FontSize = 13.5;
         window.UseLayoutRounding = true;
         window.Foreground = (Brush)Application.Current.FindResource("TextMain");
+        if (Environment.GetEnvironmentVariable("GS_SELFTEST") == "1") window.ShowActivated = false;
         if (new WindowInteropHelper(window).Handle != IntPtr.Zero) ApplyTitleBar(window);
         else window.SourceInitialized += (_, _) => ApplyTitleBar(window);
     }
@@ -30,6 +35,10 @@ public static class WindowTheme
         try
         {
             var hwnd = new WindowInteropHelper(window).Handle;
+            // Le sole finestre dell'autotest non devono sottrarre il focus all'utente,
+            // neppure quando WPF chiude una finestra figlia o seleziona un divisore.
+            if (Environment.GetEnvironmentVariable("GS_SELFTEST") == "1")
+                SetWindowLongPtr(hwnd, -20, new nint(GetWindowLongPtr(hwnd, -20).ToInt64() | (1L << 27)));
             var on = 1;
             DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, ref on, sizeof(int));
             // Windows 11: gli stessi colori del tema, convertiti nel formato COLORREF (BGR).

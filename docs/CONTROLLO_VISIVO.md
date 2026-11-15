@@ -1,3 +1,183 @@
+# Controllo visivo v0.5.0 — 15 novembre 2026
+
+**T, G2 e M1 chiusi.** La barra dà priorità ai comandi essenziali, la guida si dispone
+su una colonna al minimo e il manico dirada le etichette senza rimpicciolirle.
+La verifica v0.4.3 in fondo a questo documento è storica: i suoi difetti residui descrivono
+la situazione precedente, non lo stato attuale.
+
+## Dimensioni e metodo
+
+Foto esterne al repository, ottenute soltanto con l'autotest e PrintWindow:
+`%USERPROFILE%/.codex/visualizations/2026/11/14/01a1dbd8-afd1-78d3-82a7-0e4fa2e0579a/GuitarStudio-v0.5.0/`.
+
+- `prima/`: baseline della vecchia impaginazione, con sola strumentazione/versione aggiornata;
+  11 scene, 17 PNG. Al minimo il vecchio manico provocava un ciclo di scroll: quella sola
+  foto è stata saltata dopo aver riprodotto il difetto. La vista principale minima è presente.
+- `dopo/`: 32 scene, 59 PNG, inclusi menu completi, sottomenu, speed trainer e tutte le pagine
+  della guida. `manifest.json` riporta dimensioni, DPI nativo e DPI effettivo dei contenuti;
+  `layout-metrics.json` contiene i numeri del layout.
+- `dopo-report.txt` e `autotest-completo-finale.txt`: autotest visivo e completo, esito OK.
+  `xunit-inprocess.txt`: 61 test eseguiti, 61 superati, zero falliti/saltati/errori.
+
+Nessun mouse o tasto inviato al sistema, nessuna impostazione del desktop modificata.
+L'autotest calibra **i contenuti al 200% (192 DPI)** tramite LayoutTransform rispetto al DPI
+reale; anche i popup finali sono calibrati. Le cornici native conservano la scala del desktop
+(quella rilevata nel manifest), quindi questa è una prova della geometria dell'app al 200%,
+non un cambio della scala globale di Windows. I vecchi popup della baseline conservano la
+loro scala nativa; la vista principale, il manico e la guida sono calibrati al 200% nelle due serie.
+Le finestre GS_SELFTEST hanno ShowActivated=false e WS_EX_NOACTIVATE; il fotografo verifica
+che la finestra principale non sia in primo piano. I PNG delle finestre/popup completi
+accompagnano i compositi: un popup oltre il bordo dell'ospite non è una parte persa dell'elenco.
+
+| Profilo | PNG | Larghezza al 200% | Barra | Viewport partitura (DIP) | Sistemi interi |
+|---|---|---|---|---|---|
+| Principale | 1920×1080 | 960 DIP | Due righe, tutti i gruppi | 295,3 | 2 |
+| Intermedio | 1840×1080 | 920 DIP | Compatta, gruppi in Altro | 334,7 | 2 |
+| Minimo | 1760×960 | 880 DIP | Compatta, gruppi in Altro | 274,7 | 1 |
+
+La guida è fotografata anche a **1280×840 pixel**, corrispondenti al suo minimo 640×420 DIP.
+Non sono stati ridotti i caratteri per ottenere lo spazio: la vista iniziale è **Solo tab al 100%**,
+con titolo e accordatura nelle proprietà anziché sopra il foglio. Tab + spartito e Solo spartito
+restano nel selettore; il limite di due sistemi riguarda la vista iniziale. Il manico è nascosto
+all'avvio e viene fotografato anche aperto; le tracce iniziano con una riga e scorrono sulle altre.
+
+## Difetti chiusi e contratti verificati
+
+| Difetto | Prima | Dopo e prova |
+|---|---|---|
+| T | Trasporto e display tagliati, già a 150%; al 200% quasi tutti i comandi centrali invisibili | Prima riga stabile con Play, Stop, display e velocità; seconda riga da 820 DIP interni, overflow sotto. Bounds di tutti i controlli verificati nei tre profili. |
+| G2 | Spiegazioni della guida in colonne troppo strette | Riquadri su una colonna sotto 840 DIP utili; spiegazioni larghe almeno 180 DIP, font almeno 13, titoli a capo e fine raggiungibile con scorrimento. |
+| M1 | Numeri 17/19/21 sovrapposti sul manico stretto | Misura con il font effettivo a 13; almeno 4 DIP tra i rettangoli, 24 sempre presente. Le 24 posizioni restano cliccabili e il tooltip dà corda e numero. |
+| Ciclo di scroll | Richieste ricorsive da ScrollChanged quando manca una zona stabile, riprodotte nella baseline minima | ScrollChanged ridisegna senza scorrere; guardia di rientranza fino a ContextIdle, viewport minimo 90 DIP, destinazione limitata a ScrollableHeight ed epsilon 1. Prova forzata a 58 DIP: 64 aggiornamenti/0 scroll; prova normale: 1 correzione, poi stabilità e rispetto dello scroll manuale. |
+| Attribuzione | Credito originale poco contrastato, e fuori vista scorrendo | Originale conservato; riga alphaTab.net fissa, a 13, LineStrong su Paper, leggibile anche scorrendo. |
+
+I comandi File vengono spostati tra i contenitori, conservando gli stessi MenuItem e il loro
+ordine. Loop, metronomo e conteggio sono testati sia dal menu verso i pulsanti/player, sia
+nel ritorno dello stato verso il menu. Speed trainer viene ancorato ad Altro quando il suo
+pulsante è nascosto. Anche nella finestra larga Altro offre Pannelli, Tracce e Spazio partitura.
+Aggiungi/Elimina traccia restano raggiungibili quando l'intestazione del mixer è nascosta.
+Ogni icona della barra ha nome accessibile e tooltip con nome e scorciatoia.
+Le combinazioni sono esatte: Alt+F4 e Maiusc+F10 non sono intercettati; F4 e i tasti
+dei selettori/campi di testo conservano il comportamento nativo. L’autotest verifica
+anche che lettere e frecce sui selettori non modifichino note o cursore.
+
+I due GridSplitter sono provati con DragStarted/DragDelta/DragCompleted WPF, senza input
+nativo; settings.json viene scritto, riletto e riapplicato. Il minimo centrale di 140 DIP e
+il minimo del manico dipendente dalle corde impediscono di azzerare il foglio. Ridurre la
+finestra limita le altezze senza cancellare quelle desiderate. Alternative senza trascinamento:
+frecce sul divisore e Altro → Spazio partitura. Il focus e il trascinamento con dispositivi
+reali restano nella lista [PROVA_MANUALE.md](PROVA_MANUALE.md), non vengono dichiarati provati.
+
+## Foto della verifica attuale
+
+Per ogni PNG della serie finale il CSV [CONTROLLO_VISIVO_v0.5.0.csv](CONTROLLO_VISIVO_v0.5.0.csv)
+riporta superficie, confronto prima e risultato. L'elenco qui sotto include anche gli HWND
+completi dei popup. Nei compositi valgono i risultati della superficie in primo piano.
+La carta chiara è intenzionale; le zone nere esterne ai popup sono trasparenza/ombra di PrintWindow.
+
+| Foto in dopo/ | Prima omonima | Risultato |
+|---|---|---|
+| `1920-altro-popup-1.png` | Nuovo stato | Menu del tema; gruppi secondari e regolazioni raggiungibili |
+| `1920-altro.png` | Nuovo stato | Menu del tema; gruppi secondari e regolazioni raggiungibili |
+| `1920-file-popup-1.png` | Sì | Comandi File originali, ordine conservato; raggiungibili anche da Altro |
+| `1920-file.png` | Sì | Comandi File originali, ordine conservato; raggiungibili anche da Altro |
+| `1920-guida-audio-popup-1.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `1920-guida-audio.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `1920-guida-effetti-popup-1.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `1920-guida-effetti.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `1920-guida-fondo-popup-1.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `1920-guida-fondo.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `1920-guida-popup-1.png` | Sì | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `1920-guida.png` | Sì | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `1920-manico.png` | Sì | M1 chiuso; etichette misurate a 13, distanza >=4 DIP, 24 presente |
+| `1920-predefinita.png` | Sì | T chiuso; Play/Stop/display/velocità interi; due sistemi nel profilo principale |
+| `1920-tracce-estese.png` | Nuovo stato | Altezza regolata, intestazione visibile e preferenza conservata |
+| `1920-trainer-popup-1.png` | Nuovo stato | Speed trainer raggiungibile, popup ancorato al pulsante visibile |
+| `1920-trainer.png` | Nuovo stato | Speed trainer raggiungibile, popup ancorato al pulsante visibile |
+| `intermedia-altro-popup-1.png` | Nuovo stato | Menu del tema; gruppi secondari e regolazioni raggiungibili |
+| `intermedia-altro.png` | Nuovo stato | Menu del tema; gruppi secondari e regolazioni raggiungibili |
+| `intermedia-esercitazione-popup-1.png` | Nuovo stato | Toggle e player sincronizzati; segni di spunta visibili |
+| `intermedia-esercitazione-popup-2.png` | Nuovo stato | Toggle e player sincronizzati; segni di spunta visibili |
+| `intermedia-esercitazione.png` | Nuovo stato | Toggle e player sincronizzati; segni di spunta visibili |
+| `intermedia-file-popup-1.png` | Sì | Comandi File originali, ordine conservato; raggiungibili anche da Altro |
+| `intermedia-file-popup-2.png` | Nuovo stato | Comandi File originali, ordine conservato; raggiungibili anche da Altro |
+| `intermedia-file.png` | Sì | Comandi File originali, ordine conservato; raggiungibili anche da Altro |
+| `intermedia-guida-audio-popup-1.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `intermedia-guida-audio.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `intermedia-guida-effetti-popup-1.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `intermedia-guida-effetti.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `intermedia-guida-fondo-popup-1.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `intermedia-guida-fondo.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `intermedia-guida-popup-1.png` | Sì | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `intermedia-guida.png` | Sì | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `intermedia-manico.png` | Sì | M1 chiuso; etichette misurate a 13, distanza >=4 DIP, 24 presente |
+| `intermedia-predefinita.png` | Sì | T chiuso; Play/Stop/display/velocità interi; due sistemi nel profilo principale |
+| `intermedia-tracce-estese.png` | Nuovo stato | Altezza regolata, intestazione visibile e preferenza conservata |
+| `intermedia-trainer-popup-1.png` | Nuovo stato | Speed trainer raggiungibile, popup ancorato al pulsante visibile |
+| `intermedia-trainer.png` | Nuovo stato | Speed trainer raggiungibile, popup ancorato al pulsante visibile |
+| `minimo-altro-popup-1.png` | Nuovo stato | Menu del tema; gruppi secondari e regolazioni raggiungibili |
+| `minimo-altro.png` | Nuovo stato | Menu del tema; gruppi secondari e regolazioni raggiungibili |
+| `minimo-esercitazione-popup-1.png` | Nuovo stato | Toggle e player sincronizzati; segni di spunta visibili |
+| `minimo-esercitazione-popup-2.png` | Nuovo stato | Toggle e player sincronizzati; segni di spunta visibili |
+| `minimo-esercitazione.png` | Nuovo stato | Toggle e player sincronizzati; segni di spunta visibili |
+| `minimo-file-popup-1.png` | Sì | Comandi File originali, ordine conservato; raggiungibili anche da Altro |
+| `minimo-file-popup-2.png` | Nuovo stato | Comandi File originali, ordine conservato; raggiungibili anche da Altro |
+| `minimo-file.png` | Sì | Comandi File originali, ordine conservato; raggiungibili anche da Altro |
+| `minimo-guida-audio-popup-1.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `minimo-guida-audio.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `minimo-guida-effetti-popup-1.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `minimo-guida-effetti.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `minimo-guida-fondo-popup-1.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `minimo-guida-fondo.png` | Nuovo stato | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `minimo-guida-popup-1.png` | Sì | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `minimo-guida.png` | Sì | G2 chiuso; testi >=13, spiegazioni >=180 DIP, scorrimento verticale fino alla fine |
+| `minimo-manico.png` | Nuovo stato | M1 chiuso; etichette misurate a 13, distanza >=4 DIP, 24 presente |
+| `minimo-predefinita.png` | Sì | T chiuso; Play/Stop/display/velocità interi; due sistemi nel profilo principale |
+| `minimo-tracce-estese.png` | Nuovo stato | Altezza regolata, intestazione visibile e preferenza conservata |
+| `minimo-trainer-popup-1.png` | Nuovo stato | Speed trainer raggiungibile, popup ancorato al pulsante visibile |
+| `minimo-trainer.png` | Nuovo stato | Speed trainer raggiungibile, popup ancorato al pulsante visibile |
+
+## Esecuzione, build e limiti dell'ambiente
+
+Per ripetere la verifica: GS_SELFTEST=1, GS_SELFTEST_UI=1, GS_SELFTEST_LAYOUT=1,
+GS_UI_CAPTURE_DIR esterno al repository, GS_SELFTEST_DATA_DIR per i dati sintetici e
+GS_SELFTEST_REPORT per il resoconto. Senza GS_UI_CAPTURE_DIR si esegue l'autotest completo;
+GS_SELFTEST_EXIT=1 lo chiude. L'avvio con `dotnet GuitarStudio.dll` mantiene il processo
+nella sessione di esecuzione del sandbox; un processo in background può essere terminato
+quando finisce il comando che lo ha avviato.
+
+Build Debug e Release: **0 avvisi, 0 errori**, con:
+
+```powershell
+dotnet build --no-restore -m:1 -nr:false -p:UseSharedCompilation=false
+dotnet build -c Release --no-restore -m:1 -nr:false -p:UseSharedCompilation=false
+```
+
+VSTest ordinario va in timeout prima della suite perché testhost non si collega al runner
+in questo ambiente; non è riportato come verde. È stata invece eseguita la **stessa suite
+xUnit di 61 test** nello stesso processo, usando l'AssemblyRunner già incluso nell'adattatore
+installato (reflection, perché incorporato come tipo interno), senza dipendenze nuove.
+Sorgenti del piccolo launcher e log sono fuori repository in runner-xunit e xunit-inprocess.txt.
+Due test nuovi coprono le vecchie preferenze e il roundtrip delle due altezze. L'autotest
+completo è OK, inclusi audio, anteprima e timer reale di autosave. Audit statico UI strict:
+zero violazioni; non sostituisce i controlli runtime appena descritti.
+
+Ricerca di colori letterali C#/XAML fuori da Dark.xaml: zero corrispondenze (inclusi HEX,
+COLORREF, Colors/Brushes e nomi diretti). UseWorkers=false, NAudio 2.4 e le guardie MIDI
+non sono stati modificati. build-diagnostic.log è stato eliminato e non è tra le modifiche.
+
+Il sandbox nega Git: prima FETCH_HEAD per pull, poi `.git/index.lock: Permission denied`
+per git add. Nessun cambio di permessi o forzatura; modifiche lasciate nell'albero di lavoro,
+nessun commit e nessun push. Messaggio previsto:
+`v0.5.0: trasporto adattivo e spazio per la partitura`.
+
+---
+
+# Verifica v0.4.3 conservata come storico
+
+Le tabelle seguenti descrivono la situazione della v0.4.3 e le sue fotografie, non i difetti
+residui della v0.5.0. Il CSV storico CONTROLLO_VISIVO.csv conserva le sue 69 righe originali.
+
 # Controllo visivo v0.4.3 — 14–15 novembre 2026
 
 Foto ottenute esclusivamente nell'autotest con PrintWindow, senza spostare il mouse,

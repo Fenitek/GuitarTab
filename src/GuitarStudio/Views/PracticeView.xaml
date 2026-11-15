@@ -6,33 +6,53 @@
              Focusable="True" FocusVisualStyle="{x:Null}"
              PreviewKeyDown="View_PreviewKeyDown">
 
-    <Grid>
+    <Grid x:Name="WorkspaceGrid" SizeChanged="Workspace_SizeChanged">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition x:Name="BodyRow" Height="*" MinHeight="140"/>
+            <RowDefinition x:Name="TracksDividerRow" Height="6"/>
+            <RowDefinition x:Name="TracksRow" Height="34" MinHeight="34"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- ============================== BARRA SUPERIORE ============================== -->
-        <Border Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="8,6">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Sinistra: pannelli, file, annulla, zoom -->
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <ToggleButton x:Name="PaletteToggle" Style="{StaticResource IconToggle}" Content="&#xE90C;" IsChecked="True"
-                                  Click="PanelToggle_Click" ToolTip="Tavolozza di modifica (F2)"/>
-                    <ToggleButton x:Name="TracksToggle" Style="{StaticResource IconToggle}" Content="&#xE90E;" IsChecked="True"
-                                  Click="PanelToggle_Click" ToolTip="Pannello tracce"/>
-                    <ToggleButton x:Name="InspectorToggle" Style="{StaticResource IconToggle}" Content="&#xE90D;" IsChecked="True"
-                                  Click="PanelToggle_Click" ToolTip="Pannello Brano / Traccia / Battuta"/>
+        <Border x:Name="TransportBar" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="8,5">
+            <Grid x:Name="ToolbarLayout" SizeChanged="Toolbar_SizeChanged">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <Grid x:Name="ToolbarCore">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="PlayButton" Style="{StaticResource IconButton}" Content="&#xE768;" FontSize="18" Width="38" Click="Play_Click" IsEnabled="False" ToolTip="Play / Pausa (Spazio)" AutomationProperties.Name="Play o pausa"/>
+                        <Button x:Name="StopButton" Style="{StaticResource IconButton}" Content="&#xE71A;" Click="Stop_Click" IsEnabled="False" ToolTip="Stop (Maiusc+Spazio)" AutomationProperties.Name="Stop"/>
+                    </StackPanel>
+                    <Border x:Name="TransportDisplay" Grid.Column="1" Background="{StaticResource BgDeep}" CornerRadius="6" Padding="10,3" Margin="8,0" MinWidth="260" MaxWidth="420" BorderBrush="{StaticResource Line}" BorderThickness="1">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock x:Name="LcdTempo" DockPanel.Dock="Right" Text="♩ = 120" Foreground="{StaticResource TextDim}" FontSize="13" Margin="10,0,0,0"/>
+                                <TextBlock x:Name="LcdTrack" Text="—" Foreground="{StaticResource Accent}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                            </DockPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock x:Name="LcdBar" Text="1/1" Foreground="{StaticResource TextMain}" FontFamily="{StaticResource MonoFont}" FontSize="13"/>
+                                <TextBlock x:Name="LcdSig" Text="4/4" Foreground="{StaticResource TextDim}" FontFamily="{StaticResource MonoFont}" FontSize="13" Margin="12,0,0,0"/>
+                                <TextBlock x:Name="TimeText" Text="0:00 / 0:00" Foreground="{StaticResource TextMain}" FontFamily="{StaticResource MonoFont}" FontSize="13" Margin="12,0,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <StackPanel x:Name="SpeedGroup" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,8,0">
+                        <Slider x:Name="SpeedSlider" Width="100" Minimum="25" Maximum="150" Value="100" Focusable="False" TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="SpeedSlider_ValueChanged" ToolTip="Velocità 25–150% (Ctrl+Pag↑ / Pag↓)" AutomationProperties.Name="Velocità di riproduzione"/>
+                        <TextBlock x:Name="SpeedText" Text="100%" Width="44" FontSize="13" VerticalAlignment="Center" Margin="6,0,0,0" Foreground="{StaticResource Accent}" FontWeight="SemiBold"/>
+                    </StackPanel>
+                    <Button x:Name="MoreButton" Grid.Column="3" Style="{StaticResource ToolButton}" Content="Altro ▾" Margin="0" Padding="10,6" VerticalAlignment="Center" Click="More_Click" ToolTip="Altri comandi e spazio partitura (F10)" AutomationProperties.Name="Altri comandi">
+                        <Button.ContextMenu><ContextMenu/></Button.ContextMenu>
+                    </Button>
+                </Grid>
+                <StackPanel x:Name="SecondaryCommands" Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
+                    <ToggleButton x:Name="PaletteToggle" Style="{StaticResource IconToggle}" Content="&#xE90C;" IsChecked="True" Click="PanelToggle_Click" ToolTip="Tavolozza di modifica (F2)"/>
+                    <ToggleButton x:Name="TracksToggle" Style="{StaticResource IconToggle}" Content="&#xE90E;" IsChecked="True" Click="PanelToggle_Click" ToolTip="Pannello tracce (F3)"/>
+                    <ToggleButton x:Name="InspectorToggle" Style="{StaticResource IconToggle}" Content="&#xE90D;" IsChecked="True" Click="PanelToggle_Click" ToolTip="Proprietà Brano / Traccia / Battuta (F4)"/>
+                    <ToggleButton x:Name="FretToggle" Style="{StaticResource IconToggle}" Click="FretToggle_Click" ToolTip="Mostra o nascondi il manico (F6)"><TextBlock Text="Manico" FontFamily="{StaticResource UiFont}" FontSize="13"/></ToggleButton>
                     <Border Style="{StaticResource SeparatorLine}"/>
-                    <Button x:Name="FileMenuButton" Style="{StaticResource IconButton}" Content="&#xE700;" Click="FileMenu_Click" ToolTip="Menu file">
+                    <Button x:Name="FileMenuButton" Style="{StaticResource IconButton}" Content="&#xE700;" Click="FileMenu_Click" ToolTip="Menu file (Alt+F)">
                         <Button.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="Nuova tablatura" InputGestureText="Ctrl+N" Click="New_Click"/>
@@ -57,53 +77,15 @@
                     <Border Style="{StaticResource SeparatorLine}"/>
                     <Button x:Name="UndoButton" Style="{StaticResource IconButton}" Content="&#xE7A7;" Click="Undo_Click" ToolTip="Annulla (Ctrl+Z)"/>
                     <Button x:Name="RedoButton" Style="{StaticResource IconButton}" Content="&#xE7A6;" Click="Redo_Click" ToolTip="Ripeti (Ctrl+Y)"/>
-                </StackPanel>
-
-                <!-- Centro: trasporto e display -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="12,0">
-                    <Button Style="{StaticResource IconButton}" Content="&#xE892;" Click="GoStart_Click" ToolTip="All'inizio"/>
-                    <Button Style="{StaticResource IconButton}" Content="&#xE76B;" Click="PrevBar_Click" ToolTip="Battuta precedente"/>
-                    <Button x:Name="PlayButton" Style="{StaticResource IconButton}" Content="&#xE768;" FontSize="18" Width="40"
-                            Click="Play_Click" IsEnabled="False" ToolTip="Play / Pausa (Spazio)"/>
-                    <Button Style="{StaticResource IconButton}" Content="&#xE76C;" Click="NextBar_Click" ToolTip="Battuta successiva"/>
-                    <Button x:Name="StopButton" Style="{StaticResource IconButton}" Content="&#xE71A;" Click="Stop_Click" IsEnabled="False" ToolTip="Stop"/>
-
-                    <!-- Display -->
-                    <Border Background="{StaticResource BgDeep}" CornerRadius="6" Padding="14,4" Margin="10,0" MinWidth="290"
-                            BorderBrush="{StaticResource Line}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock x:Name="LcdTrack" Text="—" Foreground="{StaticResource Accent}" FontSize="13" FontWeight="SemiBold"
-                                       HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <TextBlock x:Name="LcdBar" Text="1/1" Foreground="{StaticResource TextMain}" FontFamily="{StaticResource MonoFont}" FontSize="14"/>
-                                <TextBlock x:Name="LcdSig" Text="4/4" Foreground="{StaticResource TextDim}" FontFamily="{StaticResource MonoFont}" FontSize="14" Margin="14,0,0,0"/>
-                                <TextBlock x:Name="TimeText" Text="0:00 / 0:00" Foreground="{StaticResource TextMain}" FontFamily="{StaticResource MonoFont}" FontSize="14" Margin="14,0,0,0"/>
-                                <TextBlock x:Name="LcdTempo" Text="♩ = 120" Foreground="{StaticResource TextDim}" FontSize="14" Margin="14,0,0,0"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- Destra: esercizio -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <ToggleButton x:Name="LoopToggle" Style="{StaticResource IconToggle}" Content="&#xE8EE;" Click="LoopToggle_Click"
-                                  ToolTip="Loop: trascina sulla tab per scegliere il pezzo da ripetere"/>
-                    <ToggleButton x:Name="MetronomeToggle" Style="{StaticResource IconToggle}" Click="MetronomeToggle_Click" ToolTip="Metronomo">
-                        <TextBlock Text="♩" FontFamily="{StaticResource MusicFont}" FontSize="17"/>
-                    </ToggleButton>
-                    <ToggleButton x:Name="CountInToggle" Style="{StaticResource IconToggle}" Click="CountInToggle_Click" ToolTip="Una battuta di conteggio prima di partire">
-                        <TextBlock Text="1-2" FontFamily="{StaticResource UiFont}" FontSize="13" FontWeight="SemiBold"/>
-                    </ToggleButton>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE892;" Click="GoStart_Click" ToolTip="All'inizio (Ctrl+Home)"/>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE76B;" Click="PrevBar_Click" ToolTip="Battuta precedente (Ctrl+←)"/>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE76C;" Click="NextBar_Click" ToolTip="Battuta successiva (Ctrl+→)"/>
                     <Border Style="{StaticResource SeparatorLine}"/>
-                    <TextBlock Text="&#xEC4A;" FontFamily="{StaticResource IconFont}" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" Margin="2,0,6,0"
-                               ToolTip="Velocità di riproduzione"/>
-                    <Slider x:Name="SpeedSlider" Width="120" Minimum="25" Maximum="150" Value="100" Focusable="False"
-                            TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                            ValueChanged="SpeedSlider_ValueChanged" ToolTip="Velocità di riproduzione"/>
-                    <TextBlock x:Name="SpeedText" Text="100%" Width="44" FontSize="14" VerticalAlignment="Center" Margin="6,0,2,0"
-                               Foreground="{StaticResource Accent}" FontWeight="SemiBold"/>
-                    <ToggleButton x:Name="TrainerToggle" Style="{StaticResource IconToggle}" Content="&#xE916;" Click="TrainerToggle_Click"
-                                  ToolTip="Speed trainer: la velocità sale a ogni giro del loop"/>
+                    <ToggleButton x:Name="LoopToggle" Style="{StaticResource IconToggle}" Content="&#xE8EE;" Click="LoopToggle_Click" ToolTip="Loop: ripeti la selezione (F7)"/>
+                    <ToggleButton x:Name="MetronomeToggle" Style="{StaticResource IconToggle}" Click="MetronomeToggle_Click" ToolTip="Metronomo (F8)"><TextBlock Text="♩" FontFamily="{StaticResource MusicFont}" FontSize="17"/></ToggleButton>
+                    <ToggleButton x:Name="CountInToggle" Style="{StaticResource IconToggle}" Click="CountInToggle_Click" ToolTip="Conteggio iniziale (F9)"><TextBlock Text="1-2" FontFamily="{StaticResource UiFont}" FontSize="13" FontWeight="SemiBold"/></ToggleButton>
+                    <ToggleButton x:Name="TrainerToggle" Style="{StaticResource IconToggle}" Content="&#xE916;" Click="TrainerToggle_Click" ToolTip="Speed trainer (Ctrl+F10)"/>
+                </StackPanel>
                     <Popup x:Name="TrainerPopup" AllowsTransparency="True" PopupAnimation="Fade" VerticalOffset="6" PlacementTarget="{Binding ElementName=TrainerToggle}" Placement="Bottom" StaysOpen="False"
                            Closed="TrainerPopup_Closed">
                         <Border Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="8,0,8,10">
@@ -134,20 +116,15 @@
                             </StackPanel>
                         </Border>
                     </Popup>
-                    <Border Style="{StaticResource SeparatorLine}"/>
-                    <ToggleButton x:Name="FretToggle" Style="{StaticResource IconToggle}" Click="FretToggle_Click" ToolTip="Manico: note scritte o in riproduzione">
-                        <TextBlock Text="Manico" FontFamily="{StaticResource UiFont}" FontSize="13.5"/>
-                    </ToggleButton>
-                </StackPanel>
             </Grid>
         </Border>
 
         <!-- ============================== CORPO ============================== -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="PaletteColumn" Width="226" MinWidth="190" MaxWidth="440"/>
+                <ColumnDefinition x:Name="PaletteColumn" Width="190" MinWidth="190" MaxWidth="440"/>
                 <ColumnDefinition Width="*" MinWidth="300"/>
-                <ColumnDefinition x:Name="InspectorColumn" Width="290" MinWidth="250" MaxWidth="560"/>
+                <ColumnDefinition x:Name="InspectorColumn" Width="250" MinWidth="250" MaxWidth="560"/>
             </Grid.ColumnDefinitions>
 
             <!-- Tavolozza di modifica -->
@@ -155,12 +132,12 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
                     <StackPanel Margin="12,0,6,14">
                         <TextBlock Text="VOCE" Style="{StaticResource SectionHeader}"/>
-                        <WrapPanel>
-                            <ToggleButton x:Name="VoiceOne" Style="{StaticResource ToolToggle}" Content="1 ↑" Tag="0" Width="76"
+                        <UniformGrid Columns="2">
+                            <ToggleButton x:Name="VoiceOne" Style="{StaticResource ToolToggle}" Content="1 ↑" Tag="0" MinWidth="60" Margin="0,0,4,0"
                                           Click="Voice_Click" ToolTip="Voce 1: melodia (Ctrl+Alt+1)" AutomationProperties.Name="Voce 1, melodia"/>
-                            <ToggleButton x:Name="VoiceTwo" Style="{StaticResource ToolToggle}" Content="2 ↓" Tag="1" Width="76"
+                            <ToggleButton x:Name="VoiceTwo" Style="{StaticResource ToolToggle}" Content="2 ↓" Tag="1" MinWidth="60" Margin="0,0,0,0"
                                           Click="Voice_Click" ToolTip="Voce 2: accompagnamento (Ctrl+Alt+2)" AutomationProperties.Name="Voce 2, accompagnamento"/>
-                        </WrapPanel>
+                        </UniformGrid>
                         <TextBlock Text="Durate indipendenti nella stessa battuta." Foreground="{StaticResource TextDim}"
                                    FontSize="13" TextWrapping="Wrap" Margin="0,6,6,2"/>
                         <TextBlock Text="DURATA" Style="{StaticResource SectionHeader}"/>
@@ -234,13 +211,15 @@
             </Border>
 
             <!-- Spartito + manico -->
-            <Grid Grid.Column="1">
+            <Grid x:Name="ScoreArea" Grid.Column="1">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*" MinHeight="140"/>
+                    <RowDefinition x:Name="FretDividerRow" Height="0"/>
+                    <RowDefinition x:Name="FretRow" Height="0"/>
                 </Grid.RowDefinitions>
                 <Border Background="{StaticResource Paper}" Margin="10,10,10,6" CornerRadius="6" ClipToBounds="True">
                     <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                         <at:AlphaTab x:Name="Tab" BarCursorFill="{StaticResource ScoreBarCursor}" BeatCursorFill="{StaticResource ScoreBeatCursor}" SelectionFill="{StaticResource ScoreSelection}"
                                      PreviewMouseLeftButtonDown="Tab_PreviewMouseLeftButtonDown"/>
                         <Canvas x:Name="Overlay" IsHitTestVisible="False" ClipToBounds="True">
@@ -262,18 +241,21 @@
                                            TextWrapping="Wrap" MaxWidth="520"/>
                             </DockPanel>
                         </Border>
+                        <TextBlock x:Name="ScoreAttribution" Grid.Row="1" Text="alphaTab.net" FontSize="13" Foreground="{StaticResource LineStrong}"
+                                   HorizontalAlignment="Right" Margin="6,0,12,2" ToolTip="Motore di notazione alphaTab.net"/>
                     </Grid>
                 </Border>
-                <Border x:Name="FretPanel" Grid.Row="1" Background="{StaticResource BgPanel}" Margin="10,0,10,6"
+                <GridSplitter x:Name="FretSplitter" Grid.Row="1" Style="{StaticResource HorizontalPanelSplitter}" Visibility="Collapsed" DragCompleted="HeightSplitter_DragCompleted" KeyUp="HeightSplitter_KeyUp" AutomationProperties.Name="Altezza del manico" ToolTip="Altezza del manico: trascina oppure usa le frecce; alternative in Altro → Spazio partitura"/>
+                <Border x:Name="FretPanel" Grid.Row="2" Background="{StaticResource BgPanel}" Margin="10,0,10,6"
                         CornerRadius="6" Padding="8,6" Visibility="Collapsed">
                     <views:FretboardView x:Name="Fretboard"/>
                 </Border>
             </Grid>
 
             <GridSplitter x:Name="PaletteSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Left" Background="{StaticResource TransparentFill}"
-                          ResizeBehavior="PreviousAndCurrent" ResizeDirection="Columns" Cursor="SizeWE" ToolTip="Trascina per allargare la tavolozza"/>
+                          ResizeBehavior="PreviousAndCurrent" ResizeDirection="Columns" Cursor="SizeWE" DragCompleted="SideSplitter_DragCompleted" ToolTip="Trascina per allargare la tavolozza"/>
             <GridSplitter x:Name="InspectorSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Right" Background="{StaticResource TransparentFill}"
-                          ResizeBehavior="CurrentAndNext" ResizeDirection="Columns" Cursor="SizeWE" ToolTip="Trascina per allargare il pannello"/>
+                          ResizeBehavior="CurrentAndNext" ResizeDirection="Columns" Cursor="SizeWE" DragCompleted="SideSplitter_DragCompleted" ToolTip="Trascina per allargare il pannello"/>
 
             <!-- Pannello proprietà -->
             <Border x:Name="InspectorPanel" Grid.Column="2" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}"
@@ -354,13 +336,14 @@
         </Grid>
 
         <!-- ============================== TRACCE ============================== -->
-        <Border x:Name="TracksPanel" Grid.Row="2" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
+        <GridSplitter x:Name="TracksSplitter" Grid.Row="2" Style="{StaticResource HorizontalPanelSplitter}" DragCompleted="HeightSplitter_DragCompleted" KeyUp="HeightSplitter_KeyUp" AutomationProperties.Name="Altezza delle tracce" ToolTip="Altezza delle tracce: trascina oppure usa le frecce; alternative in Altro → Spazio partitura"/>
+        <Border x:Name="TracksPanel" Grid.Row="3" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
             <DockPanel>
                 <!-- Le colonne vengono create dal codice, uguali a quelle delle righe (TrackColumnWidths) -->
-                <Grid x:Name="TracksHeader" DockPanel.Dock="Top" Height="34" Background="{StaticResource BgDark}">
+                <Grid x:Name="TracksHeader" DockPanel.Dock="Top" Height="28" Background="{StaticResource BgDark}">
                     <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0">
-                        <Button Style="{StaticResource IconButton}" Content="&#xE710;" FontSize="13" Width="28" Height="26" Click="AddTrack_Click" ToolTip="Aggiungi una traccia (chitarra o basso)"/>
-                        <Button Style="{StaticResource IconButton}" Content="&#xE74D;" FontSize="13" Width="28" Height="26" Click="DeleteTrack_Click" ToolTip="Elimina la traccia selezionata"/>
+                        <Button Style="{StaticResource IconButton}" Content="&#xE710;" FontSize="13" Width="28" Height="26" Click="AddTrack_Click" ToolTip="Aggiungi una traccia (Ctrl+Maiusc+N)"/>
+                        <Button Style="{StaticResource IconButton}" Content="&#xE74D;" FontSize="13" Width="28" Height="26" Click="DeleteTrack_Click" ToolTip="Elimina traccia (Ctrl+Maiusc+D)"/>
                         <TextBlock Text="Tracce" Foreground="{StaticResource TextMain}" FontWeight="SemiBold" FontSize="13.5" VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </StackPanel>
                     <TextBlock Grid.Column="2" Text="M" Foreground="{StaticResource TextDim}" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Mute: silenzia la traccia"/>
@@ -368,14 +351,14 @@
                     <TextBlock Grid.Column="4" Text="Volume" Foreground="{StaticResource TextDim}" FontSize="13" VerticalAlignment="Center" Margin="8,0,0,0"/>
                     <TextBlock Grid.Column="6" Text="Battute  ·  clicca per andarci" Foreground="{StaticResource TextDim}" FontSize="13" VerticalAlignment="Center"/>
                 </Grid>
-                <ScrollViewer MaxHeight="170" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                <ScrollViewer x:Name="TracksScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
                     <StackPanel x:Name="TrackRows"/>
                 </ScrollViewer>
             </DockPanel>
         </Border>
 
         <!-- ============================== STATO ============================== -->
-        <Border Grid.Row="3" Background="{StaticResource BgDeep}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="12,4,8,4">
+        <Border x:Name="StatusBar" Grid.Row="4" Background="{StaticResource BgDeep}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="12,4,8,4">
             <DockPanel>
                 <ComboBox x:Name="ZoomCombo" DockPanel.Dock="Right" Width="92" Height="28" MinHeight="28" FontSize="13" Margin="6,0,0,0" VerticalAlignment="Center"
                           SelectedIndex="2" Focusable="False" SelectionChanged="ZoomCombo_SelectionChanged" ToolTip="Zoom dello spartito">
@@ -387,7 +370,7 @@
                     <ComboBoxItem Content="200%" Tag="2"/>
                 </ComboBox>
                 <ComboBox x:Name="ViewCombo" DockPanel.Dock="Right" Width="150" Height="28" MinHeight="28" FontSize="13" Margin="14,0,0,0" VerticalAlignment="Center"
-                          SelectedIndex="0" Focusable="False" SelectionChanged="ViewCombo_SelectionChanged" ToolTip="Cosa mostrare: tablatura, spartito o entrambi">
+                          SelectedIndex="1" Focusable="False" SelectionChanged="ViewCombo_SelectionChanged" ToolTip="Cosa mostrare: tablatura, spartito o entrambi">
                     <ComboBoxItem Content="Tab + spartito"/>
                     <ComboBoxItem Content="Solo tab"/>
                     <ComboBoxItem Content="Solo spartito"/>

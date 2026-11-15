@@ -241,8 +241,11 @@ public partial class PracticeView
         var s = AppSettings.Current;
         _paletteWidth = Math.Clamp(s.PaletteWidth, PaletteMinWidth, PaletteColumn.MaxWidth);
         _inspectorWidth = Math.Clamp(s.InspectorWidth, InspectorMinWidth, InspectorColumn.MaxWidth);
+        PalettePanel.Visibility = InspectorPanel.Visibility = Visibility.Collapsed;
         ShowPalette(PaletteToggle.IsChecked == true);
         ShowInspectorPanel(InspectorToggle.IsChecked == true);
+        InitializeAdaptiveToolbar();
+        InitializePanelHeights(s);
     }
 
     private void ShowPalette(bool show) =>
@@ -270,5 +273,7 @@ public partial class PracticeView
             _inspectorWidth = InspectorColumn.ActualWidth;
         settings.PaletteWidth = _paletteWidth;
         settings.InspectorWidth = _inspectorWidth;
+        settings.FretboardHeight = _fretboardHeight;
+        settings.TracksHeight = _tracksHeight;
     }
 }

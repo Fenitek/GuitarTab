@@ -68,13 +68,31 @@ public sealed class HelpWindow : Window
         }),
         ("File, ascolto e finestra", new[]
         {
+            ("Focus nella partitura", "i campi di testo e i selettori conservano i propri tasti; Alt+F4 e Maiusc+F10 mantengono il comportamento di Windows"),
             ("Spazio", "play / pausa dal cursore"),
+            ("Maiusc+Spazio", "stop"),
+            ("Ctrl+Home", "torna all'inizio del brano"),
+            ("Ctrl+Pag↑ / Pag↓", "aumenta o diminuisce la velocità di 5 punti"),
             ("Ctrl+N / O", "nuova tablatura / apri"),
             ("Ctrl+S", "salva"),
             ("Ctrl+Maiusc+S", "salva come"),
             ("Ogni 60 secondi", "copia locale di recupero delle modifiche; all'avvio puoi recuperarla dopo un'interruzione. Salva e la chiusura pulita la eliminano"),
             ("F2", "mostra o nasconde la tavolozza (modalità modifica)"),
+            ("F3 / F4 / F6", "mostra o nasconde tracce, proprietà e manico"),
+            ("F7 / F8 / F9", "loop, metronomo e conteggio iniziale"),
+            ("F10 / Ctrl+F10", "menu Altro / speed trainer"),
+            ("Alt+F", "menu File, anche quando è dentro Altro"),
+            ("Ctrl+Maiusc+N / D", "aggiunge / elimina una traccia"),
             ("F1", "questa guida")
+        }),
+        ("Spazio per scrivere", new[]
+        {
+            ("Solo tab", "vista iniziale per lasciare almeno due sistemi leggibili; dal selettore in basso puoi scegliere Tab + spartito"),
+            ("Divisori orizzontali", "trascina il bordo tra partitura, manico e tracce: le altezze vengono ricordate"),
+            ("Tab → frecce", "con il divisore selezionato, su e giù regolano l'altezza senza trascinare"),
+            ("Altro → Spazio partitura", "riduci le tracce a una riga, regola il manico o ripristina le altezze predefinite"),
+            ("Finestra stretta", "Play, Stop, display e velocità restano visibili; File, spostamento e strumenti per esercitarsi sono nel menu Altro"),
+            ("Numeri sul manico", "le etichette si diradano se manca spazio; tutti i tasti restano cliccabili e il suggerimento mostra corda e numero")
         })
     };
 
@@ -135,7 +153,7 @@ public sealed class HelpWindow : Window
     {
         var page = new ScrollViewer
         {
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Focusable = false,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false,
             Content = content, Padding = new Thickness(28, 18, 16, 24), Visibility = Visibility.Collapsed
         };
         var tab = new RadioButton
@@ -157,21 +175,20 @@ public sealed class HelpWindow : Window
 
     private UIElement BuildShortcuts()
     {
-        var columns = new UniformGrid { Columns = 2, VerticalAlignment = VerticalAlignment.Top };
-        var left = new StackPanel { Margin = new Thickness(0, 0, 12, 0) };
-        var right = new StackPanel { Margin = new Thickness(12, 0, 12, 0) };
-        columns.Children.Add(left);
-        columns.Children.Add(right);
-
-        // Bilancia le due colonne per numero di righe.
-        int leftRows = 0, rightRows = 0;
+        var columns = new WrapPanel { VerticalAlignment = VerticalAlignment.Top };
+        columns.SizeChanged += (_, _) =>
+        {
+            var count = columns.ActualWidth >= 840 ? 2 : 1;
+            columns.ItemWidth = Math.Max(1, columns.ActualWidth / count);
+            foreach (FrameworkElement card in columns.Children)
+                card.Margin = new Thickness(0, 0, count == 2 ? 12 : 0, 16);
+        };
         foreach (var (title, rows) in Shortcuts)
         {
             var card = Card(title);
             var body = (StackPanel)card.Child;
             foreach (var (keys, what) in rows) body.Children.Add(ShortcutRow(keys, what));
-            if (leftRows <= rightRows) { left.Children.Add(card); leftRows += rows.Length + 2; }
-            else { right.Children.Add(card); rightRows += rows.Length + 2; }
+            columns.Children.Add(card);
         }
         return columns;
     }
@@ -181,7 +198,7 @@ public sealed class HelpWindow : Window
         var body = new StackPanel();
         body.Children.Add(new TextBlock
         {
-            Text = title, Foreground = Res("Accent"), FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 10)
+            Text = title, Foreground = Res("Accent"), FontSize = 16, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10)
         });
         return new Border
         {
@@ -271,7 +288,8 @@ public sealed class HelpWindow : Window
             "Velocità: il cursore in alto a destra rallenta o accelera senza cambiare l'intonazione (25–150%).",
             "Loop: attivalo e trascina sulla tab per scegliere il pezzo da ripetere.",
             "Speed trainer: a ogni giro del loop la velocità sale del passo che scegli, fino all'obiettivo.",
-            "Metronomo e conteggio iniziale si attivano dai pulsanti accanto al loop."));
+            "Metronomo e conteggio iniziale si attivano dai pulsanti accanto al loop. Nella finestra stretta gli stessi comandi sono in Altro → Esercitazione.",
+            "Play, Stop, display e velocità rimangono sempre visibili; F10 apre Altro e Alt+F apre File."));
         return panel;
     }
 

@@ -123,6 +123,7 @@ public partial class PracticeView
         if (sender == PaletteToggle) SetEditMode(PaletteToggle.IsChecked == true);
         TracksPanel.Visibility = TracksToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         ShowInspectorPanel(InspectorToggle.IsChecked == true);
+        ApplyPanelHeights();
         UpdateEditUi();
         Focus();
     }
@@ -130,6 +131,7 @@ public partial class PracticeView
     private void FretToggle_Click(object sender, RoutedEventArgs e)
     {
         FretPanel.Visibility = FretToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        ApplyPanelHeights();
         UpdateEditUi();
         Focus();
     }
@@ -179,6 +181,7 @@ public partial class PracticeView
     {
         TrainerToggle.IsChecked = _trainerOn; // lo stato lo decide il pulsante nel riquadro
         TrainerActionButton.Content = _trainerOn ? "Disattiva" : "Attiva";
+        TrainerPopup.PlacementTarget = _compactToolbar ? MoreButton : TrainerToggle;
         TrainerPopup.IsOpen = true;
     }
 

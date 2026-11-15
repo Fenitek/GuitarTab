@@ -18,8 +18,10 @@ public sealed class AppSettings
     public double? WindowHeight { get; set; }
     public bool WindowMaximized { get; set; }
 
-    public double PaletteWidth { get; set; } = 226;
-    public double InspectorWidth { get; set; } = 290;
+    public double PaletteWidth { get; set; } = 190;
+    public double InspectorWidth { get; set; } = 250;
+    public double FretboardHeight { get; set; } = 162;
+    public double TracksHeight { get; set; } = 34;
 
     /// <summary>SoundFont scelto dall'utente; null = quello incluso.</summary>
     public string? SoundFontPath { get; set; }

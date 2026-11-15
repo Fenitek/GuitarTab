@@ -85,6 +85,27 @@ Tavolozza e proprietà ridimensionabili, partitura centrale scorrevole, mixer in
 Il selettore delle voci precede le durate: si sceglie la linea da scrivere, poi la durata,
 poi il tasto. Due pulsanti compatti rimangono visibili anche con la tavolozza minima di 190 px.
 
+La barra mantiene Play, Stop, display e velocità nella prima riga. Da 820 DIP interni
+mostra una seconda riga completa; sotto quella soglia File, Modifiche, Spostamento ed
+Esercitazione confluiscono in Altro. Lo stesso menu ospita Pannelli, Tracce e Spazio partitura
+anche nella finestra larga. I MenuItem File cambiano contenitore, senza copie dei comandi.
+Nome accessibile, tooltip e scorciatoia accompagnano ogni icona della barra.
+
+Minimo della finestra 880×480 DIP; larghezze iniziali dei pannelli 190/250 DIP.
+La vista iniziale è Solo tab al 100%, senza il grande titolo e l'accordatura sopra i sistemi:
+quelle informazioni restano nella finestra e nelle proprietà. Tab + spartito e Solo spartito
+restano disponibili nel selettore. La partitura mantiene almeno 140 DIP di altezza di layout.
+
+Due divisori orizzontali, alti 6 DIP, regolano manico e tracce. Le altezze preferite
+(162/34 DIP iniziali) sopravvivono alla chiusura; una finestra più corta le limita senza
+perdere la preferenza. Il mixer a 34 DIP mostra una traccia, scorre sulle altre e nasconde
+l'intestazione; Aggiungi/Elimina rimangono in Altro → Tracce. I divisori accettano le frecce;
+Altro → Spazio partitura offre alternative al trascinamento e il ripristino delle altezze.
+
+La guida passa a una colonna quando lo spazio utile è inferiore a 840 DIP. Il manico misura
+le etichette a 13 px, mantiene 4 DIP di distanza e conserva il 24; le etichette intermedie
+possono essere omesse, mantenendo tutte le posizioni e il numero nel tooltip.
+
 ## Elevation & Depth
 
 Pannelli separati da bordi sobri; popup e toast mantengono lo stile scuro esistente.
@@ -108,6 +129,8 @@ Raggio dei controlli 5 px, pannelli 6 px; niente nuovi ornamenti per una singola
 | Toast | PracticeView.Shell.cs / ShowToast | Stesso feedback di salvataggio, effetti e riproduzione |
 | Form | PracticeView.Layout.cs / ispettori | Campi e risorse del tema, lingua italiana |
 | Dialoghi | Ui/Dialogs.cs | Salvataggio prima della chiusura, pulsanti espliciti e focus |
+| Trasporto e overflow | PracticeView.Toolbar.cs / Dark.xaml | Comandi condivisi, stato sincronizzato, nessun controllo principale tagliato |
+| Divisori | Dark.xaml / HorizontalPanelSplitter | Mouse, frecce e menu alternativi; altezze in AppSettings |
 
 Il recupero automatico usa lo stesso dialogo: Recupera apre una copia da salvare con un
 nome scelto dall'utente; Elimina copia la scarta; Più tardi, Esc e chiusura del dialogo la
@@ -127,10 +150,15 @@ sono bloccate. Il renderer resta sincrono sul dispatcher, senza worker.
 L'ultima anteprima richiesta viene eseguita quando MIDI corrente e suoni sono pronti;
 un'altra modifica o il cambio documento la scartano, lo spostamento del cursore la conserva.
 
-Verifica visiva v0.4.3: 1920×1080 pixel e minimo 1000×620 DIP (1500×930 pixel a 150%).
-Restano da riprogettare il trasporto troppo largo, la guida a due colonne al minimo e
-le etichette ravvicinate degli ultimi tasti del manico. Inventario foto e limiti della
-cattura in docs/CONTROLLO_VISIVO.md; prova del focus reale in docs/PROVA_MANUALE.md.
+Verifica visiva v0.5.0: contenuti al 200% a 1920×1080, 1840×1080 e 1760×960 pixel.
+T, G2 e M1 chiusi; due sistemi interi nel profilo principale, senza ridurre i caratteri.
+La cornice nativa conserva il DPI del desktop; l'autotest calibra i contenuti a 192 DPI
+senza modificare impostazioni dello schermo, mouse o tastiera. Le finestre di prova non
+si attivano. Inventario, misure e limiti in docs/CONTROLLO_VISIVO.md.
+L'attribuzione originale resta nel rendering; una riga fissa alphaTab.net sulla carta
+(LineStrong su Paper, font 13) rimane leggibile anche dopo lo scorrimento.
+ScrollChanged ridisegna l'overlay senza avviare altri scroll; le correzioni del cursore
+sono limitate a una per giro del dispatcher, con margine stabile e destinazione raggiungibile.
 
 ## Do's and Don'ts
 

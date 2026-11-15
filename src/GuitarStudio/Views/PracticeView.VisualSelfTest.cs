@@ -41,6 +41,11 @@ public partial class PracticeView
 
     private async Task RunVisualSelfTest(LiveLog log)
     {
+        if (Environment.GetEnvironmentVariable("GS_SELFTEST_LAYOUT") == "1")
+        {
+            await RunLayoutVisualSelfTest(log);
+            return;
+        }
         var main = Window.GetWindow(this)!;
         await VisualCapture.Paint();
         // Conserva anche lo stato iniziale: mostra la precedenza tra recupero e file richiesto.

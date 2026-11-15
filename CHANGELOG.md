@@ -3,6 +3,22 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.5.0 — 2026-11-15
+
+- Barra di trasporto adattiva: Play, Stop, display e velocità rimangono visibili.
+  Nella finestra stretta File, spostamento e strumenti per esercitarsi passano in «Altro».
+  Icone con nome e scorciatoia; menu e pulsanti condividono lo stato dei comandi.
+- Divisori trascinabili per manico e tracce, con altezze ricordate; il mixer si riduce
+  a una riga. Le stesse regolazioni sono disponibili da tastiera e in «Altro → Spazio partitura».
+- Vista iniziale «Solo tab», a grandezza normale, per vedere almeno due sistemi a 1920×1080
+  con contenuti al 200%. «Tab + spartito» resta nel selettore; titolo e accordatura sono nelle proprietà.
+- Guida F1 leggibile anche al minimo; etichette del manico diradate senza ridurre i caratteri.
+  Tutti i tasti restano cliccabili e il suggerimento mostra corda e numero.
+- Protetto lo scorrimento del cursore contro i cicli di aggiornamento; lo scorrimento manuale
+  non viene annullato. Attribuzione alphaTab.net leggibile anche mentre si scorre la partitura.
+- Prove automatiche su trasporto, divisori, preferenze e scorrimento, con foto prima/dopo
+  nelle tre dimensioni e resoconto in `docs/CONTROLLO_VISIVO.md`.
+
 ## 0.4.3 — 2026-11-15
 
 - Colori di manico, partitura, selezioni e mixer raccolti nel tema, mantenendo i valori esistenti.

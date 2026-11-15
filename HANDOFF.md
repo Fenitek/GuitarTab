@@ -23,6 +23,60 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.5.0 — modifiche nell'albero di lavoro
+
+- `PracticeView.Toolbar.cs`: prima riga con Play, Stop, display e velocità. Da 820 DIP
+  interni mostra tutti i gruppi nella seconda riga; sotto li trasferisce in Altro.
+  I MenuItem File sono gli stessi oggetti, spostati tra ContextMenu e sottomenu;
+  recenti, SoundFont e handler restano validi. Binding a due vie per loop, metronomo,
+  conteggio e pannelli. Speed trainer usa MoreButton come PlacementTarget se nascosto.
+- Scorciatoie nuove: Maiusc+Spazio Stop; F3/F4/F6 pannelli; F7/F8/F9 esercitazione;
+  F10 Altro, Ctrl+F10 speed trainer, Alt+F File, Ctrl+Home inizio, Ctrl+Pag↑/Pag↓ velocità,
+  Ctrl+Maiusc+N/D aggiungi/elimina traccia. Nomi accessibili e tooltip della barra.
+  Combinazioni esatte: Alt+F4 e Maiusc+F10 non vengono intercettati; i controlli di input
+  mantengono la propria tastiera (F4, lettere, frecce, Ctrl+Home), senza scrivere note.
+- `PanelHeights.cs`: GridSplitter reali per manico e tracce, preferenze FretboardHeight/
+  TracksHeight (162/34 DIP). Minimo del mixer una riga; sotto 62 DIP sparisce l'intestazione,
+  ma Aggiungi/Elimina rimangono in Altro. Minimo partitura 140 DIP, manico proporzionato
+  alle corde. Limiti temporanei non sovrascrivono le altezze desiderate. DragCompleted e
+  frecce salvano le preferenze; menu per regolare/ripristinare senza trascinare.
+- Ripristino larghezze corretto: InitLayout nasconde prima i pannelli per non sostituire
+  le preferenze con le dimensioni XAML iniziali. FitSidePanels conserva lo spazio centrale;
+  il completamento del trascinamento laterale aggiorna i valori ricordati.
+- Finestra minima 880×480 DIP; pannelli iniziali 190/250 DIP. Vista iniziale Solo tab
+  al 100%, titolo e accordatura fuori dal foglio di lavoro (restano in finestra/proprietà).
+  Le altre due viste restano disponibili. Attribuzione originale non rimossa; aggiunta una
+  riga fissa alphaTab.net, LineStrong su Paper a 13 px, sempre leggibile mentre si scorre.
+- `HelpWindow`: WrapPanel dei riquadri delle scorciatoie, una colonna sotto 840 DIP utili, due sopra;
+  scorrimento orizzontale disabilitato e titoli a capo. F1 aggiornata con overflow,
+  divisori, vista iniziale e scorciatoie. Manico: etichette misurate a 13 px, 4 DIP
+  liberi tra i rettangoli, 24 sempre presente; tutte le 24 posizioni restano cliccabili.
+- **Trappola scorrimento**: con un viewport sotto 60 px, il vecchio UpdateOverlay
+  richiedeva una posizione che ScrollChanged correggeva di nuovo all'infinito. Ora
+  ScrollChanged usa ensureVisible:false; _overlayScrollPending impedisce la rientranza
+  fino a ContextIdle. Niente correzioni sotto 90 DIP, destinazione limitata a ScrollableHeight,
+  epsilon 1 DIP. VerifyOverlayScrollGuard forza 58 DIP e 64 aggiornamenti senza scroll;
+  poi prova una correzione, stabilità e scorrimento manuale. È anche nell'autotest completo.
+- `GS_SELFTEST_LAYOUT=1` con le variabili della cattura visiva esegue i tre profili al 200%.
+  SizeAtScale calibra LayoutTransform rispetto al DPI reale, anche per i popup: non cambia
+  il desktop. Le cornici native conservano il DPI corrente, riportato nei manifest.
+  Win32 WS_EX_NOACTIVATE è applicato soltanto alle finestre GS_SELFTEST, per impedire
+  che chiusura delle finestre figlie e Focus dei divisori sottraggano il focus all'utente.
+- L'autotest verifica bounds di ogni comando, proprietario/ordine dei MenuItem File,
+  toggle e player, scorciatoie, drag reale WPF tramite eventi (non input di sistema),
+  scrittura/rilettura settings.json, etichette senza intersezioni, guida e sua fine raggiungibile.
+  Misure e foto esterne: stessa radice visualizations del lavoro precedente, cartella
+  `GuitarStudio-v0.5.0/prima` e `dopo`; dettagli in docs/CONTROLLO_VISIVO.md.
+- Verifiche: build seriale Debug/Release 0 avvisi/0 errori; 61 test (59 precedenti + 2
+  sulle preferenze), eseguiti con il runner xUnit dell'adattatore installato nello stesso
+  processo. VSTest ordinario non collega testhost in questo sandbox (timeout prima dei test):
+  sorgenti e log del runner alternativo sono nella cartella esterna runner-xunit.
+  Autotest completo, timer autosave reale, audio e controllo visivo OK. UseWorkers=false,
+  NAudio 2.4 e guardie MIDI invariati. build-diagnostic.log eliminato.
+- Git: pull negato su FETCH_HEAD; git add negato su .git/index.lock. Nessun cambio di
+  permessi o tentativo di forzatura; niente commit e niente push. Messaggio previsto:
+  `v0.5.0: trasporto adattivo e spazio per la partitura`.
+
 ### Aggiornamento v0.4.3
 
 - Colori letterali rimossi dai sorgenti C#/XAML fuori da Dark.xaml, inclusi Black/White/
