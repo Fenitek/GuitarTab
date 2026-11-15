@@ -48,6 +48,14 @@ public sealed class HelpWindow : Window
             ("A", "accento"),
             ("N", "armonico naturale")
         }),
+        ("Dinamiche e abbellimenti", new[]
+        {
+            ("D / Maiusc+D", "dinamica più forte / più debole (ppp … fff), dal tempo sotto il cursore fino al prossimo cambio"),
+            ("Tavolozza → Dinamica", "un clic su ppp, pp, p, mp, mf, f, ff o fff; con una selezione vale per tutti i tempi selezionati"),
+            ("Ctrl+G", "abbellimento prima del tempo: una nota piccola appena prima della nota sotto il cursore"),
+            ("Ctrl+Maiusc+G", "abbellimento sul tempo: la nota piccola cade sul tempo e la nota principale arriva subito dopo"),
+            ("Stesso tasto sull'abbellimento", "lo toglie; il tasto dell'altro tipo lo cambia. Scrivi una cifra per cambiare il tasto")
+        }),
         ("Selezione e appunti", new[]
         {
             ("Maiusc+frecce", "estende la selezione"),
@@ -264,6 +272,17 @@ public sealed class HelpWindow : Window
             "Il bend dura quanto la nota: per un bend lento usa una nota più lunga."));
         panel.Children.Add(Article("Effetti sul tempo intero",
             "Pennata in giù/su, tremolo picking e tapping valgono per tutte le note del tempo (l'accordo), non per la singola corda."));
+        panel.Children.Add(Article("Dinamiche (ppp … fff)",
+            "La dinamica dice quanto forte suonare. Come sulla carta, il segno vale dal tempo in cui lo metti fino al prossimo cambio " +
+            "nella stessa voce: mettere p a metà brano rende piano tutto quello che segue, finché non trovi un altro segno.",
+            "In riproduzione cambia la forza (velocity) delle note: ppp è molto piano, fff molto forte. Il valore del tempo sotto il " +
+            "cursore è nel pannello Battuta (Ctrl+B) e nella riga di stato in basso."));
+        panel.Children.Add(Article("Note di abbellimento",
+            "Mettono una nota piccola, un tono sotto sulla stessa corda, davanti alla nota sotto il cursore; poi puoi scrivere un altro tasto.",
+            "«Prima del tempo» (Ctrl+G) ruba un attimo alla nota precedente: la nota principale resta sul tempo. «Sul tempo» " +
+            "(Ctrl+Maiusc+G) suona l'abbellimento sul tempo e ritarda appena la nota principale.",
+            "Gli abbellimenti non contano nella durata della battuta. Se cancelli la nota principale in fondo alla battuta, " +
+            "anche il suo abbellimento viene tolto. Tutto si salva nel file Guitar Pro."));
         return panel;
     }
 

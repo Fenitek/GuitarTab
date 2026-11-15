@@ -93,6 +93,8 @@ public partial class PracticeView
             StatusText.Text = "Controllo visivo: note, selezione e tracce";
             await VisualCapture.Paint();
             _visualCapture.Save(main, prefix + "principale");
+            await CaptureNotationScene(main, prefix, "dinamiche-abbellimenti", PrepareNotationScene);
+            ShowInspector(TabTrack);
 
             async Task Combos(DependencyObject root, string suffix, Window? child = null)
             {

@@ -63,6 +63,8 @@
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
     <FontFamily x:Key="MusicFont">Segoe UI Symbol</FontFamily>
     <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
+    <!-- Segni di dinamica (ppp…fff): corsivo con grazie, come sulla carta da musica -->
+    <FontFamily x:Key="DynamicsFont">Palatino Linotype, Georgia</FontFamily>
 
     <!-- ============================== PULSANTI ============================== -->
     <Style x:Key="HorizontalPanelSplitter" TargetType="GridSplitter">

@@ -37,7 +37,7 @@ internal static class EditorFixture
         score.Title, score.Artist,
         Bars = score.MasterBars.Select(m => new
         {
-            m.TimeSignatureNumerator, m.TimeSignatureDenominator, m.IsRepeatStart, m.RepeatCount,
+            m.TimeSignatureNumerator, m.TimeSignatureDenominator, m.IsRepeatStart, m.RepeatCount, m.AlternateEndings,
             Section = m.Section?.Text,
             Tempos = m.TempoAutomations.Select(a => a.Value)
         }),
@@ -51,7 +51,8 @@ internal static class EditorFixture
                 {
                     beat.Duration, beat.Dots, Tuplet = beat.HasTuplet ? beat.TupletNumerator : 0,
                     Denominator = beat.HasTuplet ? beat.TupletDenominator : 0,
-                    beat.IsEmpty,
+                    beat.IsEmpty, beat.Dynamics, beat.GraceType, beat.Text,
+                    Chord = beat.Chord is { } chord ? new { chord.Name, chord.ShowDiagram, chord.FirstFret, Strings = string.Join(",", chord.Strings) } : null,
                     Notes = beat.Notes.Select(n => new
                     {
                         n.String, n.Fret, n.IsHammerPullOrigin, n.IsTieDestination, n.SlideOutType,

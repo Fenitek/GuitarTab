@@ -171,6 +171,26 @@
                             </Button>
                         </WrapPanel>
 
+                        <TextBlock Text="DINAMICA" Style="{StaticResource SectionHeader}"/>
+                        <!-- Otto pulsanti ppp…fff generati dal codice -->
+                        <WrapPanel x:Name="DynamicsHost"/>
+                        <TextBlock Text="Vale fino al prossimo cambio. D più forte, Maiusc+D più debole."
+                                   Foreground="{StaticResource TextDim}" FontSize="13" TextWrapping="Wrap" Margin="0,2,6,2"/>
+
+                        <TextBlock Text="ABBELLIMENTI" Style="{StaticResource SectionHeader}"/>
+                        <UniformGrid Columns="2">
+                            <ToggleButton x:Name="GraceBeforeToggle" Style="{StaticResource ToolToggle}" Tag="BeforeBeat" MinWidth="60" Margin="0,0,4,0"
+                                          Click="Grace_Click" AutomationProperties.Name="Abbellimento prima del tempo"
+                                          ToolTip="Abbellimento prima del tempo (Ctrl+G): una nota piccola suonata appena prima della nota sotto il cursore">
+                                <TextBlock><Run Text="♪" FontFamily="{StaticResource MusicFont}"/><Run Text=" prima"/></TextBlock>
+                            </ToggleButton>
+                            <ToggleButton x:Name="GraceOnToggle" Style="{StaticResource ToolToggle}" Tag="OnBeat" MinWidth="60"
+                                          Click="Grace_Click" AutomationProperties.Name="Abbellimento sul tempo"
+                                          ToolTip="Abbellimento sul tempo (Ctrl+Maiusc+G): la nota piccola cade sul tempo e ritarda di poco la nota sotto il cursore">
+                                <TextBlock><Run Text="♪" FontFamily="{StaticResource MusicFont}"/><Run Text=" sul tempo"/></TextBlock>
+                            </ToggleButton>
+                        </UniformGrid>
+
                         <!-- Effetti: sezioni generate dal codice -->
                         <StackPanel x:Name="EffectsHost"/>
 
@@ -299,6 +319,23 @@
 
                             <!-- Battuta -->
                             <StackPanel x:Name="BarPage" Visibility="Collapsed">
+                                <TextBlock x:Name="BeatHeader" Text="Tempo 1" Style="{StaticResource PanelHeader}"/>
+                                <Grid Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="Dinamica" Foreground="{StaticResource TextDim}" FontSize="13" Margin="0,3,14,3"/>
+                                    <TextBlock x:Name="BeatDynamicsText" Grid.Column="1" Foreground="{StaticResource TextMain}" FontSize="14"
+                                               FontFamily="{StaticResource DynamicsFont}" FontStyle="Italic" FontWeight="Bold" Margin="0,2,0,3"/>
+                                    <TextBlock Grid.Row="1" Text="Abbellimento" Foreground="{StaticResource TextDim}" FontSize="13" Margin="0,3,14,3"/>
+                                    <TextBlock x:Name="BeatGraceText" Grid.Row="1" Grid.Column="1" Foreground="{StaticResource TextMain}" FontSize="13"
+                                               TextWrapping="Wrap" Margin="0,3,0,3"/>
+                                </Grid>
                                 <TextBlock x:Name="BarHeader" Text="Battuta 1" Style="{StaticResource PanelHeader}"/>
                                 <TextBlock Text="Velocità" Style="{StaticResource FieldLabel}"/>
                                 <StackPanel Orientation="Horizontal">

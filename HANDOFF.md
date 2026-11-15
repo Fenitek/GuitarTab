@@ -23,6 +23,28 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.7.0
+
+- `TabEditor.SetDynamics/StepDynamics`: `Beat.Dynamics` sui tempi selezionati più i tempi
+  seguenti della stessa voce (catena NextBeat, anche tra battute) che avevano la dinamica
+  dell'ultimo selezionato. alphaTab copia `Beat.Dynamics` su `Note.Dynamics` in Finish e il
+  MIDI lo usa come velocity. Snapshot `Bars` dei soli tempi toccati (più confinanti).
+- `TabEditor.ToggleGrace`: inserisce un `Beat` con `GraceType` BeforeBeat/OnBeat davanti al
+  tempo corrente (nota un tono sotto, stessa corda) e ci sposta il cursore; sullo stesso tipo
+  lo toglie, sull'altro cambia tutto il gruppo. Voice.Finish costruisce GraceGroup e sposta
+  PlaybackStart: BeforeBeat accorcia il tempo precedente, OnBeat il principale.
+- **Trappola**: con un abbellimento BeforeBeat sul primo tempo, `Voice.CalculateDuration`
+  supera la battuta e quella precedente risulta corta. BarFill/FixBar usano ora `VoiceTicks`
+  (somma di DisplayDuration dei tempi non-grace). Un abbellimento in fondo alla voce non ha
+  nota principale: `DropOrphanGraces` lo toglie dopo DeleteBeat/DeleteSelection/FixBar.
+- UI: risorsa `DynamicsFont` in Dark.xaml; tavolozza DINAMICA (generata) e ABBELLIMENTI
+  (ToolToggle); pannello Battuta con «Tempo N · voce V» (dinamica, abbellimento), aggiornato
+  a ogni movimento del cursore; dinamica e abbellimento anche in CursorText.
+- Test: `DynamicsGraceTests` (modifica/annulla/.gp, velocity e tick MIDI). EditorFixture.Content
+  confronta ora anche dinamica, abbellimento, testo, accordo e finali alternativi.
+  `PracticeView.NotationSelfTest.cs`: prova con tasti simulati, MIDI del lettore, .gp riaperto,
+  Play; scena foto `dinamiche-abbellimenti` alle due dimensioni.
+
 ### Aggiornamento v0.6.2
 
 - `Diagnostics/SoundStartupProbe.cs`: con `GS_PERF_SOUND_REPORT` registra tempo e memoria

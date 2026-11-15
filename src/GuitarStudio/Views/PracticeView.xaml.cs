@@ -125,6 +125,7 @@ public partial class PracticeView : UserControl
         api.MidiLoaded.On(_ => Ui(OnMidiLoaded));
         Fretboard.FretClicked += OnFretClicked;
         BuildEffectButtons();
+        BuildDynamicsButtons();
         api.PlayedBeatChanged.On(beat => Ui(() => OnPlayedBeat(beat)));
 
         api.Error.On(err => Ui(() => StatusText.Text = "Errore: " + err.Message));
@@ -429,6 +430,10 @@ public partial class PracticeView : UserControl
         var note = _editor.CurrentNote;
         foreach (var t in _effectToggles)
             t.IsChecked = TabEditor.HasEffect(beat, note, (NoteEffect)t.Tag);
+        foreach (var t in _dynamicToggles)
+            t.IsChecked = beat != null && beat.Dynamics == (DynamicValue)t.Tag;
+        GraceBeforeToggle.IsChecked = beat?.GraceType == GraceType.BeforeBeat;
+        GraceOnToggle.IsChecked = beat?.GraceType == GraceType.OnBeat;
 
         UpdateFretboard();
         UpdateLcd();
@@ -445,6 +450,11 @@ public partial class PracticeView : UserControl
         var stringName = Tuning.GetTextForTuning(Note.GetStringTuning(staff, _editor.ModelString(_editor.Line)), false);
         var fret = note == null ? "—" : note.IsDead ? "X" : note.Fret.ToString("0");
         var text = $"Battuta {_editor.BarIndex + 1}/{staff.Bars.Count} · Voce {_editor.VoiceIndex + 1} · Tempo {_editor.BeatIndex + 1} · Corda {_editor.Line} ({stringName}) · Tasto {fret}";
+        if (_editor.CurrentBeat is { } current)
+        {
+            text += $" · {TabEditor.DynamicLabel(current.Dynamics)}";
+            if (current.GraceType != GraceType.None) text += $" · abbellimento {TabEditor.GraceLabel(current.GraceType)}";
+        }
         if (_editor.HasSelection) text = $"{_editor.SelectedBeats().Count} tempi selezionati  ·  " + text;
 
         if (_editor.BarFill(out var used, out var total) && Math.Abs(used - total) > 0.5)
@@ -673,6 +683,7 @@ public partial class PracticeView : UserControl
                 case Key.T: ShowInspector(TabTrack); return;
                 case Key.F: _editor.FixBar(); return;
                 case Key.D3 or Key.NumPad3: _editor.ToggleTuplet(); return;
+                case Key.G: ApplyGrace(shift ? GraceType.OnBeat : GraceType.BeforeBeat); return;
             }
         }
 
@@ -709,6 +720,7 @@ public partial class PracticeView : UserControl
             case Key.OemPeriod:
             case Key.Decimal: _editor.ToggleDot(); break;
             case Key.R: _editor.MakeRest(); break;
+            case Key.D: StepDynamics(shift ? -1 : +1); break;
 
             case Key.H: ApplyEffect(NoteEffect.HammerPull); break;
             case Key.S: ApplyEffect(NoteEffect.Slide); break;

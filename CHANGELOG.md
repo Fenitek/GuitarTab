@@ -3,6 +3,17 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.7.0 — 2026-11-15
+
+- Dinamiche da ppp a fff: otto pulsanti nella tavolozza, D per più forte e Maiusc+D per più
+  debole. Il segno vale dal tempo scelto (o dalla selezione) fino al prossimo cambio, si sente
+  in riproduzione e compare nel pannello Battuta e nella riga di stato.
+- Note di abbellimento prima del tempo (Ctrl+G) e sul tempo (Ctrl+Maiusc+G), un tono sotto la
+  nota sotto il cursore e modificabili con le cifre. Non contano nella durata della battuta,
+  si sentono in riproduzione e si tolgono con lo stesso comando.
+- Dinamiche e abbellimenti si salvano nei file Guitar Pro; annulla e ripeti salvano solo le
+  battute coinvolte. Guida F1 aggiornata.
+
 ## 0.6.2 — 2026-11-15
 
 - Nuova icona del programma, disegnata apposta: le corde di una tablatura con il cursore

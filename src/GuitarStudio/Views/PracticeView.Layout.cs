@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -94,6 +95,103 @@ public partial class PracticeView
             }
             EffectsHost.Children.Add(wrap);
         }
+    }
+
+    // ================================================================ dinamiche e abbellimenti
+
+    private static readonly Dictionary<DynamicValue, string> DynamicNames = new()
+    {
+        [DynamicValue.PPP] = "pianississimo", [DynamicValue.PP] = "pianissimo", [DynamicValue.P] = "piano",
+        [DynamicValue.MP] = "mezzo piano", [DynamicValue.MF] = "mezzo forte", [DynamicValue.F] = "forte",
+        [DynamicValue.FF] = "fortissimo", [DynamicValue.FFF] = "fortississimo"
+    };
+
+    private readonly List<ToggleButton> _dynamicToggles = new();
+
+    internal static string DynamicDescription(DynamicValue value) =>
+        $"{TabEditor.DynamicLabel(value)} — {DynamicNames.GetValueOrDefault(value, TabEditor.DynamicLabel(value))}";
+
+    private void BuildDynamicsButtons()
+    {
+        var style = (Style)FindResource("PaletteToggle");
+        foreach (var value in TabEditor.DynamicLevels)
+        {
+            var label = TabEditor.DynamicLabel(value);
+            var t = new ToggleButton
+            {
+                Content = new TextBlock
+                {
+                    Text = label, FontFamily = (FontFamily)FindResource("DynamicsFont"),
+                    FontStyle = FontStyles.Italic, FontWeight = FontWeights.Bold, FontSize = 16
+                },
+                ToolTip = $"Dinamica {DynamicDescription(value)}: dal tempo sotto il cursore (o dalla selezione) " +
+                          "fino al prossimo cambio. D più forte, Maiusc+D più debole.",
+                Tag = value,
+                Style = style
+            };
+            AutomationProperties.SetName(t, $"Dinamica {DynamicNames[value]}");
+            t.Click += (_, _) =>
+            {
+                ApplyDynamics(value);
+                UpdateEditUi();
+                Focus();
+            };
+            _dynamicToggles.Add(t);
+            DynamicsHost.Children.Add(t);
+        }
+    }
+
+    private void ApplyDynamics(DynamicValue value)
+    {
+        if (_editor.CurrentBeat is not { } beat)
+        {
+            ShowToast("Qui non c'è un tempo a cui dare la dinamica.", ToastKind.Warning);
+            return;
+        }
+        if (!_editor.SetDynamics(value) && !_editor.HasSelection && beat.Dynamics == value)
+            StatusText.Text = $"La dinamica è già {DynamicDescription(value)}.";
+        else
+            StatusText.Text = $"Dinamica {DynamicDescription(value)}.";
+    }
+
+    private void StepDynamics(int delta)
+    {
+        var before = _editor.CurrentBeat?.Dynamics;
+        if (_editor.StepDynamics(delta) && _editor.CurrentBeat is { } beat)
+            StatusText.Text = $"Dinamica {DynamicDescription(beat.Dynamics)}.";
+        else if (before is { } value)
+            ShowToast(delta > 0 ? $"La dinamica è già la più forte ({TabEditor.DynamicLabel(value)})."
+                                : $"La dinamica è già la più debole ({TabEditor.DynamicLabel(value)}).");
+    }
+
+    private void Grace_Click(object sender, RoutedEventArgs e)
+    {
+        ApplyGrace(Enum.Parse<GraceType>((string)((FrameworkElement)sender).Tag));
+        UpdateEditUi();
+        Focus();
+    }
+
+    private void ApplyGrace(GraceType type)
+    {
+        if (_editor.GraceWarning(type) is { } warning)
+        {
+            ShowToast(warning, ToastKind.Warning);
+            return;
+        }
+        var wasGrace = _editor.CurrentBeat?.GraceType;
+        _editor.ToggleGrace(type);
+        StatusText.Text = wasGrace == type
+            ? "Abbellimento tolto."
+            : $"Abbellimento {TabEditor.GraceLabel(type)}: scrivi il tasto per cambiarlo.";
+        if (wasGrace != type) PreviewCurrentNote();
+    }
+
+    private void FillBeatPage()
+    {
+        var beat = _editor.CurrentBeat;
+        BeatHeader.Text = beat == null ? "Tempo" : $"Tempo {_editor.BeatIndex + 1} · voce {_editor.VoiceIndex + 1}";
+        BeatDynamicsText.Text = beat == null ? "—" : DynamicDescription(beat.Dynamics);
+        BeatGraceText.Text = beat == null ? "—" : TabEditor.GraceLabel(beat.GraceType);
     }
 
     private void Rest_Click(object sender, RoutedEventArgs e) { _editor.MakeRest(); Focus(); }
@@ -278,6 +376,9 @@ public partial class PracticeView
                     FillTrackPage(track, staff);
                 }
             }
+
+            // Tempo sotto il cursore: cambia anche solo spostandosi.
+            FillBeatPage();
 
             // Battuta
             var barKey = $"{score.GetHashCode()}|{_editor.BarIndex}|{_revision}";

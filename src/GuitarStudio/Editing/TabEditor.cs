@@ -474,8 +474,7 @@ public sealed class TabEditor
             {
                 var v = beat.Voice;
                 v.Beats.Remove(beat);
-                if (v.Beats.Count == 0)
-                    foreach (var rest in RestsFor(v.Bar.MasterBar, Duration.Quarter)) v.AddBeat(rest);
+                DropOrphanGraces(v);
             }
             Relink();
             BarIndex = from.Bar;
@@ -715,6 +714,104 @@ public sealed class TabEditor
         };
     }
 
+    // ---------------------------------------------------------------- dinamiche
+
+    /// <summary>Le otto dinamiche dell'editor, dalla più debole alla più forte.</summary>
+    public static readonly DynamicValue[] DynamicLevels =
+    {
+        DynamicValue.PPP, DynamicValue.PP, DynamicValue.P, DynamicValue.MP,
+        DynamicValue.MF, DynamicValue.F, DynamicValue.FF, DynamicValue.FFF
+    };
+
+    public static string DynamicLabel(DynamicValue value) => value.ToString().ToLowerInvariant();
+
+    /// <summary>
+    /// Mette la dinamica sui tempi selezionati (o su quello sotto il cursore). Come un segno
+    /// sulla partitura, vale anche per i tempi successivi della stessa voce, fino al prossimo cambio.
+    /// </summary>
+    public bool SetDynamics(DynamicValue value)
+    {
+        if (!IsEditable) return false;
+        var targets = SelectedBeats();
+        if (targets.Count == 0) return false;
+        var previous = targets[^1].Dynamics;
+        for (var next = targets[^1].NextBeat; next != null && next.Dynamics == previous; next = next.NextBeat)
+            targets.Add(next);
+        if (targets.All(b => b.Dynamics == value)) return false;
+        EditLocal(() => { foreach (var beat in targets) beat.Dynamics = value; }, targets.Select(b => b.Voice.Bar));
+        return true;
+    }
+
+    /// <summary>Dinamica più forte (+1) o più debole (−1) rispetto a quella sotto il cursore.</summary>
+    public bool StepDynamics(int delta)
+    {
+        if (CurrentBeat is not { } beat) return false;
+        var i = Array.IndexOf(DynamicLevels, beat.Dynamics);
+        if (i < 0) i = Array.IndexOf(DynamicLevels, DynamicValue.F);
+        return SetDynamics(DynamicLevels[Math.Clamp(i + delta, 0, DynamicLevels.Length - 1)]);
+    }
+
+    // ---------------------------------------------------------------- note di abbellimento
+
+    public static string GraceLabel(GraceType type) => type switch
+    {
+        GraceType.BeforeBeat => "prima del tempo",
+        GraceType.OnBeat => "sul tempo",
+        GraceType.BendGrace => "bend",
+        _ => "nessuno"
+    };
+
+    /// <summary>Spiega perché non si può aggiungere un abbellimento qui, oppure null.</summary>
+    public string? GraceWarning(GraceType type)
+    {
+        if (!IsEditable || CurrentBeat is not { } beat) return "Qui non c'è un tempo.";
+        if (beat.GraceType != GraceType.None) return null;
+        return beat.Notes.Count == 0
+            ? "L'abbellimento si mette prima di una nota.\nScrivi prima la nota principale, poi aggiungi l'abbellimento con il cursore su di essa."
+            : null;
+    }
+
+    /// <summary>
+    /// Sul tempo normale inserisce prima del cursore una nota di abbellimento (un tono sotto,
+    /// sulla stessa corda) e ci sposta il cursore. Su un abbellimento cambia il tipo, oppure lo
+    /// toglie se il tipo è già quello. Gli abbellimenti non contano nella durata della battuta.
+    /// </summary>
+    public bool ToggleGrace(GraceType type)
+    {
+        if (GraceWarning(type) != null || CurrentBeat is not { } beat || CurrentVoice is not { } voice) return false;
+        if (beat.GraceType == type)
+        {
+            EditLocal(() =>
+            {
+                voice.Beats.Remove(beat);
+                Relink();
+                _anchor = null;
+            });
+            return true;
+        }
+        if (beat.GraceType != GraceType.None)
+        {
+            // Lo stesso gruppo deve avere un solo tipo: cambia tutti gli abbellimenti adiacenti.
+            var group = voice.Beats.Where(b => b.GraceType != GraceType.None && b.GraceGroup != null && b.GraceGroup == beat.GraceGroup).ToList();
+            if (group.Count == 0) group.Add(beat);
+            EditLocal(() => { foreach (var b in group) b.GraceType = type; });
+            return true;
+        }
+        var main = CurrentNote ?? beat.Notes[0];
+        var str = (int)main.String;
+        var fret = main.Fret >= 2 ? main.Fret - 2 : main.Fret + 2;
+        EditLocal(() =>
+        {
+            var grace = new Beat { Duration = Duration.Eighth, GraceType = type, Dynamics = beat.Dynamics, Voice = voice };
+            grace.AddNote(new Note { String = str, Fret = fret });
+            voice.Beats.Insert(BeatIndex, grace);
+            Relink();
+            Line = LineOf(str);
+            _anchor = null;
+        });
+        return true;
+    }
+
     // ---------------------------------------------------------------- durate
 
     public void SetDuration(Duration duration)
@@ -790,10 +887,23 @@ public sealed class TabEditor
         EditLocal(() =>
         {
             voice.Beats.RemoveAt(BeatIndex);
+            DropOrphanGraces(voice);
             Relink();
             if (BeatIndex >= voice.Beats.Count) BeatIndex = voice.Beats.Count - 1;
             _anchor = null;
         });
+    }
+
+    /// <summary>
+    /// Un abbellimento appartiene alla nota che lo segue nella stessa battuta: se in fondo alla
+    /// voce non c'è più una nota principale, gli abbellimenti rimasti vengono tolti.
+    /// </summary>
+    private static void DropOrphanGraces(Voice voice)
+    {
+        while (voice.Beats.Count > 0 && voice.Beats[^1].GraceType != GraceType.None)
+            voice.Beats.RemoveAt(voice.Beats.Count - 1);
+        if (voice.Beats.Count == 0)
+            foreach (var rest in RestsFor(voice.Bar.MasterBar, Duration.Quarter)) voice.AddBeat(rest);
     }
 
     public void InsertBarAfter()
@@ -829,35 +939,41 @@ public sealed class TabEditor
         {
             if (used > total)
             {
-                while (voice.Beats.Count > 1 && voice.CalculateDuration() > total + 0.5)
+                while (voice.Beats.Count(b => b.GraceType == GraceType.None) > 1 && VoiceTicks(voice) > total + 0.5)
                 {
                     voice.Beats.RemoveAt(voice.Beats.Count - 1);
+                    // Un abbellimento senza la sua nota principale non ha senso: va via con lei.
+                    while (voice.Beats[^1].GraceType != GraceType.None) voice.Beats.RemoveAt(voice.Beats.Count - 1);
                     Relink();
                     Score!.Finish(_settings);
                 }
             }
             // Una sola nota può essere più lunga dell'intera battuta: ne conserva il tasto,
             // riduce la durata e completa con pause, come dopo la rimozione dei tempi in eccesso.
-            if (voice.CalculateDuration() > total + 0.5)
+            if (VoiceTicks(voice) > total + 0.5)
             {
-                var beat = voice.Beats[0];
+                var beat = voice.Beats.First(b => b.GraceType == GraceType.None);
                 beat.Duration = Durations.First(d => Ticks(d) <= total + 0.5);
                 beat.Dots = 0;
                 beat.TupletNumerator = beat.TupletDenominator = -1;
                 Score!.Finish(_settings);
             }
-            foreach (var rest in RestsForTicks(total - voice.CalculateDuration(), Duration.Whole))
+            foreach (var rest in RestsForTicks(total - VoiceTicks(voice), Duration.Whole))
                 voice.AddBeat(rest);
             Relink();
         });
     }
+
+    /// <summary>Durata scritta della voce: gli abbellimenti non occupano tempo nella battuta.</summary>
+    private static double VoiceTicks(Voice voice) => voice.IsEmpty ? 0 :
+        voice.Beats.Where(b => b.GraceType == GraceType.None).Sum(b => b.DisplayDuration);
 
     /// <summary>Quanto è piena la battuta corrente (in tick) rispetto al tempo in chiave.</summary>
     public bool BarFill(out double used, out double total)
     {
         used = total = 0;
         if (CurrentVoice is not { } voice || CurrentBar is not { } bar) return false;
-        used = voice.CalculateDuration();
+        used = VoiceTicks(voice);
         total = bar.MasterBar.CalculateDuration(false);
         return true;
     }
