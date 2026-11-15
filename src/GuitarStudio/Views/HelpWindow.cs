@@ -276,6 +276,12 @@ public sealed class HelpWindow : Window
             "legature di valore, let ring, accenti e ghost note (più forte / più piano), palm mute e note stoppate (note accorciate).",
             "Hammer-on, pull-off e slide collegano le due note; il glissato continuo dello slide può non sentirsi come su una chitarra vera: " +
             "è un limite della sintesi MIDI, non un errore della tua tablatura."));
+        panel.Children.Add(Article("Anteprima mentre scrivi",
+            "La nota appena scritta usa un motore audio separato: non aspetta il MIDI del brano. " +
+            "Usa il SoundFont scelto, il suono della traccia, l'accordatura e il capotasto. " +
+            "Le due cifre aggiornano subito il tasto: potresti sentire anche la prima cifra.",
+            "È una nota breve per controllare l'altezza; per ascoltare durate ed effetti nel loro contesto premi Play. " +
+            "Durante il caricamento dei suoni attende l'ultima richiesta ancora valida. In riproduzione l'anteprima è sospesa."));
         panel.Children.Add(Article("I suoni di chitarra e basso",
             "Il SoundFont incluso è GeneralUser GS 1.471 di S. Christian Collins, con campioni distinti per nylon, acciaio, elettriche e bassi. " +
             "È distribuito con la sua licenza v2.0 nella cartella Assets; sorgente e testo integrale sono documentati in docs/SOUNDFONT.md.",

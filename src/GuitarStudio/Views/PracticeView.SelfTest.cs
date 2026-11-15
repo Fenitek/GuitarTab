@@ -251,66 +251,110 @@ public partial class PracticeView
         }
         async Task Ready()
         {
-            var deadline = DateTime.UtcNow.AddSeconds(5);
-            while ((!_soundFontReady || !_midiReady) && DateTime.UtcNow < deadline) await Task.Delay(25);
-            Require(_soundFontReady && _midiReady, "MIDI e suoni pronti");
+            var deadline = DateTime.UtcNow.AddSeconds(15);
+            while ((!_previewFontReady || !_soundFontReady || !_midiReady || !ReferenceEquals(Api.Score, _editor.Score)) && DateTime.UtcNow < deadline) await Task.Delay(20);
+            Require(_previewFontReady && _previewPlayer is { IsReady: true } && _soundFontReady && _midiReady && ReferenceEquals(Api.Score, _editor.Score),
+                "sintetizzatore delle anteprime e lettore pronti");
         }
-        await Ready();
-        var requested = _previewRequested;
+        async Task<GuitarStudio.Audio.PreviewMeasurement> Heard()
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(3);
+            while (DateTime.UtcNow < deadline)
+            {
+                if (_previewPlayer!.AudioError is { } error) throw new InvalidOperationException("Uscita anteprima", error);
+                if (_previewPlayer.TryGetMeasurement(out var measurement))
+                {
+                    if (measurement!.Id != _lastPreviewId) continue;
+                    Require(measurement.DeviceMs >= measurement.SamplesMs - 1,
+                        "AudioClock successivo alla consegna dei campioni");
+                    _lastPreviewLatencyMs = measurement!.DeviceMs;
+                    log.AppendLine($"anteprima misurata: campioni={measurement.SamplesMs:0.00} ms, dispositivo={measurement.DeviceMs:0.00} ms");
+                    Require(measurement.DeviceMs < 50, "anteprima al dispositivo sotto 50 ms");
+                    return measurement;
+                }
+                await Task.Delay(5);
+            }
+            throw new InvalidOperationException("Nessun campione non silenzioso ha raggiunto la posizione del dispositivo.");
+        }
+        void Drain() { while (_previewPlayer!.TryGetMeasurement(out _)) { } }
+        await Ready(); Drain();
+        log.AppendLine($"uscita anteprima: WASAPI condiviso, {GuitarStudio.Audio.PreviewRenderer.SampleRate} Hz, buffer effettivo={_previewPlayer!.BufferMs:0.00} ms");
         var played = _previewPlayed;
-        _lastDigit = null;
-        TypeDigit(5);
-        Require(!_midiReady && _previewPlayed == played && _pendingPreview != null, "richiesta accodata senza PlayNote a MIDI non pronto");
-        _midiLoads.Enqueue((_editor.Score, _revision - 1));
-        OnMidiLoaded();
-        Require(!_midiReady && _previewPlayed == played, "un MidiLoaded vecchio non suona l'anteprima");
-        await Ready();
-        log.AppendLine($"anteprima: richieste={_previewRequested - requested}, suonate={_previewPlayed - played}, latenza={_lastPreviewLatencyMs:0.0} ms");
-        Require(_previewRequested == requested + 1 && _previewPlayed == played + 1 && _lastPreviewFret == 5,
-            "la nota richiesta suona una sola volta dopo il caricamento corrente");
+        _lastDigit = null; TypeDigit(5);
+        Require(!_midiReady && _previewPlayed == played + 1 && _pendingPreview == null,
+            "nota inviata al motore separato mentre il MIDI del brano non è pronto");
+        _midiLoads.Enqueue((_editor.Score, _revision - 1)); OnMidiLoaded();
+        Require(!_midiReady && _previewPlayed == played + 1, "un MidiLoaded vecchio non riavvia la nota");
+        await Heard();
 
-        requested = _previewRequested; played = _previewPlayed;
-        _lastDigit = null;
-        TypeDigit(1); TypeDigit(2);
-        Require(!_midiReady && _previewPlayed == played, "due cifre rapide attendono il MIDI");
-        await Ready();
-        Require(_previewRequested == requested + 2 && _previewPlayed == played + 1 && _lastPreviewFret == 12,
-            "1 e 2 rapidi suonano soltanto il tasto 12");
+        Drain(); played = _previewPlayed;
+        _lastDigit = null; TypeDigit(1); TypeDigit(2);
+        await Heard();
+        Require(_previewPlayed == played + 2 && _lastPreviewFret == 12,
+            "due cifre aggiornano immediatamente la stessa anteprima monofonica al tasto 12");
+        await Ready(); Drain();
 
-        played = _previewPlayed;
-        _lastDigit = null;
-        TypeDigit(8);
-        _editor.CurrentBeat!.RemoveNote(_editor.CurrentNote!); // Nota staccata senza cambiare revisione: verifica anche l'esistenza.
-        await Ready();
-        Require(_previewPlayed == played && _pendingPreview == null, "una nota non più presente non viene suonata");
+        played = _previewPlayed; _previewFontReady = false;
+        _lastDigit = null; TypeDigit(8);
+        _editor.CurrentBeat!.RemoveNote(_editor.CurrentNote!);
+        _previewFontReady = true; TryPlayPendingPreview();
+        Require(_previewPlayed == played && _pendingPreview == null, "nota staccata durante il caricamento scartata");
+        _previewFontReady = false; _lastDigit = null; TypeDigit(7); _editor.Undo();
+        _previewFontReady = true; TryPlayPendingPreview();
+        Require(_previewPlayed == played && _pendingPreview == null, "Annulla scarta la richiesta in attesa dei suoni");
 
-        played = _previewPlayed;
-        _lastDigit = null;
-        TypeDigit(7);
-        _editor.Undo();
-        await Ready();
-        Require(_previewPlayed == played, "Annulla scarta l'anteprima della revisione precedente");
-
-        played = _previewPlayed;
-        _lastDigit = null;
-        TypeDigit(9);
-        _editor.MoveRight();
-        await Ready();
-        Require(_previewPlayed == played + 1 && _lastPreviewFret == 9 && _editor.CurrentNote == null,
-            "spostare il cursore conserva l'anteprima della nota scritta");
-
-        played = _previewPlayed;
-        TypeDigit(3);
-        _editor.MarkSaved(); NewFile();
-        await Ready();
-        Require(_previewPlayed == played && _pendingPreview == null, "Nuova annulla l'anteprima del documento precedente");
+        _lastDigit = null; TypeDigit(9); _editor.MoveRight();
+        await Heard();
+        Require(_lastPreviewFret == 9 && _editor.CurrentNote == null, "il movimento del cursore conserva la nota appena suonata");
+        _previewFontReady = false; TypeDigit(3); _editor.MarkSaved(); NewFile();
+        _previewFontReady = true; TryPlayPendingPreview();
+        Require(_pendingPreview == null, "Nuova annulla l'anteprima in attesa del vecchio documento");
+        await Ready(); Drain();
 
         _editor.AddTrack("Basso anteprima", 33, new double[] { 43, 38, 33, 28 }, true);
-        played = _previewPlayed;
-        _lastDigit = null; TypeDigit(4);
-        Require(!_midiReady && _previewPlayed == played, "nuova traccia: nessuna anteprima sui vecchi canali");
-        await Ready();
-        Require(_previewPlayed == played + 1 && _lastPreviewFret == 4, "nuova traccia: anteprima dopo i nuovi canali MIDI");
+        played = _previewPlayed; _lastDigit = null; TypeDigit(4);
+        Require(!_midiReady && _previewPlayed == played + 1, "nuova traccia suona sul canale privato prima del nuovo MIDI");
+        await Heard();
+        var staff = _editor.Staff!;
+        _editor.SetTrackProperties("Basso", 36, staff.Tuning.ToList(), staff.StringTuning.Name, 2);
+        _lastDigit = null; TypeDigit(5); await Heard();
+        Require(_editor.CurrentNote!.RealValue == _editor.OpenStringPitch(_editor.Line) + 5,
+            "anteprima usa l'altezza reale con accordatura e capotasto");
+
+        // Il caricamento passa dalla stessa funzione usata dal menu; dati soltanto nella cartella isolata.
+        var custom = Path.Combine(AppPaths.DataDirectory, "suono-personale.sf2");
+        Directory.CreateDirectory(AppPaths.DataDirectory);
+        File.Copy(BundledSoundFont, custom, true);
+        LoadSoundFont(custom, false); await Ready();
+        Require(AppSettings.Current.SoundFontPath == custom && DefaultSoundFontItem.IsEnabled,
+            "SoundFont personale caricato e preferenza salvata");
+        _lastDigit = null; TypeDigit(6); await Heard();
+        DefaultSoundFont_Click(this, new RoutedEventArgs()); await Ready();
+        Require(AppSettings.Current.SoundFontPath == null && !DefaultSoundFontItem.IsEnabled,
+            "ripristino del SoundFont incluso anche nel motore delle anteprime");
+
+        _editor.MarkSaved();
+        CancelPendingMidiReload();
+        _editor.Attach(GuitarStudio.Diagnostics.PerformanceScore.Create(Api.Settings), 0);
+        Render(); await Ready();
+        _editor.MoveTo(100, 0, 1); Drain();
+        var results = new List<GuitarStudio.Audio.PreviewMeasurement>();
+        for (var i = 0; i < 12; i++)
+        {
+            var keyTimer = System.Diagnostics.Stopwatch.StartNew();
+            _lastDigit = null; TypeDigit(i % 9 + 1);
+            log.AppendLine($"gestore cifra 200×4: {keyTimer.Elapsed.TotalMilliseconds:0.00} ms");
+            results.Add(await Heard());
+            await Task.Delay(90);
+        }
+        var samples = results.Select(r => r.SamplesMs).Order().ToArray();
+        var devices = results.Select(r => r.DeviceMs).Order().ToArray();
+        log.AppendLine($"anteprima 200×4, n={results.Count}: campioni mediana={(samples[5] + samples[6]) / 2:0.00} ms max={samples[^1]:0.00} ms; dispositivo mediana={(devices[5] + devices[6]) / 2:0.00} ms max={devices[^1]:0.00} ms");
+        if (Environment.GetEnvironmentVariable("GS_SELFTEST_PREVIEW_REPORT") is { Length: > 0 } previewReport)
+            File.WriteAllText(previewReport, System.Text.Json.JsonSerializer.Serialize(results,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        Require(devices.All(ms => ms < 50), "tasto → campione raggiunto dal dispositivo sotto 50 ms (12/12)");
+        _editor.MarkSaved(); NewFile(); await Ready();
     }
 
     private async Task VerifyAutosave(LiveLog log)
@@ -447,7 +491,7 @@ public partial class PracticeView
             }
             _editor.MoveTo(0, 0, 6);
             _editor.SetFret(5);
-            Require(!_midiReady, "anteprime bloccate durante l'attesa del MIDI aggiornato");
+            Require(!_midiReady, "MIDI del brano invalidato dopo la modifica (anteprima indipendente)");
             await WaitForMidi(() => loadedMidi?.Events.OfType<NoteOnEvent>().Any(n => n.NoteKey == 45) == true);
             Require(loadedMidi?.Events.OfType<NoteOnEvent>().Any(n => n.NoteKey == 45) == true,
                 "la nota scritta nella tablatura vuota arriva al MIDI del lettore");

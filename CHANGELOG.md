@@ -3,6 +3,17 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.6.1 — 2026-11-15
+
+- La nota appena scritta suona con un sintetizzatore dedicato, senza attendere il MIDI del brano.
+  Su 200 battute e 4 tracce: mediana 29,70 ms, massimo 35,99 ms fino al dispositivo audio.
+- Anteprime con suono, volume, posizione stereo, accordatura e capotasto della traccia;
+  il SoundFont scelto dal menu viene caricato in entrambi i motori.
+- Cifre successive aggiornano subito l'anteprima; annulla, cambio documento e Play
+  interrompono quella precedente. Nessuna chiamata PlayNote sul lettore del brano.
+- Corretta la coda della vecchia nota durante un cambio rapido. Aggiunti test audio
+  e misure fino al campione non silenzioso raggiunto dal dispositivo; guida F1 aggiornata.
+
 ## 0.6.0 — 2026-11-15
 
 - Suoni predefiniti sostituiti con GeneralUser GS 1.471 di S. Christian Collins:

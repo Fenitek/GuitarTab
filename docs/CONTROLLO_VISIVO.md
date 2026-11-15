@@ -1,4 +1,22 @@
-# Controllo visivo v0.5.0 — 15 novembre 2026
+# Controllo visivo — 15 novembre 2026
+
+## Aggiornamento v0.5.1 e verifica finale v0.6.1
+
+Solo tab mostra durate, punto e travature; Tab + spartito mostra il ritmo soltanto
+sul pentagramma. Confermati nelle foto, non solo nel valore dell'impostazione.
+Ridotti i margini vuoti, senza cambiare scala o dimensione dei glifi: **due sistemi
+interi a 1920×1080 con contenuti al 200%**, viewport 295,3 DIP. Anche il profilo
+intermedio contiene due sistemi; al minimo resta un sistema intero.
+
+Foto esterne nella stessa radice visualizations descritta sotto:
+GuitarStudio-v0.5.1/prima (baseline), GuitarStudio-v0.5.1/dopo2 (verifica v0.5.1),
+GuitarStudio-v0.6.1/foto (verifica finale). Scene nuove `1920-solo-tab-ritmo.png`
+e `1920-tab-spartito-ritmo.png`; gli autotest visivi terminano con OK.
+F1 include GeneralUser GS e il comportamento immediato dell'anteprima.
+Nessun input di sistema o cambio del DPI del desktop. Attribuzione originale e fissa
+alphaTab.net visibili; tema e controlli conservano lo stile precedente.
+
+## Verifica v0.5.0
 
 **T, G2 e M1 chiusi.** La barra dà priorità ai comandi essenziali, la guida si dispone
 su una colonna al minimo e il manico dirada le etichette senza rimpicciolirle.

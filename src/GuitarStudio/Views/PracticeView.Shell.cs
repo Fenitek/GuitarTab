@@ -6,6 +6,7 @@ using System.Windows.Threading;
 using GuitarStudio.Ui;
 using Microsoft.Win32;
 using Path = System.IO.Path;
+using GuitarStudio.Audio;
 
 namespace GuitarStudio.Views;
 
@@ -97,6 +98,8 @@ public partial class PracticeView
     private async void LoadSoundFont(string? customPath, bool announce)
     {
         var generation = ++_soundFontLoadGeneration;
+        _previewFontReady = false;
+        _previewPlayer?.Stop();
         _soundFontReady = false;
         var settings = AppSettings.Current;
         if (customPath != null && !File.Exists(customPath))
@@ -118,7 +121,7 @@ public partial class PracticeView
         {
             StatusText.Text = "Caricamento dei suoni…";
             var bytes = await Task.Run(() => File.ReadAllBytes(path));
-            if (generation != _soundFontLoadGeneration) return;
+            if (generation != _soundFontLoadGeneration || _previewDisposed) return;
             if (!LooksLikeSoundFont(bytes))
             {
                 Dialogs.Warning(Window.GetWindow(this), $"«{Path.GetFileName(path)}» non è un SoundFont valido (.sf2 o .sf3).");
@@ -139,6 +142,20 @@ public partial class PracticeView
                 settings.Save();
             }
             DefaultSoundFontItem.IsEnabled = customPath != null;
+            try
+            {
+                var renderer = await Task.Run(() => new PreviewRenderer(bytes));
+                if (generation != _soundFontLoadGeneration || _previewDisposed) return;
+                _previewPlayer ??= new NotePreviewPlayer();
+                _previewPlayer.SetRenderer(renderer);
+                _previewFontReady = true;
+                TryPlayPendingPreview();
+            }
+            catch (Exception ex)
+            {
+                App.Log(ex);
+                ShowToast("Anteprima non disponibile. La riproduzione del brano resta utilizzabile.", ToastKind.Warning);
+            }
         }
         catch (Exception ex)
         {

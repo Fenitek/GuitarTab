@@ -144,6 +144,7 @@ public partial class PracticeView : UserControl
         api.PlayerStateChanged.On(args => Ui(() =>
         {
             _playing = args.State == PlayerState.Playing;
+            if (_playing) { _pendingPreview = null; _previewPlayer?.Stop(); }
             PlayButton.Content = _playing ? "" : "";
         }));
 
@@ -371,6 +372,7 @@ public partial class PracticeView : UserControl
     {
         var total = Stopwatch.StartNew();
         _pendingPreview = null;
+        _previewPlayer?.Stop();
         _lastDeferredRenderMs = 0;
         _lastDeferredMidiMs = 0;
         _revision++;
@@ -733,6 +735,7 @@ public partial class PracticeView : UserControl
 
     private void TypeDigit(int digit)
     {
+        var requestedAt = Stopwatch.GetTimestamp();
         var pos = (_editor.BarIndex, _editor.BeatIndex, _editor.Line);
         var now = DateTime.Now;
         var fret = digit;
@@ -751,16 +754,16 @@ public partial class PracticeView : UserControl
         _lastDigitPos = pos;
 
         _editor.SetFret(fret);
-        PreviewCurrentNote();
+        PreviewCurrentNote(requestedAt);
     }
 
     /// <summary>Fa sentire la nota appena scritta.</summary>
-    private void PreviewCurrentNote()
+    private void PreviewCurrentNote(long? requestedAt = null)
     {
         _previewRequested++;
         _pendingPreview = null;
         if (_playing || _editor.Score is not { } score || _editor.CurrentNote is not { } note) return;
-        _pendingPreview = new PendingPreview(score, note, _revision, Stopwatch.GetTimestamp());
+        _pendingPreview = new PendingPreview(score, note, _revision, requestedAt ?? Stopwatch.GetTimestamp());
         TryPlayPendingPreview();
     }
 

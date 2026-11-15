@@ -95,6 +95,9 @@ Minimo della finestra 880×480 DIP; larghezze iniziali dei pannelli 190/250 DIP.
 La vista iniziale è Solo tab al 100%, senza il grande titolo e l'accordatura sopra i sistemi:
 quelle informazioni restano nella finestra e nelle proprietà. Tab + spartito e Solo spartito
 restano disponibili nel selettore. La partitura mantiene almeno 140 DIP di altezza di layout.
+Solo tab mostra esplicitamente durate e travature sotto le corde; le viste con pentagramma
+non duplicano il ritmo. Margini verticali di carta 10 DIP e separazione dei sistemi 5+5 DIP
+mantengono due sistemi interi a 1920×1080 con contenuti al 200%, senza rimpicciolire i glifi.
 
 Due divisori orizzontali, alti 6 DIP, regolano manico e tracce. Le altezze preferite
 (162/34 DIP iniziali) sopravvivono alla chiusura; una finestra più corta le limita senza

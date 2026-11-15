@@ -1,5 +1,54 @@
 # Prestazioni dell'editor
 
+## v0.6.1 — anteprima indipendente dal MIDI del brano
+
+15 novembre 2026, .NET 10.0.204 Release, Windows, stessa macchina delle misure precedenti.
+SoundFont GeneralUser GS 1.471 (31.281.186 byte). L'autotest genera 200 battute × 4 tracce,
+scrive 12 tasti nella battuta 101 e misura ogni richiesta. La preparazione invalida il vecchio MIDI e attende esplicitamente Score e MIDI correnti
+prima di spostarsi nella battuta 101; una prova che leggeva la disponibilit� del vecchio
+documento contava erroneamente anche il caricamento. Nessuna prova concorrente
+durante i campioni; nessun controllo di mouse o tastiera dell'utente.
+
+| Punto raggiunto dall'anteprima | Prima v0.6.0 (ms) | Dopo v0.6.1 mediana (ms) | Massimo (ms) |
+|---|---:|---:|---:|
+| Ritorno da Api.PlayNote, una richiesta | 304,0 | — | — |
+| Primo campione non silenzioso consegnato all'uscita, 12 richieste | non misurato | 17,66 | 23,91 |
+| Campione raggiunto dall'AudioClock del dispositivo, 12 richieste | non misurato | 29,70 | 35,99 |
+
+Il prima è il contatore dell'autotest v0.6.0, sullo stesso SoundFont: non misurava il
+dispositivo. I due punti di misura sono esplicitamente diversi. Tutti i 12 campioni
+finali e le prove di nota iniziale, basso nuovo e SoundFont personale sono sotto 50 ms.
+Mediane calcolate come media dei due valori centrali. Campioni JSON e resoconti esterni
+in GuitarStudio-v0.6.1/anteprima-finale.json e autotest-finale.txt; prima in
+GuitarStudio-v0.6.0/autotest.txt. Le foto finali sono nella sottocartella foto.
+
+Il cronometro parte all'ingresso di TypeDigit, prima di SetFret. Il thread audio trova
+il primo campione oltre 0,0001, registra la coda WASAPI e attende che l'AudioClock lo
+raggiunga. Sottrae il solo ritardo di osservazione usando l'avanzamento del clock;
+non sottrae buffering o tempo di sintesi. La posizione viene riferita al padding
+corrente dopo la sintesi, evitando di contare come audio consegnato eventuali underrun.
+Non è una misura della tastiera fisica, del DAC o della propagazione acustica/Bluetooth.
+Il client richiede il buffer minimo supportato (durata e periodicità a zero, come da
+[documentazione Microsoft](https://learn.microsoft.com/en-us/windows/win32/api/audioclient/nf-audioclient-iaudioclient-initialize));
+quello effettivo della macchina è 22 ms, riportato nell'autotest.
+
+Il renderer usa l'API pubblica AlphaSynthAudioExporter, precaricata con tutti i programmi;
+crea solo brevi MIDI sul canale privato 0, senza rigenerare quello del brano. Tutta la
+sintesi e l'uscita condivisa WASAPI sono su un thread dedicato. Il dispatcher accoda
+solo valori immutabili. Nessuna Api.PlayNote; `_midiReady`, debounce del lettore di 300 ms,
+UseWorkers=false e NAudio 2.4.0 restano validi. Due cifre aggiornano immediatamente
+l'anteprima: se sono separate da un ciclo audio può sentirsi anche la prima cifra.
+
+Il test di cambio nota ha rilevato una coda residua: AllSoundOff fa un rilascio breve.
+Prima della nuova nota si sintetizzano e scartano 30 ms di rilascio, senza attendere
+30 ms reali. Il PCM successivo coincide con quello di un renderer appena inizializzato.
+I test coprono interruzione, fine naturale, Stop, programma, altezza, slice del buffer,
+campioni finiti e SoundFont invalido. L'autotest copre anche nuova traccia, capotasto,
+richieste staccate/annullate durante il caricamento e SoundFont personale nei due motori.
+
+Per riprodurre: GS_SELFTEST=1, GS_SELFTEST_EXIT=1 e GS_SELFTEST_PREVIEW_REPORT con un
+percorso JSON; GS_SELFTEST_PREVIEW_ONLY=1 limita la prova all'audio iniziale e all'anteprima.
+
 ## v0.4.2 — battute e anteprima
 
 14 novembre 2026, stessa macchina e carico descritti sotto: 200 battute, quattro tracce,
@@ -49,7 +98,7 @@ il cursore la conserva. Due cifre rapide sostituiscono la richiesta e suonano so
 L'autotest copre anche eventi MIDI vecchi, nota staccata e nuovi canali dopo Aggiungi traccia.
 Il singolo punto PlayNote resta protetto da `_midiReady` e dal controllo della revisione.
 
-**Proposta non applicata:** circa 310 ms sono percepibili per il feedback di scrittura.
+**Proposta allora non applicata (realizzata in v0.6.1, sopra):** circa 310 ms sono percepibili per il feedback di scrittura.
 Un motore separato per le sole anteprime, già inizializzato con SoundFont e canali propri,
 permetterebbe di preparare una breve nota senza rigenerare il MIDI dell'intero brano.
 Richiederebbe un proprio stato di disponibilità e test di suono/canali. In questa versione

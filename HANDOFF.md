@@ -23,6 +23,34 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.6.1
+
+- `Audio/PreviewRenderer.cs`: istanza privata dell'API pubblica AlphaSynthAudioExporter,
+  SoundFont precaricato per tutti i programmi, solo canale 0, brevi MIDI autonomi.
+  Nessun riferimento a Score, Note o MIDI del brano passa al thread audio.
+- `Audio/NotePreviewPlayer.cs`: uscita WASAPI condivisa, 48 kHz stereo float, thread proprio
+  AboveNormal; I/O a eventi e fallback di attesa 5 ms, buffer effettivo misurato 22 ms.
+  Creazione, uso e rilascio del client audio avvengono sullo stesso thread. Nessun cambio
+  di dispositivo, volume globale, modalità esclusiva o impostazioni Windows.
+- PreviewCurrentNote non chiama più Api.PlayNote: usa programma/altezza reale/volume/pan
+  correnti e il motore privato quando pronto. Richieste durante il caricamento conservano
+  identità e revisione; note staccate, Annulla/Nuova e Play le scartano. Due cifre suonano
+  subito: può sentirsi la prima cifra prima del tasto finale, come spiegato in F1.
+- Caricamento SoundFont comune ai due motori, con generazione e coda degli eventi del
+  lettore; un caricamento vecchio non sostituisce il renderer attuale. Errori dell'uscita
+  disabilitano l'anteprima con avviso, senza usare il sintetizzatore del brano come ripiego.
+- Trappola: AllSoundOff in alphaTab termina le voci con un rilascio breve. Prima di una
+  nuova nota il renderer completa 30 ms di quel rilascio fuori dall'uscita (calcolo, nessuna
+  attesa). Il test confronta il PCM con un motore nuovo dopo interruzione e fine naturale.
+- Misure Release, GeneralUser GS: 12/12 anteprime su 200×4 sotto 50 ms, campioni consegnati
+  mediana 17,66/max 23,91 ms; AudioClock mediana 29,70/max 35,99 ms. Dettagli e limiti in
+  docs/PERFORMANCE.md. Non è una misura acustica o della tastiera fisica.
+- Verifiche: build Debug/Release 0 avvisi/0 errori, 70 test xUnit, autotest completo Release
+  e visivo OK; foto esterne GuitarStudio-v0.6.1/foto. Il confronto dei 13 programmi usa
+  motori nuovi per evitare che le code precedenti falsino la distinzione dei campioni.
+- Git ancora negato: tre versioni e patch separate fuori dal repository in GuitarStudio-rilasci.
+  Messaggio previsto `v0.6.1: anteprime audio indipendenti dal brano`. Nessun push.
+
 ### Aggiornamento v0.6.0
 
 - Predefinito `Assets/GeneralUser-GS.sf2`: GeneralUser GS **1.471**, 31.281.186 byte.
@@ -388,7 +416,11 @@ src/GuitarStudio/
 - Nuova traccia: `Track` + `Staff` (`StringTuning`, `DisplayTranspositionPitch = -12`), canali MIDI liberi (evitando il 9, quello della batteria), battute di pause, `Score.AddTrack`.
 
 ### Audio
-- ⚠️ **Crash del sintetizzatore**: suonare un'anteprima (`api.PlayNote`) su una traccia appena creata, prima che alphaTab abbia rigenerato il MIDI, causa `IndexOutOfRangeException` in `AlphaTab.Synth.Synthesis.Voice.Render`. Siccome avviene su un thread interno, **chiude il programma**. Soluzione attuale: `_midiReady = false` quando cambiano le tracce, torna `true` su `api.MidiLoaded`, e l'anteprima viene saltata finché non è pronto. Qualsiasi nuova funzione che cambia canali o programmi deve rispettare questa regola.
+- ⚠️ **Crash del sintetizzatore**: `api.PlayNote` su canali non inizializzati causa
+  IndexOutOfRangeException in Voice.Render su un thread interno. La regola resta valida:
+  mai PlayNote con `_midiReady` falso. Da v0.6.1 non ci sono chiamate Api.PlayNote;
+  l'anteprima ha sintetizzatore e canale propri. `_midiReady` continua a proteggere Play
+  e il caricamento del brano, che resta accorpato dopo 300 ms. NAudio resta 2.4.0.
 
 ### Cursore dell'editor sopra lo spartito
 - Si usa `api.BoundsLookup`. Per ogni battuta, `MasterBarBounds.Bars` contiene i riquadri dei pentagrammi; l'**ultimo** relativo allo staff corrente è la tab. Il suo `VisualBounds` va esattamente dalla prima all'ultima corda, quindi `y(corda) = Y + (line-1) * H/(n-1)`.

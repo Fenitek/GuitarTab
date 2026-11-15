@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows.Threading;
 using AlphaTab.Model;
+using GuitarStudio.Audio;
 
 namespace GuitarStudio.Views;
 
@@ -16,6 +17,10 @@ public partial class PracticeView
     private PendingPreview? _pendingPreview;
     private double _lastPreviewLatencyMs;
     private double _lastPreviewFret;
+    private long _lastPreviewId;
+    private NotePreviewPlayer? _previewPlayer;
+    private bool _previewFontReady;
+    private bool _previewDisposed;
 
     private void TryPlayPendingPreview()
     {
@@ -37,15 +42,26 @@ public partial class PracticeView
             _pendingPreview = null;
             return;
         }
-        if (!_soundFontReady || !_midiReady) return;
+        if (_previewPlayer?.AudioError is { } audioError)
+        {
+            _pendingPreview = null;
+            if (_previewFontReady)
+            {
+                _previewFontReady = false; App.Log(audioError);
+                ShowToast("Anteprima non disponibile. Ricarica i suoni dal menu File.", ToastKind.Warning);
+            }
+            return;
+        }
+        if (!_previewFontReady || _previewPlayer is not { IsReady: true }) return;
         _pendingPreview = null;
-        // Unico punto PlayNote: sia i canali sia la revisione MIDI devono essere pronti.
         try
         {
-            Api.PlayNote(note);
+            var info = track.PlaybackInfo;
+            _lastPreviewId = _previewPlayer.Play((int)info.Program, (int)note.RealValue, 96,
+                (int)Math.Round(info.Volume * 127 / 16), (int)Math.Round(info.Balance * 127 / 16), pending.RequestedAt);
+            if (_lastPreviewId == 0) return;
             _previewPlayed++;
             _lastPreviewFret = note.Fret;
-            _lastPreviewLatencyMs = Stopwatch.GetElapsedTime(pending.RequestedAt).TotalMilliseconds;
         }
         catch (Exception ex) { App.Log(ex); }
     }
@@ -100,5 +116,6 @@ public partial class PracticeView
         _midiReloadTimer?.Stop();
         _midiReady = false;
         _pendingPreview = null;
+        _previewPlayer?.Stop();
     }
 }

@@ -63,6 +63,8 @@ public partial class PracticeView
     public void CompleteAutosave()
     {
         CancelPendingMidiReload();
+        _previewDisposed = true;
+        _previewPlayer?.Dispose();
         _autosaveTimer?.Stop();
         ClearAutosave();
         _autosave?.Dispose();

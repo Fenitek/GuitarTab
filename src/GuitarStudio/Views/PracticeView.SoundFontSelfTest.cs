@@ -52,8 +52,8 @@ public partial class PracticeView
         async Task Ready()
         {
             var deadline = DateTime.UtcNow.AddSeconds(20);
-            while ((!_soundFontReady) && DateTime.UtcNow < deadline) await Task.Delay(20);
-            if (!_soundFontReady) throw new InvalidOperationException("Caricamento SoundFont non terminato.");
+            while ((!_soundFontReady || !_previewFontReady) && DateTime.UtcNow < deadline) await Task.Delay(20);
+            if (!_soundFontReady || !_previewFontReady) throw new InvalidOperationException("Caricamento SoundFont non terminato nei due motori.");
         }
         var custom = Path.Combine(AppPaths.DataDirectory, "SoundFont-personale.sf2");
         Directory.CreateDirectory(AppPaths.DataDirectory); File.Copy(BundledSoundFont, custom, true);
