@@ -51,6 +51,9 @@ public sealed record BarInfo(
     int RepeatCount,
     string? Section);
 
+/// <summary>Nome e diagramma di un accordo; tasti dalla corda più grave (null = non suonata).</summary>
+public sealed record ChordInfo(string Name, bool ShowDiagram, IReadOnlyList<int?> FretsLowToHigh);
+
 /// <summary>
 /// Logica dell'editor di tablature: cursore, selezione, appunti e modifiche al modello di alphaTab.
 /// Non sa nulla dell'interfaccia: chi lo usa ascolta <see cref="Changed"/> e <see cref="CursorMoved"/>.
@@ -80,6 +83,7 @@ public sealed class TabEditor
     // Appunti: battute (liste di tempi clonati) e se sono battute intere.
     private List<List<Beat>>? _clipboard;
     private bool _clipboardWholeBars;
+    private Dictionary<string, Chord> _clipboardChords = new();
 
     public TabEditor(Settings settings)
     {
@@ -406,6 +410,7 @@ public sealed class TabEditor
             clip.Add(SelectedBeats().Select(ModelCopy.CloneBeat).ToList());
             _clipboardWholeBars = false;
         }
+        _clipboardChords = Staff!.Chords?.Keys().ToDictionary(k => k, k => HistorySnapshot.Chords.Clone(Staff.Chords.Get(k)!)) ?? new();
         _clipboard = clip;
         return clip.Sum(c => c.Count);
     }
@@ -437,7 +442,7 @@ public sealed class TabEditor
                     if (!(i == 0 && target == BarIndex)) InsertBarAt(index);
                     var v = Staff!.Bars[index].Voices[VoiceIndex];
                     v.Beats.Clear();
-                    foreach (var beat in clip[i]) v.AddBeat(ModelCopy.CloneBeat(beat));
+                    foreach (var beat in clip[i]) v.AddBeat(PastedBeat(beat));
                 }
                 Relink();
                 BarIndex = target + clip.Count - 1;
@@ -448,7 +453,7 @@ public sealed class TabEditor
                 var insertAt = BeatIndex;
                 foreach (var beat in clip[0])
                 {
-                    var copy = ModelCopy.CloneBeat(beat);
+                    var copy = PastedBeat(beat);
                     copy.Voice = voice;
                     voice.Beats.Insert(insertAt++, copy);
                 }
@@ -456,9 +461,20 @@ public sealed class TabEditor
                 BeatIndex = Math.Min(insertAt, voice.Beats.Count - 1);
             }
             _anchor = null;
-        }, _clipboardWholeBars
+        }, new HistorySnapshot.Composite(new HistorySnapshot.Chords(Staff!), _clipboardWholeBars
             ? new HistorySnapshot.BarSplice(Score!, targetBar, replace ? 1 : 0, clip.Count)
-            : HistorySnapshot.Bars.Capture([CurrentBar!]));
+            : HistorySnapshot.Bars.Capture([CurrentBar!])));
+    }
+
+    // Gli accordi sono definiti nello staff: incollando in un'altra traccia la definizione segue il tempo.
+    private Beat PastedBeat(Beat source)
+    {
+        var copy = ModelCopy.CloneBeat(source);
+        if (copy.ChordId is { } id)
+            copy.ChordId = _clipboardChords.TryGetValue(id, out var chord)
+                ? ChordIdFor(Staff!, HistorySnapshot.Chords.Clone(chord))
+                : null!;
+        return copy;
     }
 
     /// <summary>Elimina i tempi della sola voce selezionata, preservando le altre voci.</summary>
@@ -807,6 +823,109 @@ public sealed class TabEditor
             voice.Beats.Insert(BeatIndex, grace);
             Relink();
             Line = LineOf(str);
+            _anchor = null;
+        });
+        return true;
+    }
+
+    // ---------------------------------------------------------------- accordi e testo
+
+    /// <summary>Tasti dalla corda più grave alla più acuta; null = corda non suonata.</summary>
+    public static string FormatFrets(IEnumerable<int?> frets) =>
+        string.Join(" ", frets.Select(f => f is { } v ? v.ToString() : "x"));
+
+    /// <summary>Legge "x 3 2 0 1 0" (anche con trattini o virgole). Null se il formato non va.</summary>
+    public static int?[]? ParseFrets(string text, int strings)
+    {
+        var parts = text.Split([' ', ',', '-', '\t'], StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != strings) return null;
+        var result = new int?[strings];
+        for (var i = 0; i < strings; i++)
+        {
+            if (parts[i] is "x" or "X") continue;
+            if (!int.TryParse(parts[i], out var fret) || fret < 0 || fret > 24) return null;
+            result[i] = fret;
+        }
+        return result;
+    }
+
+    /// <summary>Accordo sopra il tempo corrente, oppure null.</summary>
+    public ChordInfo? CurrentChord => CurrentBeat?.Chord is { } c && Staff is { } staff
+        ? new ChordInfo(c.Name, c.ShowDiagram, FretsLowToHigh(c, staff.Tuning.Count))
+        : null;
+
+    /// <summary>L'accordo già presente, o uno proposto dalle note del tempo sotto il cursore.</summary>
+    public ChordInfo SuggestChord()
+    {
+        if (CurrentChord is { } existing) return existing;
+        var frets = new int?[StringCount];
+        if (CurrentBeat is { } beat)
+            foreach (var note in beat.Notes.Where(n => !n.IsDead))
+                frets[(int)note.String - 1] = (int)note.Fret; // String 1 = la più grave
+        return new ChordInfo("", frets.Any(f => f != null), frets);
+    }
+
+    private static int?[] FretsLowToHigh(Chord chord, int strings)
+    {
+        // Chord.Strings va dalla corda più acuta alla più grave; -1 = non suonata.
+        var frets = new int?[strings];
+        for (var i = 0; i < strings && i < chord.Strings.Count; i++)
+            frets[strings - 1 - i] = chord.Strings[i] < 0 ? null : (int)chord.Strings[i];
+        return frets;
+    }
+
+    /// <summary>Mette, cambia o (con null) toglie l'accordo sul tempo corrente.</summary>
+    public bool SetChord(ChordInfo? info)
+    {
+        if (!IsEditable || CurrentBeat is not { } beat || Staff is not { } staff) return false;
+        if (info is { } i && (string.IsNullOrWhiteSpace(i.Name) || i.FretsLowToHigh.Count != StringCount)) return false;
+        if (info == null && !beat.HasChord) return false;
+        if (info != null && CurrentChord is { } same && same.Name == info.Name.Trim() &&
+            same.ShowDiagram == info.ShowDiagram && same.FretsLowToHigh.SequenceEqual(info.FretsLowToHigh)) return false;
+
+        Edit(() =>
+        {
+            var old = beat.ChordId;
+            beat.ChordId = info == null ? null : ChordIdFor(staff, BuildChord(info));
+            if (old != null && old != beat.ChordId && !ChordInUse(staff, old)) staff.Chords!.Delete(old);
+            _anchor = null;
+        }, new HistorySnapshot.Composite(new HistorySnapshot.Chords(staff), HistorySnapshot.Bars.Capture([beat.Voice.Bar])));
+        return true;
+    }
+
+    private static Chord BuildChord(ChordInfo info)
+    {
+        var chord = new Chord { Name = info.Name.Trim(), ShowDiagram = info.ShowDiagram, ShowName = true, ShowFingering = false };
+        foreach (var fret in info.FretsLowToHigh.Reverse()) chord.Strings.Add(fret ?? -1);
+        var played = info.FretsLowToHigh.Where(f => f is > 0).Select(f => f!.Value).ToList();
+        chord.FirstFret = played.Count > 0 && played.Max() > 4 ? played.Min() : 1;
+        return chord;
+    }
+
+    /// <summary>Riusa una definizione identica già presente nello staff, altrimenti ne crea una.</summary>
+    private static string ChordIdFor(Staff staff, Chord chord)
+    {
+        var ids = staff.Chords?.Keys().ToList() ?? [];
+        foreach (var id in ids)
+            if (staff.Chords!.Get(id)!.UniqueId == chord.UniqueId) return id;
+        var next = 1;
+        while (ids.Contains(next.ToString())) next++;
+        staff.AddChord(next.ToString(), chord);
+        return next.ToString();
+    }
+
+    private static bool ChordInUse(Staff staff, string id) =>
+        staff.Bars.SelectMany(b => b.Voices).SelectMany(v => v.Beats).Any(b => b.ChordId == id);
+
+    /// <summary>Testo libero sopra il tempo corrente; vuoto o null lo toglie.</summary>
+    public bool SetBeatText(string? text)
+    {
+        if (!IsEditable || CurrentBeat is not { } beat) return false;
+        text = string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+        if (text == (string.IsNullOrEmpty(beat.Text) ? null : beat.Text)) return false;
+        EditLocal(() =>
+        {
+            beat.Text = text!;
             _anchor = null;
         });
         return true;

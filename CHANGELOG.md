@@ -3,6 +3,17 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.8.0 — 2026-11-15
+
+- Accordi sopra il tempo (tasto C o «Accordo…» nella tavolozza): nome e, a scelta, diagramma.
+  Il dialogo propone il diagramma con le note già scritte nel tempo; lo stesso accordo usato
+  più volte ha un solo diagramma in cima alla partitura.
+- Testo libero sopra il tempo (Maiusc+T o «Testo…»), ad esempio «rallentando» o «Strofa 2».
+- Dialoghi nel tema scuro, con controllo dei valori e messaggio d'errore nel dialogo;
+  «Togli» rimuove accordo o testo. Valori mostrati nel pannello Battuta.
+- Accordi e testo si salvano nei file Guitar Pro, si annullano con Ctrl+Z e seguono il tempo
+  copiato anche in un'altra traccia. Guida F1 aggiornata.
+
 ## 0.7.0 — 2026-11-15
 
 - Dinamiche da ppp a fff: otto pulsanti nella tavolozza, D per più forte e Maiusc+D per più

@@ -453,6 +453,7 @@ public partial class PracticeView : UserControl
         if (_editor.CurrentBeat is { } current)
         {
             text += $" · {TabEditor.DynamicLabel(current.Dynamics)}";
+            if (current.Chord is { } chordName) text += $" · accordo {chordName.Name}";
             if (current.GraceType != GraceType.None) text += $" · abbellimento {TabEditor.GraceLabel(current.GraceType)}";
         }
         if (_editor.HasSelection) text = $"{_editor.SelectedBeats().Count} tempi selezionati  ·  " + text;
@@ -729,7 +730,9 @@ public partial class PracticeView : UserControl
             case Key.P: ApplyEffect(NoteEffect.PalmMute); break;
             case Key.X: ApplyEffect(NoteEffect.Dead); break;
             case Key.L: ApplyEffect(NoteEffect.LetRing); break;
+            case Key.T when shift: EditBeatText(); break;
             case Key.T: ApplyEffect(NoteEffect.Tie); break;
+            case Key.C: EditChord(); break;
             case Key.G: ApplyEffect(NoteEffect.Ghost); break;
             case Key.A: ApplyEffect(NoteEffect.Accent); break;
             case Key.N: ApplyEffect(NoteEffect.HarmonicNatural); break;

@@ -58,6 +58,57 @@ internal abstract class HistorySnapshot
         }
     }
 
+    /// <summary>Più snapshot ripristinati in ordine (es. accordi dello staff, poi battute).</summary>
+    internal sealed class Composite(params HistorySnapshot[] parts) : HistorySnapshot
+    {
+        internal override IReadOnlyList<int>? BarIndices => parts.Select(p => p.BarIndices).FirstOrDefault(b => b != null);
+        internal override HistorySnapshot CaptureCurrent(TabEditor editor) =>
+            new Composite(parts.Select(p => p.CaptureCurrent(editor)).ToArray());
+        internal override void Restore(TabEditor editor)
+        {
+            foreach (var part in parts) part.Restore(editor);
+        }
+    }
+
+    /// <summary>
+    /// Definizioni degli accordi di uno staff (nome e diagramma). Sono piccole e non stanno nelle
+    /// battute: i tempi le richiamano per ChordId. Non esegue Finish: va unito a uno snapshot Bars.
+    /// </summary>
+    internal sealed class Chords : HistorySnapshot
+    {
+        private readonly int _track, _staff;
+        private readonly (string Id, Chord Chord)[] _chords;
+
+        internal Chords(Staff staff)
+        {
+            _track = (int)staff.Track.Index;
+            _staff = (int)staff.Index;
+            _chords = staff.Chords?.Keys().Select(id => (id, Clone(staff.Chords.Get(id)!))).ToArray() ?? [];
+        }
+
+        internal static Chord Clone(Chord c)
+        {
+            var copy = new Chord
+            {
+                Name = c.Name, FirstFret = c.FirstFret, ShowName = c.ShowName, ShowDiagram = c.ShowDiagram,
+                ShowFingering = c.ShowFingering
+            };
+            foreach (var s in c.Strings) copy.Strings.Add(s);
+            foreach (var f in c.BarreFrets) copy.BarreFrets.Add(f);
+            return copy;
+        }
+
+        internal override HistorySnapshot CaptureCurrent(TabEditor editor) =>
+            new Chords(editor.Score!.Tracks[_track].Staves[_staff]);
+
+        internal override void Restore(TabEditor editor)
+        {
+            var staff = editor.Score!.Tracks[_track].Staves[_staff];
+            staff.Chords = null;
+            foreach (var (id, chord) in _chords) staff.AddChord(id, Clone(chord));
+        }
+    }
+
     internal sealed class Bars : HistorySnapshot
     {
         internal override IReadOnlyList<int> BarIndices => _bars.Keys.Select(a => a.Bar).Distinct().Order().ToArray();

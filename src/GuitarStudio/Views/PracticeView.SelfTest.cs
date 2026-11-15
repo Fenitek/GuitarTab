@@ -87,6 +87,10 @@ public partial class PracticeView
             _editor.MarkSaved();
             NewFile();
             await Task.Delay(800);
+            await VerifyChordsAndText(log);
+            _editor.MarkSaved();
+            NewFile();
+            await Task.Delay(800);
 
             // Riff: corda 6 tasto 5, 7; corda 5 tasto 5, 12 (due cifre) con hammer-on.
             for (var i = 0; i < 5; i++) await K(Key.Down);

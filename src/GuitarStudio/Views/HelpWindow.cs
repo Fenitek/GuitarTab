@@ -56,6 +56,12 @@ public sealed class HelpWindow : Window
             ("Ctrl+Maiusc+G", "abbellimento sul tempo: la nota piccola cade sul tempo e la nota principale arriva subito dopo"),
             ("Stesso tasto sull'abbellimento", "lo toglie; il tasto dell'altro tipo lo cambia. Scrivi una cifra per cambiare il tasto")
         }),
+        ("Accordi e testo", new[]
+        {
+            ("C", "accordo sopra il tempo: nome e, se vuoi, diagramma proposto dalle note del tempo"),
+            ("Maiusc+T", "testo libero sopra il tempo (es. rallentando, Strofa 2)"),
+            ("Tavolozza → Accordo… / Testo…", "gli stessi dialoghi; «Togli» rimuove l'accordo o il testo esistente")
+        }),
         ("Selezione e appunti", new[]
         {
             ("Maiusc+frecce", "estende la selezione"),
@@ -283,6 +289,12 @@ public sealed class HelpWindow : Window
             "(Ctrl+Maiusc+G) suona l'abbellimento sul tempo e ritarda appena la nota principale.",
             "Gli abbellimenti non contano nella durata della battuta. Se cancelli la nota principale in fondo alla battuta, " +
             "anche il suo abbellimento viene tolto. Tutto si salva nel file Guitar Pro."));
+        panel.Children.Add(Article("Accordi e diagrammi",
+            "Con il cursore su un tempo premi C: il dialogo propone il diagramma con le note già scritte in quel tempo, " +
+            "dalla corda più grave alla più acuta (x = corda non suonata). Scrivi il nome, ad esempio Do, Am7 o G/B.",
+            "Il nome compare sopra il tempo. Se «Mostra il diagramma» è attivo, il diagramma compare in cima alla partitura; " +
+            "lo stesso accordo usato più volte ha un solo diagramma. Gli accordi non cambiano il suono: sono un'indicazione da leggere.",
+            "Maiusc+T aggiunge un testo libero sopra il tempo. Accordi e testo si salvano nel file Guitar Pro e si annullano con Ctrl+Z."));
         return panel;
     }
 

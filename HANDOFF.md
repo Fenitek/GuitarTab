@@ -23,6 +23,24 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.8.0
+
+- Accordi: `Beat.ChordId` → definizione in `Staff.Chords` (Map id → Chord). `Chord.Strings` va
+  dalla corda più ACUTA alla più grave, -1 = non suonata; nell'editor `ChordInfo.FretsLowToHigh`
+  va dalla più grave (come si scrive "x 3 2 0 1 0"). FirstFret = minimo se il massimo supera 4.
+  `ChordIdFor` riusa una definizione con lo stesso `UniqueId`; una definizione non più usata
+  viene tolta. alphaTab disegna il nome sopra il tempo e i diagrammi in cima alla partitura.
+- **Trappola**: le definizioni degli accordi non stanno nella battuta, quindi lo snapshot
+  `Bars` non le ripristina. Nuovi `HistorySnapshot.Chords` (copia piccola della mappa dello
+  staff) e `Composite` (accordi poi battute); usati da SetChord e da Paste. Copy conserva le
+  definizioni negli appunti: incollando in un'altra traccia l'accordo viene ricreato lì.
+- Testo: `Beat.Text` con `SetBeatText` (vuoto = togli), snapshot Bars.
+- `Ui/Dialogs.cs`: `Show` accetta campi e una funzione di controllo che mostra l'errore nel
+  dialogo senza chiuderlo. Nuovi `Dialogs.Chord` e `Dialogs.BeatText`; nell'autotest il
+  presentatore compila i campi per nome (`FillDialog`) e passa gli stessi controlli.
+- Scorciatoie: C accordo, Maiusc+T testo (T resta la legatura). Pannello Battuta: righe
+  Accordo e Testo. Autotest `VerifyChordsAndText` e scena `accordi-testo` con le foto dei due dialoghi.
+
 ### Aggiornamento v0.7.0
 
 - `TabEditor.SetDynamics/StepDynamics`: `Beat.Dynamics` sui tempi selezionati più i tempi

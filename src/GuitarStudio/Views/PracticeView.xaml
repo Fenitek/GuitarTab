@@ -191,6 +191,16 @@
                             </ToggleButton>
                         </UniformGrid>
 
+                        <TextBlock Text="ACCORDI E TESTO" Style="{StaticResource SectionHeader}"/>
+                        <UniformGrid Columns="2">
+                            <Button x:Name="ChordButton" Style="{StaticResource ToolButton}" MinWidth="60" Margin="0,0,4,0" Click="Chord_Click"
+                                    Content="Accordo…" AutomationProperties.Name="Accordo sopra il tempo"
+                                    ToolTip="Nome dell'accordo sopra il tempo, con diagramma facoltativo (C)"/>
+                            <Button x:Name="BeatTextButton" Style="{StaticResource ToolButton}" MinWidth="60" Click="BeatText_Click"
+                                    Content="Testo…" AutomationProperties.Name="Testo sopra il tempo"
+                                    ToolTip="Testo libero sopra il tempo, es. rallentando o Strofa 2 (Maiusc+T)"/>
+                        </UniformGrid>
+
                         <!-- Effetti: sezioni generate dal codice -->
                         <StackPanel x:Name="EffectsHost"/>
 
@@ -328,7 +338,15 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="2" Text="Accordo" Foreground="{StaticResource TextDim}" FontSize="13" Margin="0,3,14,3"/>
+                                    <TextBlock x:Name="BeatChordText" Grid.Row="2" Grid.Column="1" Foreground="{StaticResource TextMain}" FontSize="13"
+                                               TextWrapping="Wrap" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="3" Text="Testo" Foreground="{StaticResource TextDim}" FontSize="13" Margin="0,3,14,3"/>
+                                    <TextBlock x:Name="BeatTextText" Grid.Row="3" Grid.Column="1" Foreground="{StaticResource TextMain}" FontSize="13"
+                                               TextWrapping="Wrap" Margin="0,3,0,3"/>
                                     <TextBlock Text="Dinamica" Foreground="{StaticResource TextDim}" FontSize="13" Margin="0,3,14,3"/>
                                     <TextBlock x:Name="BeatDynamicsText" Grid.Column="1" Foreground="{StaticResource TextMain}" FontSize="14"
                                                FontFamily="{StaticResource DynamicsFont}" FontStyle="Italic" FontWeight="Bold" Margin="0,2,0,3"/>

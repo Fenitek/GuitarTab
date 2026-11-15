@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using AlphaTab.Model;
 using GuitarStudio.Editing;
+using GuitarStudio.Ui;
 using Track = AlphaTab.Model.Track;
 
 namespace GuitarStudio.Views;
@@ -192,6 +193,47 @@ public partial class PracticeView
         BeatHeader.Text = beat == null ? "Tempo" : $"Tempo {_editor.BeatIndex + 1} · voce {_editor.VoiceIndex + 1}";
         BeatDynamicsText.Text = beat == null ? "—" : DynamicDescription(beat.Dynamics);
         BeatGraceText.Text = beat == null ? "—" : TabEditor.GraceLabel(beat.GraceType);
+        BeatChordText.Text = _editor.CurrentChord is { } chord
+            ? chord.Name + (chord.ShowDiagram ? $"  ({TabEditor.FormatFrets(chord.FretsLowToHigh)})" : "  (solo nome)")
+            : "nessuno";
+        BeatTextText.Text = string.IsNullOrEmpty(beat?.Text) ? "nessuno" : $"«{beat.Text}»";
+    }
+
+    // ================================================================ accordi e testo
+
+    private void Chord_Click(object sender, RoutedEventArgs e) { EditChord(); Focus(); }
+    private void BeatText_Click(object sender, RoutedEventArgs e) { EditBeatText(); Focus(); }
+
+    private void EditChord()
+    {
+        if (!_editor.IsEditable || _editor.CurrentBeat == null)
+        {
+            ShowToast("Porta il cursore su un tempo di una traccia a corde per scrivere l'accordo.", ToastKind.Warning);
+            return;
+        }
+        var existing = _editor.CurrentChord;
+        var (result, chord) = Dialogs.Chord(Window.GetWindow(this), _editor.SuggestChord(), existing != null);
+        if (result == MessageBoxResult.Yes && chord != null)
+            StatusText.Text = _editor.SetChord(chord) ? $"Accordo «{chord.Name}» sopra il tempo." : "Accordo invariato.";
+        else if (result == MessageBoxResult.No && _editor.SetChord(null))
+            StatusText.Text = $"Accordo «{existing!.Name}» tolto.";
+        UpdateEditUi();
+    }
+
+    private void EditBeatText()
+    {
+        if (!_editor.IsEditable || _editor.CurrentBeat is not { } beat)
+        {
+            ShowToast("Porta il cursore su un tempo di una traccia a corde per scrivere il testo.", ToastKind.Warning);
+            return;
+        }
+        var current = beat.Text ?? "";
+        var (result, text) = Dialogs.BeatText(Window.GetWindow(this), current, current.Length > 0);
+        if (result == MessageBoxResult.Cancel) return;
+        if (result == MessageBoxResult.No) text = "";
+        if (_editor.SetBeatText(text))
+            StatusText.Text = text.Length > 0 ? $"Testo «{text}» sopra il tempo." : "Testo tolto.";
+        UpdateEditUi();
     }
 
     private void Rest_Click(object sender, RoutedEventArgs e) { _editor.MakeRest(); Focus(); }

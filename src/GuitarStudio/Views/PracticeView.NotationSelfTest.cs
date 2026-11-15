@@ -7,6 +7,7 @@ using AlphaTab.Midi;
 using AlphaTab.Model;
 using GuitarStudio.Diagnostics;
 using GuitarStudio.Editing;
+using GuitarStudio.Ui;
 
 namespace GuitarStudio.Views;
 
@@ -123,6 +124,135 @@ public partial class PracticeView
         Require(_playing, "la riproduzione parte con dinamiche e abbellimenti");
         Api.Stop();
         await Task.Delay(200);
+    }
+
+    /// <summary>Compila un dialogo dell'autotest come farebbe l'utente e sceglie la risposta.</summary>
+    private static Func<Window, MessageBoxResult> FillDialog(MessageBoxResult answer, params (string Name, object Value)[] fields) => window =>
+    {
+        foreach (var (name, value) in fields)
+            switch (LogicalTreeHelper.FindLogicalNode(window, name))
+            {
+                case System.Windows.Controls.TextBox box: box.Text = (string)value; break;
+                case System.Windows.Controls.CheckBox check: check.IsChecked = (bool)value; break;
+                default: throw new InvalidOperationException($"Campo {name} assente nel dialogo «{window.Title}».");
+            }
+        return answer;
+    };
+
+    private async Task VerifyChordsAndText(LiveLog log)
+    {
+        void Require(bool condition, string message)
+        {
+            if (!condition) throw new InvalidOperationException(message);
+            log.AppendLine("accordi/testo OK: " + message);
+        }
+
+        var previousPresenter = Dialogs.SelfTestPresenter;
+        try
+        {
+            ShowInspector(TabBar);
+            // Do aperto: x 3 2 0 1 0 dalla corda più grave.
+            foreach (var (line, fret) in new[] { (1, 0), (2, 1), (3, 0), (4, 2), (5, 3) })
+            {
+                _editor.MoveTo(0, 0, line); _editor.SetFret(fret);
+            }
+            Dialogs.SelfTestPresenter = FillDialog(MessageBoxResult.Yes, ("ChordNameBox", "Do"));
+            await Press(Key.C);
+            Require(_editor.CurrentChord is { Name: "Do", ShowDiagram: true } chord &&
+                    TabEditor.FormatFrets(chord.FretsLowToHigh) == "x 3 2 0 1 0",
+                "C apre il dialogo con il diagramma proposto dalle note e mette «Do»");
+            Require(BeatChordText.Text.StartsWith("Do", StringComparison.Ordinal) && CursorText.Text.Contains("accordo Do", StringComparison.Ordinal),
+                "accordo mostrato nel pannello Battuta e nella riga di stato");
+
+            Dialogs.SelfTestPresenter = FillDialog(MessageBoxResult.Yes, ("ChordNameBox", "Do"), ("ChordFretsBox", "3 2"));
+            var refused = false;
+            try { await Press(Key.C); } catch (InvalidOperationException ex) when (ex.Message.Contains("diagramma vuole 6")) { refused = true; }
+            Require(refused && _editor.CurrentChord!.Name == "Do", "un diagramma con troppi pochi valori viene rifiutato con un messaggio");
+
+            _editor.MoveTo(0, 2, 1);
+            Dialogs.SelfTestPresenter = FillDialog(MessageBoxResult.Yes, ("ChordNameBox", "Sol"), ("ChordDiagramCheck", false));
+            ChordButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            await Task.Delay(150);
+            Require(_editor.CurrentChord is { Name: "Sol", ShowDiagram: false }, "pulsante Accordo… della tavolozza: accordo con il solo nome");
+
+            Dialogs.SelfTestPresenter = FillDialog(MessageBoxResult.Yes, ("BeatTextBox", "rallentando"));
+            await Press(Key.T, ModifierKeys.Shift);
+            Require(_editor.CurrentBeat!.Text == "rallentando" && BeatTextText.Text.Contains("rallentando"),
+                "Maiusc+T mette il testo sopra il tempo e il pannello lo mostra");
+            Require(_editor.CurrentNote == null || _editor.CurrentNote.IsTieDestination == false, "Maiusc+T non applica la legatura");
+
+            Dialogs.SelfTestPresenter = FillDialog(MessageBoxResult.No);
+            await Press(Key.T, ModifierKeys.Shift);
+            Require(string.IsNullOrEmpty(_editor.CurrentBeat!.Text), "Togli testo lo rimuove");
+            await Press(Key.Z, ModifierKeys.Control);
+            Require(_editor.CurrentBeat!.Text == "rallentando", "Ctrl+Z rimette il testo");
+            Dialogs.SelfTestPresenter = FillDialog(MessageBoxResult.Cancel, ("BeatTextBox", "non applicare"));
+            await Press(Key.T, ModifierKeys.Shift);
+            Require(_editor.CurrentBeat!.Text == "rallentando", "Annulla nel dialogo non cambia niente");
+
+            _editor.MoveTo(0, 0, 1);
+            Dialogs.SelfTestPresenter = FillDialog(MessageBoxResult.No);
+            await Press(Key.C);
+            Require(_editor.CurrentChord == null, "Togli accordo lo rimuove");
+            await Press(Key.Z, ModifierKeys.Control);
+            await Press(Key.Y, ModifierKeys.Control);
+            await Press(Key.Z, ModifierKeys.Control);
+            Require(_editor.CurrentChord?.Name == "Do", "annulla e ripeti dell'accordo");
+
+            var reopened = SaveAndReopen("accordi");
+            var beats = reopened.Tracks[0].Staves[0].Bars[0].Voices[0].Beats;
+            Require(beats[0].Chord is { Name: "Do", ShowDiagram: true } && beats[2].Chord is { Name: "Sol", ShowDiagram: false } &&
+                    beats[2].Text == "rallentando", "salvataggio .gp e riapertura conservano accordi, diagramma e testo");
+            Render(); await Task.Delay(400);
+        }
+        finally
+        {
+            Dialogs.SelfTestPresenter = previousPresenter;
+        }
+    }
+
+    private void PrepareChordScene()
+    {
+        var importer = new AlphaTexImporter();
+        importer.InitFromString("\\title \"Accordi e testo\" . " +
+            string.Join(" | ", Enumerable.Repeat(":4 (0.1 1.2 0.3 2.4 3.5) (0.1 1.2 0.3 2.4 3.5) (3.1 0.2 0.3 0.4 2.5 3.6) (3.1 0.2 0.3 0.4 2.5 3.6)", 4)), Api.Settings);
+        _editor.Attach(importer.ReadScore(), 0);
+        _editor.MoveTo(0, 0, 1); _editor.SetChord(_editor.SuggestChord() with { Name = "Do" });
+        _editor.MoveTo(0, 2, 1); _editor.SetChord(_editor.SuggestChord() with { Name = "Sol" });
+        _editor.MoveTo(1, 0, 1); _editor.SetChord(_editor.SuggestChord() with { Name = "Do", ShowDiagram = false });
+        _editor.MoveTo(0, 0, 1); _editor.SetBeatText("Strofa");
+        _editor.MoveTo(1, 2, 1); _editor.SetBeatText("rallentando");
+        _editor.MoveTo(0, 2, 1);
+        _editor.MarkSaved();
+    }
+
+    /// <summary>Fotografa un dialogo sopra la finestra e lo chiude con Annulla.</summary>
+    private Func<Window, MessageBoxResult> CaptureDialog(Window main, string name) => window =>
+    {
+        window.ShowActivated = false;
+        window.Show();
+        window.Left = main.Left + (main.ActualWidth - window.ActualWidth) / 2;
+        window.Top = main.Top + (main.ActualHeight - window.ActualHeight) / 2;
+        VisualCapture.PaintSynchronously();
+        _visualCapture!.Save(main, name, window);
+        window.Close();
+        return MessageBoxResult.Cancel;
+    };
+
+    private async Task CaptureChordScene(Window main, string prefix)
+    {
+        await CaptureNotationScene(main, prefix, "accordi-testo", () =>
+        {
+            PrepareChordScene();
+            var previous = Dialogs.SelfTestPresenter;
+            Dialogs.SelfTestPresenter = CaptureDialog(main, prefix + "dialogo-accordo");
+            EditChord();
+            _editor.MoveTo(1, 2, 1);
+            Dialogs.SelfTestPresenter = CaptureDialog(main, prefix + "dialogo-testo");
+            EditBeatText();
+            Dialogs.SelfTestPresenter = previous;
+            _editor.MoveTo(0, 2, 1);
+        });
     }
 
     /// <summary>Scena per le foto: dinamiche diverse, i due abbellimenti e il pannello Battuta.</summary>

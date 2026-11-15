@@ -94,6 +94,7 @@ public partial class PracticeView
             await VisualCapture.Paint();
             _visualCapture.Save(main, prefix + "principale");
             await CaptureNotationScene(main, prefix, "dinamiche-abbellimenti", PrepareNotationScene);
+            await CaptureChordScene(main, prefix);
             ShowInspector(TabTrack);
 
             async Task Combos(DependencyObject root, string suffix, Window? child = null)
