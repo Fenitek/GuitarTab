@@ -23,6 +23,22 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.9.1
+
+- `PracticeView.PaletteSections.cs`: all'avvio i `SectionHeader` della tavolozza (anche quelli
+  generati in EffectsHost, che viene svuotato) diventano ToggleButton `SectionToggle` con il
+  corpo in uno StackPanel; i titoli chiusi stanno in `AppSettings.CollapsedPaletteSections`.
+  Un controllo nuovo nella tavolozza va messo dopo un'intestazione, altrimenti finisce nella
+  sezione precedente (eccezione: `PaletteHelpButton`).
+- Dinamiche in UniformGrid da 4 (Width NaN sui PaletteToggle). A 1920×1080/200% gli Abbellimenti
+  finiscono a 451 DIP su 343 visibili; con una sezione chiusa a 335. L'autotest visivo normale
+  (DPI reale 150%) li vuole interi senza chiudere niente.
+- **Trappola barra orizzontale**: nel layout Page alphaTab dimensiona la carta sulla larghezza del
+  controllo, non del viewport. Quando la partitura supera l'altezza compare la barra verticale
+  (12 DIP) e la carta sfora: `PART_ScrollView` ha ora HorizontalScrollBarVisibility Disabled
+  (lo sforamento cade nel margine di 35 DIP). Le scene foto falliscono se la barra ricompare.
+- Riga di stato: dinamica solo se `PreviousBeat` manca o ha un'altra dinamica.
+
 ### Aggiornamento v0.9.0
 
 - `MasterBar.AlternateEndings` è una maschera di bit (bit 0 = 1ª volta, max 8).

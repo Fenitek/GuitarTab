@@ -93,6 +93,7 @@ public partial class PracticeView
             StatusText.Text = "Controllo visivo: note, selezione e tracce";
             await VisualCapture.Paint();
             _visualCapture.Save(main, prefix + "principale");
+            if (!minimum) await VerifyPaletteSections(main, log);
             await CaptureNotationScene(main, prefix, "dinamiche-abbellimenti", PrepareNotationScene);
             await CaptureChordScene(main, prefix);
             await CaptureNotationScene(main, prefix, "finali-alternativi", PrepareEndingScene);
@@ -145,5 +146,35 @@ public partial class PracticeView
         Dialogs.SelfTestPresenter = null;
         _editor.MarkSaved();
         log.AppendLine("foto: " + Environment.GetEnvironmentVariable("GS_UI_CAPTURE_DIR"));
+    }
+
+    /// <summary>Abbellimenti visibili senza scorrere a 1920×1080/200%; sezioni richiudibili e ricordate.</summary>
+    private async Task VerifyPaletteSections(Window main, LiveLog log, string prefix = "1920-", bool fitsByDefault = true)
+    {
+        void Require(bool condition, string message)
+        {
+            if (!condition) throw new InvalidOperationException(message);
+            log.AppendLine("tavolozza OK: " + message);
+        }
+        var scroll = (ScrollViewer)PalettePanel.Child;
+        scroll.ScrollToTop(); await VisualCapture.Paint();
+        double Bottom() => GraceOnToggle.TransformToAncestor(scroll).TransformBounds(new Rect(GraceOnToggle.RenderSize)).Bottom;
+        log.AppendLine($"tavolozza {prefix}: fondo abbellimenti {Bottom():0.0} / viewport {scroll.ViewportHeight:0.0} DIP");
+        if (fitsByDefault) Require(Bottom() <= scroll.ViewportHeight, "sezione Abbellimenti intera senza scorrere");
+
+        var header = _paletteSections["DINAMICA"].Header;
+        header.IsChecked = false;
+        header.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        await VisualCapture.Paint();
+        var saved = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Path.Combine(AppPaths.DataDirectory, "settings.json")))!;
+        Require(_paletteSections["DINAMICA"].Body.Visibility == Visibility.Collapsed && saved.CollapsedPaletteSections.Contains("DINAMICA"),
+            "clic sull'intestazione: Dinamica chiusa e ricordata in settings.json");
+        log.AppendLine($"tavolozza {prefix}: con Dinamica chiusa fondo abbellimenti {Bottom():0.0} DIP");
+        Require(Bottom() <= scroll.ViewportHeight, "con una sezione chiusa gli Abbellimenti stanno nella tavolozza");
+        _visualCapture!.Save(main, prefix + "tavolozza-sezione-chiusa");
+        header.IsChecked = true;
+        header.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        saved = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Path.Combine(AppPaths.DataDirectory, "settings.json")))!;
+        Require(_dynamicToggles[0].IsVisible && !saved.CollapsedPaletteSections.Contains("DINAMICA"), "riapertura ricordata");
     }
 }

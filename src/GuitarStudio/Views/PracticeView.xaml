@@ -130,16 +130,14 @@
             <!-- Tavolozza di modifica -->
             <Border x:Name="PalettePanel" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
-                    <StackPanel Margin="12,0,6,14">
+                    <StackPanel x:Name="PaletteSections" Margin="12,0,6,14">
                         <TextBlock Text="VOCE" Style="{StaticResource SectionHeader}"/>
                         <UniformGrid Columns="2">
                             <ToggleButton x:Name="VoiceOne" Style="{StaticResource ToolToggle}" Content="1 ↑" Tag="0" MinWidth="60" Margin="0,0,4,0"
-                                          Click="Voice_Click" ToolTip="Voce 1: melodia (Ctrl+Alt+1)" AutomationProperties.Name="Voce 1, melodia"/>
+                                          Click="Voice_Click" ToolTip="Voce 1: melodia, con durate indipendenti dalla voce 2 nella stessa battuta (Ctrl+Alt+1)" AutomationProperties.Name="Voce 1, melodia"/>
                             <ToggleButton x:Name="VoiceTwo" Style="{StaticResource ToolToggle}" Content="2 ↓" Tag="1" MinWidth="60" Margin="0,0,0,0"
-                                          Click="Voice_Click" ToolTip="Voce 2: accompagnamento (Ctrl+Alt+2)" AutomationProperties.Name="Voce 2, accompagnamento"/>
+                                          Click="Voice_Click" ToolTip="Voce 2: accompagnamento, con durate indipendenti dalla voce 1 nella stessa battuta (Ctrl+Alt+2)" AutomationProperties.Name="Voce 2, accompagnamento"/>
                         </UniformGrid>
-                        <TextBlock Text="Durate indipendenti nella stessa battuta." Foreground="{StaticResource TextDim}"
-                                   FontSize="13" TextWrapping="Wrap" Margin="0,6,6,2"/>
                         <TextBlock Text="DURATA" Style="{StaticResource SectionHeader}"/>
                         <WrapPanel>
                             <ToggleButton x:Name="DurWhole" Style="{StaticResource PaletteToggle}" Tag="1" Click="Duration_Click" ToolTip="Semibreve: 4 movimenti">
@@ -173,30 +171,30 @@
 
                         <TextBlock Text="DINAMICA" Style="{StaticResource SectionHeader}"/>
                         <!-- Otto pulsanti ppp…fff generati dal codice -->
-                        <WrapPanel x:Name="DynamicsHost"/>
-                        <TextBlock Text="Vale fino al prossimo cambio. D più forte, Maiusc+D più debole."
-                                   Foreground="{StaticResource TextDim}" FontSize="13" TextWrapping="Wrap" Margin="0,2,6,2"/>
+                        <UniformGrid x:Name="DynamicsHost" Columns="4" Margin="0,0,2,0"/>
+                        <TextBlock Text="D più forte · Maiusc+D più debole" Foreground="{StaticResource TextDim}"
+                                   FontSize="13" TextWrapping="Wrap" Margin="0,0,6,2"/>
 
                         <TextBlock Text="ABBELLIMENTI" Style="{StaticResource SectionHeader}"/>
                         <UniformGrid Columns="2">
-                            <ToggleButton x:Name="GraceBeforeToggle" Style="{StaticResource ToolToggle}" Tag="BeforeBeat" MinWidth="60" Margin="0,0,4,0"
+                            <ToggleButton x:Name="GraceBeforeToggle" Style="{StaticResource ToolToggle}" Tag="BeforeBeat" MinWidth="60" Padding="4,6" Margin="0,0,4,0"
                                           Click="Grace_Click" AutomationProperties.Name="Abbellimento prima del tempo"
                                           ToolTip="Abbellimento prima del tempo (Ctrl+G): una nota piccola suonata appena prima della nota sotto il cursore">
-                                <TextBlock><Run Text="♪" FontFamily="{StaticResource MusicFont}"/><Run Text=" prima"/></TextBlock>
+                                <TextBlock Text="prima"/>
                             </ToggleButton>
-                            <ToggleButton x:Name="GraceOnToggle" Style="{StaticResource ToolToggle}" Tag="OnBeat" MinWidth="60"
+                            <ToggleButton x:Name="GraceOnToggle" Style="{StaticResource ToolToggle}" Tag="OnBeat" MinWidth="60" Padding="4,6" Margin="0"
                                           Click="Grace_Click" AutomationProperties.Name="Abbellimento sul tempo"
                                           ToolTip="Abbellimento sul tempo (Ctrl+Maiusc+G): la nota piccola cade sul tempo e ritarda di poco la nota sotto il cursore">
-                                <TextBlock><Run Text="♪" FontFamily="{StaticResource MusicFont}"/><Run Text=" sul tempo"/></TextBlock>
+                                <TextBlock Text="sul tempo"/>
                             </ToggleButton>
                         </UniformGrid>
 
                         <TextBlock Text="ACCORDI E TESTO" Style="{StaticResource SectionHeader}"/>
                         <UniformGrid Columns="2">
-                            <Button x:Name="ChordButton" Style="{StaticResource ToolButton}" MinWidth="60" Margin="0,0,4,0" Click="Chord_Click"
+                            <Button x:Name="ChordButton" Style="{StaticResource ToolButton}" MinWidth="60" Padding="4,7" Margin="0,0,4,0" Click="Chord_Click"
                                     Content="Accordo…" AutomationProperties.Name="Accordo sopra il tempo"
                                     ToolTip="Nome dell'accordo sopra il tempo, con diagramma facoltativo (C)"/>
-                            <Button x:Name="BeatTextButton" Style="{StaticResource ToolButton}" MinWidth="60" Click="BeatText_Click"
+                            <Button x:Name="BeatTextButton" Style="{StaticResource ToolButton}" MinWidth="60" Padding="4,7" Click="BeatText_Click"
                                     Content="Testo…" AutomationProperties.Name="Testo sopra il tempo"
                                     ToolTip="Testo libero sopra il tempo, es. rallentando o Strofa 2 (Maiusc+T)"/>
                         </UniformGrid>
@@ -242,7 +240,7 @@
                         <TextBlock Text="Seleziona le battute, poi scegli la volta." Foreground="{StaticResource TextDim}"
                                    FontSize="13" TextWrapping="Wrap" Margin="0,6,6,2"/>
 
-                        <Button Style="{StaticResource ToolButton}" Margin="0,20,6,0" Click="Help_Click" ToolTip="Apre la guida con tutte le scorciatoie (F1)">
+                        <Button x:Name="PaletteHelpButton" Style="{StaticResource ToolButton}" Margin="0,20,6,0" Click="Help_Click" ToolTip="Apre la guida con tutte le scorciatoie (F1)">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE897;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,1,8,0"/>
                                 <TextBlock Text="Scorciatoie  ·  F1"/>

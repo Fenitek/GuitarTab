@@ -82,6 +82,9 @@ Anche il disegno manuale del manico usa 13 px, con 20 px riservati ai numeri inf
 ## Layout
 
 Tavolozza e proprietà ridimensionabili, partitura centrale scorrevole, mixer in basso.
+Le intestazioni della tavolozza (stile SectionToggle, freccia a destra) chiudono e riaprono la
+propria sezione; lo stato resta nelle preferenze. Spiegazioni lunghe vanno nei tooltip, non
+nella tavolozza. La carta non scorre mai in orizzontale.
 Il selettore delle voci precede le durate: si sceglie la linea da scrivere, poi la durata,
 poi il tasto. Due pulsanti compatti rimangono visibili anche con la tavolozza minima di 190 px.
 
@@ -134,6 +137,7 @@ Raggio dei controlli 5 px, pannelli 6 px; niente nuovi ornamenti per una singola
 | Dialoghi | Ui/Dialogs.cs | Salvataggio prima della chiusura, pulsanti espliciti e focus |
 | Trasporto e overflow | PracticeView.Toolbar.cs / Dark.xaml | Comandi condivisi, stato sincronizzato, nessun controllo principale tagliato |
 | Divisori | Dark.xaml / HorizontalPanelSplitter | Mouse, frecce e menu alternativi; altezze in AppSettings |
+| Sezioni della tavolozza | Dark.xaml / SectionToggle | Clic apre/chiude, nome accessibile con lo stato, AppSettings.CollapsedPaletteSections |
 
 Il recupero automatico usa lo stesso dialogo: Recupera apre una copia da salvare con un
 nome scelto dall'utente; Elimina copia la scarta; Più tardi, Esc e chiusura del dialogo la

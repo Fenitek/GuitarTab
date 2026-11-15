@@ -79,6 +79,10 @@ public partial class PracticeView
         Require(BeatDynamicsText.Text.StartsWith("mp", StringComparison.Ordinal) &&
                 _dynamicToggles.Single(t => t.IsChecked == true).Tag is DynamicValue.MP && CursorText.Text.Contains("· mp", StringComparison.Ordinal),
             "valore mostrato in proprietà, tavolozza e riga di stato");
+        _editor.MoveTo(0, 2, 1);
+        Require(!CursorText.Text.Contains("· mp", StringComparison.Ordinal) && BeatDynamicsText.Text.StartsWith("mp", StringComparison.Ordinal),
+            "riga di stato senza dinamica dove non cambia rispetto al tempo precedente");
+        _editor.MoveTo(0, 1, 1);
         await Press(Key.D);
         Require(_editor.CurrentBeat!.Dynamics == DynamicValue.MF, "D rende la dinamica più forte (mf)");
 
@@ -341,6 +345,8 @@ public partial class PracticeView
         await VisualCapture.Paint();
         ScrollView!.ScrollToTop();
         await VisualCapture.Paint();
+        if (ScrollView.ComputedHorizontalScrollBarVisibility == Visibility.Visible)
+            throw new InvalidOperationException($"Barra di scorrimento orizzontale sulla carta nella scena {name}.");
         _visualCapture!.Save(main, prefix + name);
         _editor.Attach(original, 0); _editor.MarkSaved(); Render();
         await VisualCapture.Paint();

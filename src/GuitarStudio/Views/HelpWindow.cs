@@ -112,7 +112,8 @@ public sealed class HelpWindow : Window
             ("Tab → frecce", "con il divisore selezionato, su e giù regolano l'altezza senza trascinare"),
             ("Altro → Spazio partitura", "riduci le tracce a una riga, regola il manico o ripristina le altezze predefinite"),
             ("Finestra stretta", "Play, Stop, display e velocità restano visibili; File, spostamento e strumenti per esercitarsi sono nel menu Altro"),
-            ("Numeri sul manico", "le etichette si diradano se manca spazio; tutti i tasti restano cliccabili e il suggerimento mostra corda e numero")
+            ("Numeri sul manico", "le etichette si diradano se manca spazio; tutti i tasti restano cliccabili e il suggerimento mostra corda e numero"),
+            ("Intestazioni della tavolozza", "un clic su VOCE, DURATA, DINAMICA… chiude o riapre la sezione; le sezioni chiuse restano chiuse ai prossimi avvii")
         })
     };
 
@@ -288,7 +289,7 @@ public sealed class HelpWindow : Window
             "La dinamica dice quanto forte suonare. Come sulla carta, il segno vale dal tempo in cui lo metti fino al prossimo cambio " +
             "nella stessa voce: mettere p a metà brano rende piano tutto quello che segue, finché non trovi un altro segno.",
             "In riproduzione cambia la forza (velocity) delle note: ppp è molto piano, fff molto forte. Il valore del tempo sotto il " +
-            "cursore è nel pannello Battuta (Ctrl+B) e nella riga di stato in basso."));
+            "cursore è nel pannello Battuta (Ctrl+B); la riga di stato in basso la mostra solo sui tempi in cui cambia."));
         panel.Children.Add(Article("Note di abbellimento",
             "Mettono una nota piccola, un tono sotto sulla stessa corda, davanti alla nota sotto il cursore; poi puoi scrivere un altro tasto.",
             "«Prima del tempo» (Ctrl+G) ruba un attimo alla nota precedente: la nota principale resta sul tempo. «Sul tempo» " +

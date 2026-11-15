@@ -128,7 +128,9 @@ public partial class PracticeView
                 ToolTip = $"Dinamica {DynamicDescription(value)}: dal tempo sotto il cursore (o dalla selezione) " +
                           "fino al prossimo cambio. D più forte, Maiusc+D più debole.",
                 Tag = value,
-                Style = style
+                Style = style,
+                // Quattro per riga nella griglia: due righe invece di tre anche con la tavolozza minima.
+                Width = double.NaN
             };
             AutomationProperties.SetName(t, $"Dinamica {DynamicNames[value]}");
             t.Click += (_, _) =>

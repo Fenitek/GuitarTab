@@ -3,6 +3,17 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.9.1 — 2026-11-15
+
+- Tavolozza: le intestazioni (VOCE, DURATA, DINAMICA…) si chiudono e si riaprono con un clic,
+  e il programma ricorda quali hai chiuso. Le otto dinamiche stanno in due righe da quattro e
+  le spiegazioni sono più corte: a 1920×1080 con i contenuti al 200% basta chiudere una sezione
+  per vedere gli Abbellimenti senza scorrere.
+- Etichette dei pulsanti Abbellimenti, Accordo e Testo non più tagliate con la tavolozza stretta.
+- Tolta la barra di scorrimento orizzontale che compariva sulla carta quando la partitura era
+  più alta della finestra (per esempio con i finali alternativi).
+- La riga di stato mostra la dinamica solo sul tempo in cui cambia rispetto al precedente.
+
 ## 0.9.0 — 2026-11-15
 
 - Finali alternativi: «1ª volta» e «2ª volta» nella tavolozza, sulle battute selezionate.

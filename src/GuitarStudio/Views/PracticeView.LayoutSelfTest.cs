@@ -48,7 +48,11 @@ public partial class PracticeView
             RequireLayout(owner.Cast<object>().SequenceEqual(_fileCommands), "tutti i comandi File conservano identità e ordine");
             RequireLayout(TracksRow.ActualHeight >= 34 && TracksRow.ActualHeight < 35, "tracce ridotte a una riga");
             _visualCapture!.Save(main, name + "-predefinita");
-            if (name == "1920") await VerifyTabRhythmVisual(main, log);
+            if (name == "1920")
+            {
+                await VerifyTabRhythmVisual(main, log);
+                await VerifyPaletteSections(main, log, "1920-200-", fitsByDefault: false);
+            }
 
             FretToggle.IsChecked = true;
             FretToggle_Click(FretToggle, new RoutedEventArgs());

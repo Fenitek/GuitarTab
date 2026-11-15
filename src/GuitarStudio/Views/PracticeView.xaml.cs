@@ -126,6 +126,7 @@ public partial class PracticeView : UserControl
         Fretboard.FretClicked += OnFretClicked;
         BuildEffectButtons();
         BuildDynamicsButtons();
+        BuildPaletteSections();
         api.PlayedBeatChanged.On(beat => Ui(() => OnPlayedBeat(beat)));
 
         api.Error.On(err => Ui(() => StatusText.Text = "Errore: " + err.Message));
@@ -183,6 +184,11 @@ public partial class PracticeView : UserControl
             if (_scrollViewer == null && Tab.Template?.FindName("PART_ScrollView", Tab) is ScrollViewer sv)
             {
                 _scrollViewer = sv;
+                // Nel layout a pagina alphaTab dimensiona la carta sulla larghezza intera del
+                // controllo: quando compare la barra verticale (partitura più alta della vista)
+                // il viewport si stringe di 12 DIP e nasceva una barra orizzontale inutile.
+                // Lo sforamento cade nel margine destro di 35 DIP: si esclude lo scorrimento orizzontale.
+                sv.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
                 sv.ScrollChanged += (_, _) => UpdateOverlay(ensureVisible: false);
             }
             return _scrollViewer;
@@ -455,7 +461,9 @@ public partial class PracticeView : UserControl
         var text = $"Battuta {_editor.BarIndex + 1}/{staff.Bars.Count} · Voce {_editor.VoiceIndex + 1} · Tempo {_editor.BeatIndex + 1} · Corda {_editor.Line} ({stringName}) · Tasto {fret}";
         if (_editor.CurrentBeat is { } current)
         {
-            text += $" · {TabEditor.DynamicLabel(current.Dynamics)}";
+            // La dinamica vale fino al prossimo cambio: si mostra solo dove cambia.
+            if (current.PreviousBeat is not { } previous || previous.Dynamics != current.Dynamics)
+                text += $" · {TabEditor.DynamicLabel(current.Dynamics)}";
             if (current.Chord is { } chordName) text += $" · accordo {chordName.Name}";
             if (current.GraceType != GraceType.None) text += $" · abbellimento {TabEditor.GraceLabel(current.GraceType)}";
         }

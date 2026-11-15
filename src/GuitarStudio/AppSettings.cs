@@ -28,6 +28,9 @@ public sealed class AppSettings
 
     public List<string> RecentFiles { get; set; } = new();
 
+    /// <summary>Sezioni della tavolozza chiuse dall'utente (per titolo, es. «DINAMICA»).</summary>
+    public List<string> CollapsedPaletteSections { get; set; } = new();
+
     public void AddRecent(string path)
     {
         RecentFiles.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
