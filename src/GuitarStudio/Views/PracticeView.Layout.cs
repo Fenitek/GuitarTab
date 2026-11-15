@@ -495,6 +495,32 @@ public partial class PracticeView
         BarRepeatEndCheck.IsChecked = info.RepeatCount > 0;
         BarRepeatCountBox.Text = info.RepeatCount > 0 ? info.RepeatCount.ToString() : "2";
         BarSectionBox.Text = info.Section ?? "";
+        BarEndingText.Text = TabEditor.AlternateEndingsLabel(_editor.Score!.MasterBars[_editor.BarIndex]);
+    }
+
+    // ================================================================ finali alternativi
+
+    private void Ending_Click(object sender, RoutedEventArgs e)
+    {
+        ApplyEnding(int.Parse((string)((FrameworkElement)sender).Tag));
+        UpdateEditUi();
+        Focus();
+    }
+
+    private void ApplyEnding(int ending)
+    {
+        if (_editor.Score == null) return;
+        if (_editor.AlternateEndingProblem(ending) is { } problem)
+        {
+            ShowToast(problem, ToastKind.Warning);
+            return;
+        }
+        var before = TabEditor.AlternateEndingsOf(_editor.Score.MasterBars[_editor.BarIndex]).Contains(ending);
+        if (!_editor.ToggleAlternateEnding(ending, out var added)) return;
+        _barKey = null;
+        if (before) StatusText.Text = $"{ending}ª volta tolta.";
+        else if (added) ShowToast($"{ending}ª volta impostata. Aggiunta la fine del ritornello :‖ sull'ultima battuta (ripeti 2 volte).", ToastKind.Ok);
+        else StatusText.Text = $"{ending}ª volta impostata.";
     }
 
     // Brano -----------------------------------------------------------

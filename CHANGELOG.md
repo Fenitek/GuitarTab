@@ -3,6 +3,16 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.9.0 — 2026-11-15
+
+- Finali alternativi: «1ª volta» e «2ª volta» nella tavolozza, sulle battute selezionate.
+  La 1ª volta chiude il ritornello (il segno :‖ si aggiunge se manca); la 2ª va subito dopo.
+- La riproduzione segue i finali: parte comune, 1ª volta, ripetizione, 2ª volta, resto del brano.
+  Funziona anche con ritornelli ripetuti tre volte (1ª e 2ª volta sulle stesse battute).
+- Se le battute scelte non sono coerenti con i ritornelli, un avviso spiega cosa manca e
+  niente cambia. Il finale della battuta è nel pannello Battuta; si salva nei file Guitar Pro
+  e si annulla con Ctrl+Z senza copiare l'intero brano. Guida F1 aggiornata.
+
 ## 0.8.0 — 2026-11-15
 
 - Accordi sopra il tempo (tasto C o «Accordo…» nella tavolozza): nome e, a scelta, diagramma.

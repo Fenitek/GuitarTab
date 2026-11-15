@@ -62,6 +62,12 @@ public sealed class HelpWindow : Window
             ("Maiusc+T", "testo libero sopra il tempo (es. rallentando, Strofa 2)"),
             ("Tavolozza → Accordo… / Testo…", "gli stessi dialoghi; «Togli» rimuove l'accordo o il testo esistente")
         }),
+        ("Finali alternativi", new[]
+        {
+            ("Tavolozza → 1ª volta", "le battute selezionate si suonano solo al primo giro; se manca, aggiunge la fine del ritornello :‖"),
+            ("Tavolozza → 2ª volta", "le battute subito dopo la 1ª volta si suonano al secondo giro, al suo posto"),
+            ("Stesso pulsante", "toglie il finale dalle battute selezionate")
+        }),
         ("Selezione e appunti", new[]
         {
             ("Maiusc+frecce", "estende la selezione"),
@@ -295,6 +301,13 @@ public sealed class HelpWindow : Window
             "Il nome compare sopra il tempo. Se «Mostra il diagramma» è attivo, il diagramma compare in cima alla partitura; " +
             "lo stesso accordo usato più volte ha un solo diagramma. Gli accordi non cambiano il suono: sono un'indicazione da leggere.",
             "Maiusc+T aggiunge un testo libero sopra il tempo. Accordi e testo si salvano nel file Guitar Pro e si annullano con Ctrl+Z."));
+        panel.Children.Add(Article("Prima e seconda volta",
+            "Servono quando un ritornello finisce in due modi diversi. Seleziona le battute che si suonano solo al primo giro " +
+            "e premi «1ª volta»: l'ultima riceve il segno :‖ se non c'era. Poi seleziona le battute che vengono subito dopo e premi «2ª volta».",
+            "In riproduzione si sente: parte comune, 1ª volta, di nuovo la parte comune, 2ª volta, poi il resto del brano. " +
+            "Il ritornello parte dal segno ‖: (pannello Battuta) oppure dall'inizio del brano.",
+            "Se le battute scelte non sono coerenti con i ritornelli, un avviso spiega cosa manca e nulla viene cambiato. " +
+            "Con un ritornello ripetuto tre volte puoi mettere 1ª e 2ª volta sulle stesse battute. Il finale della battuta è nel pannello Battuta."));
         return panel;
     }
 

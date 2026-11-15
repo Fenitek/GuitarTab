@@ -1312,6 +1312,81 @@ public sealed class TabEditor
         });
     }
 
+    // ---------------------------------------------------------------- finali alternativi
+
+    /// <summary>Numeri dei finali alternativi della battuta (1 = prima volta…).</summary>
+    public static IReadOnlyList<int> AlternateEndingsOf(MasterBar bar) =>
+        Enumerable.Range(1, (int)MasterBar.MaxAlternateEndings).Where(n => ((int)bar.AlternateEndings & (1 << (n - 1))) != 0).ToArray();
+
+    public static string AlternateEndingsLabel(MasterBar bar) =>
+        AlternateEndingsOf(bar) is { Count: > 0 } endings ? string.Join(", ", endings.Select(n => $"{n}ª volta")) : "nessuno";
+
+    private (int From, int To) SelectedBarRange()
+    {
+        var (from, to) = SelectionRange();
+        return (from.Bar, to.Bar);
+    }
+
+    /// <summary>
+    /// Spiega perché il finale non è coerente con i ritornelli, oppure null. La 1ª volta chiude
+    /// il ritornello (il segno :‖ va sull'ultima battuta, e si aggiunge se manca); dalla 2ª in
+    /// poi il finale segue subito la battuta del finale precedente che termina con :‖.
+    /// </summary>
+    public string? AlternateEndingProblem(int ending)
+    {
+        if (Score is not { } score || ending < 1 || ending > MasterBar.MaxAlternateEndings) return "Finale non valido.";
+        var (a, b) = SelectedBarRange();
+        var bit = 1 << (ending - 1);
+        if (Enumerable.Range(a, b - a + 1).All(i => ((int)score.MasterBars[i].AlternateEndings & bit) != 0)) return null; // si toglie
+        if (Enumerable.Range(a + 1, b - a).Any(i => score.MasterBars[i].IsRepeatStart))
+            return "Dentro le battute scelte inizia un altro ritornello ‖: — seleziona solo le battute del finale.";
+        if (ending == 1)
+        {
+            var start = Enumerable.Range(0, a + 1).LastOrDefault(i => score.MasterBars[i].IsRepeatStart);
+            if (a == start)
+                return "La 1ª volta va dopo la parte comune del ritornello: non può iniziare sulla prima battuta ripetuta.";
+            if (Enumerable.Range(a, b - a).Any(i => score.MasterBars[i].IsRepeatEnd))
+                return "La 1ª volta deve terminare con il segno :‖: seleziona le battute fino a quella con la fine del ritornello.";
+            return null;
+        }
+        var earlier = (1 << (ending - 1)) - 1;
+        // Stesse battute del finale precedente (es. «1ª, 2ª volta» in un ritornello ripetuto tre volte).
+        if (score.MasterBars[b] is { IsRepeatEnd: true } closing &&
+            Enumerable.Range(a, b - a + 1).All(i => ((int)score.MasterBars[i].AlternateEndings & earlier) != 0))
+            return closing.RepeatCount > ending ? null
+                : $"Sulle stesse battute della volta precedente serve un ritornello ripetuto almeno {ending + 1} volte.";
+        if (a == 0 || score.MasterBars[a - 1] is not { IsRepeatEnd: true } previous ||
+            ((int)previous.AlternateEndings & earlier) == 0)
+            return $"La {ending}ª volta va subito dopo la battuta con il finale precedente e il segno :‖.";
+        if (previous.RepeatCount < ending)
+            return $"Il ritornello si ripete {previous.RepeatCount} volte: non esiste una {ending}ª volta. Cambia le ripetizioni nel pannello Battuta.";
+        return null;
+    }
+
+    /// <summary>
+    /// Mette o toglie il finale sulle battute selezionate (o su quella del cursore).
+    /// Restituisce true se è stato aggiunto anche il segno :‖ alla fine della 1ª volta.
+    /// </summary>
+    public bool ToggleAlternateEnding(int ending, out bool addedRepeatEnd)
+    {
+        addedRepeatEnd = false;
+        if (Score is not { } score || AlternateEndingProblem(ending) != null) return false;
+        var (a, b) = SelectedBarRange();
+        var bit = 1 << (ending - 1);
+        var bars = Enumerable.Range(a, b - a + 1).Select(i => score.MasterBars[i]).ToList();
+        var on = !bars.All(m => ((int)m.AlternateEndings & bit) != 0);
+        var closeRepeat = on && ending == 1 && !bars[^1].IsRepeatEnd;
+        Edit(() =>
+        {
+            foreach (var m in bars)
+                m.AlternateEndings = on ? (int)m.AlternateEndings | bit : (int)m.AlternateEndings & ~bit;
+            if (closeRepeat) bars[^1].RepeatCount = 2;
+            score.RebuildRepeatGroups();
+        }, new HistorySnapshot.MasterBars(score, Enumerable.Range(a, b - a + 1)));
+        addedRepeatEnd = closeRepeat;
+        return true;
+    }
+
     // ---------------------------------------------------------------- tracce
 
     public void SetTrackProperties(string name, int program, IList<double> tuning, string tuningName, int capo)

@@ -109,6 +109,30 @@ internal abstract class HistorySnapshot
         }
     }
 
+    /// <summary>Proprietà di alcune MasterBar (ritornelli, finali alternativi), senza toccare le note.</summary>
+    internal sealed class MasterBars : HistorySnapshot
+    {
+        private readonly int[] _indices;
+        private readonly object?[] _data;
+
+        internal MasterBars(Score score, IEnumerable<int> indices)
+        {
+            _indices = indices.Distinct().Order().ToArray();
+            _data = _indices.Select(i => ModelData<MasterBar>.Write(score.MasterBars[i])).ToArray();
+        }
+
+        internal override IReadOnlyList<int> BarIndices => _indices;
+        internal override HistorySnapshot CaptureCurrent(TabEditor editor) => new MasterBars(editor.Score!, _indices);
+
+        internal override void Restore(TabEditor editor)
+        {
+            // Bar.MasterBar si legge per indice: basta sostituire gli elementi e ricollegare.
+            for (var i = 0; i < _indices.Length; i++)
+                editor.Score!.MasterBars[_indices[i]] = ModelData<MasterBar>.Read(_data[i]);
+            editor.FinishRestoredBars(() => { });
+        }
+    }
+
     internal sealed class Bars : HistorySnapshot
     {
         internal override IReadOnlyList<int> BarIndices => _bars.Keys.Select(a => a.Bar).Distinct().Order().ToArray();

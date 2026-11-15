@@ -230,6 +230,18 @@
                                     ToolTip="Correggi la battuta: aggiunge pause o toglie i tempi in eccesso (Ctrl+F)"/>
                         </WrapPanel>
 
+                        <TextBlock Text="FINALI ALTERNATIVI" Style="{StaticResource SectionHeader}"/>
+                        <UniformGrid Columns="2">
+                            <ToggleButton x:Name="EndingOneToggle" Style="{StaticResource ToolToggle}" Tag="1" MinWidth="60" Margin="0,0,4,0"
+                                          Click="Ending_Click" Content="1ª volta" AutomationProperties.Name="Prima volta"
+                                          ToolTip="Prima volta sulle battute selezionate: si suonano al primo giro e chiudono il ritornello con :‖ (aggiunto se manca)"/>
+                            <ToggleButton x:Name="EndingTwoToggle" Style="{StaticResource ToolToggle}" Tag="2" MinWidth="60"
+                                          Click="Ending_Click" Content="2ª volta" AutomationProperties.Name="Seconda volta"
+                                          ToolTip="Seconda volta sulle battute selezionate: subito dopo la 1ª volta, si suonano al secondo giro al suo posto"/>
+                        </UniformGrid>
+                        <TextBlock Text="Seleziona le battute, poi scegli la volta." Foreground="{StaticResource TextDim}"
+                                   FontSize="13" TextWrapping="Wrap" Margin="0,6,6,2"/>
+
                         <Button Style="{StaticResource ToolButton}" Margin="0,20,6,0" Click="Help_Click" ToolTip="Apre la guida con tutte le scorciatoie (F1)">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE897;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,1,8,0"/>
@@ -378,6 +390,10 @@
                                     <CheckBox x:Name="BarRepeatEndCheck" Content="Fine  :‖  ripeti" VerticalAlignment="Center" Margin="0"/>
                                     <TextBox x:Name="BarRepeatCountBox" Width="44" Margin="8,0,6,0" Text="2"/>
                                     <TextBlock Text="volte" Foreground="{StaticResource TextDim}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <TextBlock Text="Finale alternativo:" Foreground="{StaticResource TextDim}" FontSize="13" Margin="0,0,8,0"/>
+                                    <TextBlock x:Name="BarEndingText" Foreground="{StaticResource TextMain}" FontSize="13" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <TextBlock Text="Sezione (Intro, Strofa, Assolo…)" Style="{StaticResource FieldLabel}"/>
                                 <TextBox x:Name="BarSectionBox"/>

@@ -23,6 +23,23 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.9.0
+
+- `MasterBar.AlternateEndings` è una maschera di bit (bit 0 = 1ª volta, max 8).
+  `TabEditor.AlternateEndingProblem/ToggleAlternateEnding` sulle battute della selezione:
+  1ª volta non sulla prima battuta del ritornello, nessun ‖: dentro, :‖ solo sull'ultima
+  (aggiunto con RepeatCount 2 se manca); dalla 2ª in poi subito dopo una battuta con :‖ e un
+  finale precedente, oppure sulle stesse battute del finale precedente se RepeatCount lo consente.
+- Riproduzione: MidiPlaybackController/Repeat di alphaTab. Le battute dopo la chiusura restano
+  nel RepeatGroup finché non inizia un nuovo ‖:, quindi la 2ª volta viene saltata al primo giro
+  e suonata dopo; il test controlla l'ordine delle note MIDI (anche ritornello ×3).
+- Nuovo `HistorySnapshot.MasterBars`: serializza solo le MasterBar coinvolte e le sostituisce
+  per indice (Bar.MasterBar si legge per indice), poi Relink/RebuildRepeatGroups/Finish.
+  SetBarInfo usa ancora lo snapshot completo: candidato a passare a MasterBars.
+- UI: sezione FINALI ALTERNATIVI (ToolToggle 1ª/2ª), «Finale alternativo» nel pannello Battuta.
+  Autotest `VerifyAlternateEndings` (ordine nel MIDI del lettore, .gp, Ctrl+Z/Y, Play) e scena
+  `finali-alternativi`.
+
 ### Aggiornamento v0.8.0
 
 - Accordi: `Beat.ChordId` → definizione in `Staff.Chords` (Map id → Chord). `Chord.Strings` va
@@ -543,7 +560,8 @@ src/GuitarStudio/
   - sul tempo: tapping, pennata su/giù, tremolo picking.
 - Copia, taglia e incolla (battute intere o tempi), seleziona tutto.
 - Battute e tempi: inserisci/elimina tempo e battuta, "Correggi battuta".
-- Proprietà della battuta: cambio BPM, tempo in chiave, ritornelli con numero di ripetizioni, sezione.
+- Proprietà della battuta: cambio BPM, tempo in chiave, ritornelli con numero di ripetizioni, sezione; finali alternativi 1ª/2ª volta (v0.9.0).
+- Dinamiche ppp–fff e note di abbellimento (v0.7.0); accordi con diagramma e testo sopra il tempo (v0.8.0).
 - Brano: titolo, artista, BPM iniziale.
 - Tracce: aggiungi/elimina (chitarra 6/7, basso 4/5), suono, accordatura, capotasto, mute/solo/volume, panoramica battute cliccabile.
 - Annulla/ripeti (100 passi); salvataggio `.gp` (Guitar Pro 7/8) e `.atex`; lettura di `.gp3/.gp4/.gp5/.gpx/.gp/MusicXML/.capx`.
@@ -572,6 +590,9 @@ src/GuitarStudio/
 | Ctrl+N / O / S, Ctrl+Maiusc+S | nuova, apri, salva, salva come |
 | F2 | mostra/nascondi la tavolozza (= modalità modifica) |
 | Spazio | play/pausa |
+| D / Maiusc+D | dinamica più forte / più debole |
+| Ctrl+G / Ctrl+Maiusc+G | abbellimento prima del tempo / sul tempo |
+| C / Maiusc+T | accordo / testo sopra il tempo (dialogo) |
 
 ## 8. Cosa manca rispetto a Guitar Pro (backlog dell'editor)
 
@@ -579,9 +600,9 @@ In ordine di utilità indicativo:
 1. Tema scuro completo e coerente (6.5) e leggibilità (6.4).
 2. SoundFont migliore e scelta del SoundFont (6.3).
 3. Voci: prime due modificabili dalla v0.3.0; eventuale estensione del selettore a quattro voci.
-4. Diagrammi degli accordi e nomi degli accordi; testo della canzone.
-5. Grace note, leva (whammy), dinamiche (p, mf, f…), crescendo.
-6. Finali alternativi dei ritornelli (prima/seconda volta), cambio d'armatura.
+4. ~~Diagrammi e nomi degli accordi~~ (v0.8.0, con testo libero sopra il tempo); manca il testo della canzone (lyrics).
+5. ~~Grace note e dinamiche~~ (v0.7.0); mancano leva (whammy) e crescendo.
+6. ~~Finali alternativi~~ (v0.9.0); manca il cambio d'armatura.
 7. Traccia di batteria modificabile.
 8. Stampa/PDF; export MIDI e audio (alphaTab ha `ExportAudio` e la generazione MIDI).
 9. Mixer più completo (pan, riverbero) e pannelli ridimensionabili.

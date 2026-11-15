@@ -255,6 +255,68 @@ public partial class PracticeView
         });
     }
 
+    private async Task VerifyAlternateEndings(LiveLog log)
+    {
+        void Require(bool condition, string message)
+        {
+            if (!condition) throw new InvalidOperationException(message);
+            log.AppendLine("finali OK: " + message);
+        }
+        void Click(System.Windows.Controls.Primitives.ToggleButton button) =>
+            button.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+
+        ShowInspector(TabBar);
+        // Battute 1–4 con il tasto 1–4 sulla prima corda: l'ordine MIDI dice l'ordine delle battute.
+        for (var bar = 0; bar < 4; bar++)
+        {
+            _editor.MoveTo(bar, 0, 1); _editor.SetFret(bar + 1);
+        }
+        _editor.MoveTo(0, 0, 1);
+        Click(EndingOneToggle);
+        Require(Toast.Visibility == Visibility.Visible && EndingOneToggle.IsChecked != true &&
+                _editor.Score!.MasterBars[0].AlternateEndings == 0, "1ª volta sulla prima battuta rifiutata con un avviso");
+        _editor.MoveTo(1, 0, 1);
+        Click(EndingOneToggle);
+        Require(EndingOneToggle.IsChecked == true && _editor.Score!.MasterBars[1].IsRepeatEnd && BarEndingText.Text == "1ª volta",
+            "1ª volta sulla battuta 2, con :‖ aggiunto e valore nel pannello");
+        _editor.MoveTo(2, 0, 1);
+        Click(EndingTwoToggle);
+        Require(EndingTwoToggle.IsChecked == true && BarEndingText.Text == "2ª volta", "2ª volta sulla battuta 3");
+
+        string Order(MidiFile midi) => string.Join(" ", midi.Events.OfType<NoteOnEvent>().OrderBy(n => n.Tick).Select(n => (int)n.NoteKey - 64));
+        var midi = await CurrentMidi(m => Order(m) == "1 2 1 3 4");
+        log.AppendLine("ordine delle battute nel lettore: " + Order(midi));
+        Require(Order(midi) == "1 2 1 3 4", "il lettore suona 1, 2 (1ª volta), di nuovo 1, poi 3 (2ª volta) e 4");
+
+        await Press(Key.Z, ModifierKeys.Control);
+        Require(_editor.Score!.MasterBars[2].AlternateEndings == 0, "Ctrl+Z toglie la 2ª volta");
+        await Press(Key.Y, ModifierKeys.Control);
+        Require(_editor.Score!.MasterBars[2].AlternateEndings == 2, "Ctrl+Y la rimette");
+
+        var reopened = SaveAndReopen("finali");
+        Require(reopened.MasterBars[1].AlternateEndings == 1 && reopened.MasterBars[1].RepeatCount == 2 &&
+                reopened.MasterBars[2].AlternateEndings == 2, "salvataggio .gp e riapertura conservano i finali");
+        await CurrentMidi(m => Order(m) == "1 2 1 3 4");
+        Play_Click(this, new RoutedEventArgs());
+        await Task.Delay(800);
+        Require(_playing, "la riproduzione parte con i finali alternativi");
+        Api.Stop();
+        await Task.Delay(200);
+    }
+
+    private void PrepareEndingScene()
+    {
+        var importer = new AlphaTexImporter();
+        importer.InitFromString("\\title \"Finali alternativi\" . " +
+            string.Join(" | ", Enumerable.Repeat(":4 5.3 7.3 5.2 7.2", 6)), Api.Settings);
+        _editor.Attach(importer.ReadScore(), 0);
+        _editor.MoveTo(0, 0, 1); _editor.SetBarInfo(_editor.GetBarInfo() with { RepeatStart = true, Section = "Ritornello" });
+        _editor.MoveTo(2, 0, 1); _editor.ToggleAlternateEnding(1, out _);
+        _editor.MoveTo(3, 0, 1); _editor.MoveTo(4, 0, 1, extendSelection: true); _editor.ToggleAlternateEnding(2, out _);
+        _editor.MoveTo(2, 0, 1);
+        _editor.MarkSaved();
+    }
+
     /// <summary>Scena per le foto: dinamiche diverse, i due abbellimenti e il pannello Battuta.</summary>
     private void PrepareNotationScene()
     {

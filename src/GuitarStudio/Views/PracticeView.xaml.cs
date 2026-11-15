@@ -434,6 +434,9 @@ public partial class PracticeView : UserControl
             t.IsChecked = beat != null && beat.Dynamics == (DynamicValue)t.Tag;
         GraceBeforeToggle.IsChecked = beat?.GraceType == GraceType.BeforeBeat;
         GraceOnToggle.IsChecked = beat?.GraceType == GraceType.OnBeat;
+        var endings = TabEditor.AlternateEndingsOf(_editor.Score.MasterBars[_editor.BarIndex]);
+        EndingOneToggle.IsChecked = endings.Contains(1);
+        EndingTwoToggle.IsChecked = endings.Contains(2);
 
         UpdateFretboard();
         UpdateLcd();
