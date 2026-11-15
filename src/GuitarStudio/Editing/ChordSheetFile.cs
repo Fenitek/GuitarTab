@@ -44,6 +44,8 @@ public static class ChordSheetFile
         [JsonPropertyName("tonalita")] public string? Key { get; set; }
         [JsonPropertyName("capotasto")] public int Capo { get; set; }
         [JsonPropertyName("sezioni")] public List<SectionDto>? Sections { get; set; }
+        // Facoltativo (v0.11): diagrammi scelti a mano, nome → tasti dalla corda più grave.
+        [JsonPropertyName("diagrammi"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, string>? Diagrams { get; set; }
     }
 
     private sealed class SectionDto
@@ -69,7 +71,8 @@ public static class ChordSheetFile
             Name = s.Name,
             Kind = s.Kind == SheetSectionKind.Progression ? "giro" : "testo",
             Lines = ChordSheetText.Lines(s.Body).Select(l => l.TrimEnd()).ToList()
-        }).ToList()
+        }).ToList(),
+        Diagrams = sheet.Diagrams.Count > 0 ? sheet.Diagrams.ToDictionary(d => d.Key, d => d.Value) : null
     }, Options) + "\n";
 
     public static byte[] ToBytes(ChordSheet sheet) => new UTF8Encoding(false).GetBytes(ToJson(sheet));
@@ -94,7 +97,12 @@ public static class ChordSheetFile
             },
             ChordSheetText.Normalize(string.Join("\n", s.Lines ?? new()))));
         return new ChordSheet(dto.Title?.Trim() ?? "", dto.Artist?.Trim() ?? "", dto.Key?.Trim() ?? "",
-            Math.Clamp(dto.Capo, 0, ChordSheetText.MaxCapo), sections.ToImmutableList());
+            Math.Clamp(dto.Capo, 0, ChordSheetText.MaxCapo), sections.ToImmutableList())
+        {
+            Diagrams = (dto.Diagrams ?? new())
+                .Where(d => !string.IsNullOrWhiteSpace(d.Key) && TabEditor.ParseFrets(d.Value ?? "", 6) != null)
+                .ToImmutableSortedDictionary(d => d.Key.Trim(), d => d.Value.Trim())
+        };
     }
 
     public static ChordSheet Read(string path) => FromJson(File.ReadAllText(path, Encoding.UTF8));

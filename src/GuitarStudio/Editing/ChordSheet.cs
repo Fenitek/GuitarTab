@@ -31,7 +31,24 @@ public sealed record ChordSheet(string Title, string Artist, string Key, int Cap
     /// <summary>Confronto di contenuto (le liste immutabili si confrontano per riferimento).</summary>
     public bool SameContent(ChordSheet other) =>
         Title == other.Title && Artist == other.Artist && Key == other.Key && Capo == other.Capo &&
-        Sections.SequenceEqual(other.Sections);
+        Sections.SequenceEqual(other.Sections) &&
+        Diagrams.Count == other.Diagrams.Count && Diagrams.All(d => other.Diagrams.TryGetValue(d.Key, out var v) && v == d.Value);
+
+    /// <summary>
+    /// Diagrammi scelti dall'utente, per nome d'accordo: tasti dalla corda più grave, come negli
+    /// accordi della tablatura («x 3 2 0 1 0»). Gli altri accordi usano <see cref="ChordShapes"/>.
+    /// </summary>
+    public ImmutableSortedDictionary<string, string> Diagrams { get; init; } = ImmutableSortedDictionary<string, string>.Empty;
+
+    /// <summary>Tutti gli accordi usati, una volta sola, nell'ordine in cui compaiono.</summary>
+    public IReadOnlyList<string> UsedChords() =>
+        Sections.SelectMany(ChordSheetText.ChordNames).Where(n => ChordName.Parse(n) != null).Distinct().ToList();
+
+    /// <summary>Diagramma da mostrare: quello scelto dall'utente, altrimenti la forma proposta.</summary>
+    public ChordInfo? DiagramFor(string name) =>
+        Diagrams.TryGetValue(name, out var frets) && TabEditor.ParseFrets(frets, 6) is { } parsed
+            ? new ChordInfo(name, true, parsed)
+            : ChordShapes.For(name);
 }
 
 /// <summary>Accordo posizionato in una riga di testo: Position è l'indice del carattere del testo sotto l'accordo.</summary>

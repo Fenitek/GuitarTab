@@ -160,6 +160,7 @@ public partial class ChordSheetView
         Require(ReferenceEquals(chord.Foreground, FindResource("SheetChord")) && ReferenceEquals(ReadPage.Background, FindResource("Paper")), "colori dal tema su carta chiara");
         await PressKey(Key.F5);
         Require(WritePage.IsVisible, "F5 torna alla scrittura");
+        await VerifyTools(Require, directory);
 
         if (capture != null) await CaptureSheet(capture, layout, log);
         _editor.MarkSaved();
@@ -198,6 +199,9 @@ public partial class ChordSheetView
             if (ReadScroll.ComputedHorizontalScrollBarVisibility == Visibility.Visible)
                 throw new InvalidOperationException("Barra orizzontale nella lettura del foglio.");
             capture.Save(main, prefix + "foglio-lettura");
+            SetMode(false);
+            await VisualCapture.Paint();
+            CaptureDiagramDialog(capture, main, prefix);
             log($"foto foglio {prefix}: scrittura, accordo al cursore, lettura (anteprima {(PreviewHost.IsVisible ? "visibile" : "nascosta")})");
         }
         SetMode(false);

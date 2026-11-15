@@ -3,6 +3,20 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.11.0 — 2026-11-15
+
+- Trasposizione di tutto il foglio per semitoni («♭ −1», «♯ +1», Ctrl+Maiusc+↓/↑): accordi,
+  bassi («Re/Fa♯») e tonalità. Diesis o bemolle seguono la nuova tonalità (Mi +4 diventa La♭ in
+  Mi maggiore, Sol♯ in Mi minore); senza tonalità si sale con i diesis e si scende con i bemolle.
+- Capotasto che cambia le forme: con il capotasto al 2° tasto un brano in La si suona con le
+  forme di Sol e suona uguale; la tonalità indicata resta quella reale. Si può anche solo annotare.
+- Nomi degli accordi italiani (Do, Re, Mi) o internazionali (C, D, E): un clic riscrive tutto il
+  foglio. Si può scrivere in entrambi i modi; in lettura le alterazioni compaiono come ♯ e ♭.
+- Diagrammi degli accordi usati in cima al foglio (posizioni aperte o barrè). Dall'anteprima un
+  clic apre lo stesso dialogo degli accordi della tablatura per scegliere un'altra diteggiatura.
+- Importazione ed esportazione in ChordPro (.cho, .chordpro), formato di testo aperto.
+  Guida F1 aggiornata.
+
 ## 0.10.0 — 2026-11-15
 
 - Nuovo tipo di documento: il **foglio di accordi**, nella nuova sezione «Accordi» della barra

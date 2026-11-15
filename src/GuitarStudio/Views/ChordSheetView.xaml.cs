@@ -104,6 +104,7 @@ public partial class ChordSheetView : UserControl
         finally { _syncing = false; }
 
         UndoButton.IsEnabled = _editor.CanUndo;
+        SyncTools();
         RedoButton.IsEnabled = _editor.CanRedo;
         UpdateTitle();
         _previewTimer.Stop();
@@ -260,13 +261,13 @@ public partial class ChordSheetView : UserControl
     private void CapoCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_syncing || CapoCombo.SelectedIndex < 0) return;
-        CommitInfo();
+        SetCapo(CapoCombo.SelectedIndex);
     }
 
     private void CommitInfo()
     {
         if (_syncing) return;
-        _editor.SetInfo(TitleBox.Text, ArtistBox.Text, KeyBox.Text, Math.Max(0, CapoCombo.SelectedIndex));
+        _editor.SetInfo(TitleBox.Text, ArtistBox.Text, KeyBox.Text, _editor.Sheet.Capo);
     }
 
     // ================================================================ sezioni
@@ -415,13 +416,14 @@ public partial class ChordSheetView : UserControl
     private void RenderPaper()
     {
         if (_readMode)
-            ReadScroll.Content = ChordSheetPaper.Build(_editor.Sheet, ReadScale, DisplayChord);
+            ReadScroll.Content = ChordSheetPaper.Build(_editor.Sheet, ReadScale, DisplayChord, AppSettings.Current.ShowChordDiagrams);
         else if (PreviewHost.Visibility == Visibility.Visible)
-            PreviewScroll.Content = ChordSheetPaper.Build(_editor.Sheet, 0.75, DisplayChord);
+            PreviewScroll.Content = ChordSheetPaper.Build(_editor.Sheet, 0.75, DisplayChord, AppSettings.Current.ShowChordDiagrams, EditDiagram);
     }
 
     /// <summary>Nome dell'accordo come compare sulla carta.</summary>
-    private string DisplayChord(string name) => name;
+    /// <summary>Nome dell'accordo come compare sulla carta: stessa notazione, con ♯ e ♭.</summary>
+    private static string DisplayChord(string name) => ChordName.Parse(name) is { } chord ? chord.Format(chord.Notation, symbols: true) : name;
 
     private void UpdatePreviewVisibility()
     {
@@ -446,6 +448,8 @@ public partial class ChordSheetView : UserControl
         switch (key)
         {
             case Key.K when ctrl && !shift: OpenChordEntry(); break;
+            case Key.Up when ctrl && shift: Transpose(+1); break;
+            case Key.Down when ctrl && shift: Transpose(-1); break;
             case Key.Z when ctrl && !shift: Undo(); break;
             case Key.Y when ctrl && !shift:
             case Key.Z when ctrl && shift: Redo(); break;

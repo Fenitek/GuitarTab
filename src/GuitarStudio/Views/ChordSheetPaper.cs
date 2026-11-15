@@ -18,7 +18,10 @@ public static class ChordSheetPaper
     private static FontFamily Font(string key) => (FontFamily)Application.Current.FindResource(key);
 
     /// <param name="display">Come mostrare un nome d'accordo (notazione, simboli ♯ ♭).</param>
-    public static FrameworkElement Build(ChordSheet sheet, double scale, Func<string, string>? display = null)
+    /// <param name="diagrams">Diagrammi degli accordi usati in cima al foglio (null = nessuno).</param>
+    /// <param name="onDiagramClick">In scrittura: clic su un diagramma (o su un accordo senza forma) per sceglierlo.</param>
+    public static FrameworkElement Build(ChordSheet sheet, double scale, Func<string, string>? display = null,
+        bool diagrams = false, Action<string>? onDiagramClick = null)
     {
         display ??= name => name;
         var root = new StackPanel { Margin = new Thickness(36 * scale, 28 * scale, 36 * scale, 40 * scale) };
@@ -31,6 +34,8 @@ public static class ChordSheetPaper
         if (sheet.Capo > 0) meta.Add($"Capotasto al {sheet.Capo}° tasto");
         if (meta.Count > 0)
             root.Children.Add(Text(string.Join("  ·  ", meta), Math.Max(13, 15 * scale), Res("SheetMuted"), FontWeights.Normal, top: 6 * scale));
+
+        if (diagrams && sheet.UsedChords().Count > 0) root.Children.Add(Diagrams(sheet, scale, display, onDiagramClick));
 
         foreach (var section in sheet.Sections)
         {
@@ -50,6 +55,39 @@ public static class ChordSheetPaper
                     : ProgressionRow(ChordSheetText.ParseRow(line), scale, display));
         }
         return root;
+    }
+
+    /// <summary>
+    /// Fila dei diagrammi degli accordi usati, nell'ordine in cui compaiono. In lettura gli accordi
+    /// senza forma nota non compaiono; in scrittura c'è un riquadro «?» da cliccare per definirli.
+    /// </summary>
+    private static FrameworkElement Diagrams(ChordSheet sheet, double scale, Func<string, string> display, Action<string>? onClick)
+    {
+        var row = new WrapPanel { Margin = new Thickness(0, 18 * scale, 0, 0) };
+        foreach (var name in sheet.UsedChords())
+        {
+            FrameworkElement item;
+            if (sheet.DiagramFor(name) is { } info)
+                item = new ChordDiagramView(info, display(name), scale);
+            else if (onClick != null)
+            {
+                var box = new StackPanel { Width = 84 * Math.Max(0.75, scale) };
+                box.Children.Add(Text(display(name), Math.Max(13, 17 * scale), Res("SheetChord"), FontWeights.Bold));
+                box.Children.Add(Text("? clic per scegliere il diagramma", 13, Res("SheetMuted"), FontWeights.Normal));
+                item = box;
+            }
+            else continue;
+            item.Margin = new Thickness(0, 0, 22 * scale, 10 * scale);
+            item.Tag = name;
+            if (onClick != null)
+            {
+                item.Cursor = System.Windows.Input.Cursors.Hand;
+                item.ToolTip = $"{display(name)}: clic per scegliere il diagramma";
+                item.MouseLeftButtonUp += (_, e) => { onClick(name); e.Handled = true; };
+            }
+            row.Children.Add(item);
+        }
+        return row;
     }
 
     private static TextBlock Text(string text, double size, Brush brush, FontWeight weight, double top = 0) => new()

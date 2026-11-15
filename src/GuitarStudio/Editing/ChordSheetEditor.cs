@@ -168,6 +168,81 @@ public sealed class ChordSheetEditor
         return offset + caret;
     }
 
+    // ---------------------------------------------------------------- trasposizione, capotasto, nomi
+
+    /// <summary>
+    /// Sposta tutti gli accordi e la tonalità di <paramref name="semitones"/>. Le alterazioni
+    /// seguono la nuova tonalità (Mi +4 in Mi maggiore → La♭, perché La♭ maggiore ha i bemolle;
+    /// in Mi minore → Sol♯); senza tonalità, o in Do/La minore, si sale con i diesis e si scende
+    /// con i bemolle. Ogni accordo resta nella sua notazione; i nomi non riconosciuti non cambiano.
+    /// </summary>
+    public bool Transpose(int semitones)
+    {
+        if (semitones % 12 == 0) return false;
+        var key = ChordName.Parse(Sheet.Key);
+        var target = key?.TransposeKey(semitones);
+        var spelling = SpellingFor(target, semitones);
+        var next = MapChords(Sheet, c => c.Transpose(semitones, spelling));
+        return Apply(target != null ? next with { Key = target.Format(key!.Notation) } : next);
+    }
+
+    /// <summary>
+    /// Capotasto. Con <paramref name="keepSound"/> gli accordi diventano le forme da suonare con il
+    /// capotasto (scendono di quanto sale il capotasto) e il brano suona uguale; la tonalità resta
+    /// quella reale. Senza, cambia solo l'indicazione.
+    /// </summary>
+    public bool SetCapo(int capo, bool keepSound)
+    {
+        capo = Math.Clamp(capo, 0, ChordSheetText.MaxCapo);
+        var delta = capo - Sheet.Capo;
+        if (delta == 0) return false;
+        var next = Sheet with { Capo = capo };
+        if (keepSound)
+        {
+            // Le forme sono nella tonalità reale meno il capotasto.
+            var shapesKey = ChordName.Parse(Sheet.Key)?.TransposeKey(-capo);
+            var spelling = SpellingFor(shapesKey, -delta);
+            next = MapChords(next, c => c.Transpose(-delta, spelling));
+        }
+        return Apply(next);
+    }
+
+    /// <summary>Riscrive accordi e tonalità con i nomi italiani (Do Re Mi) o internazionali (C D E).</summary>
+    public bool ConvertNotation(ChordNotation notation)
+    {
+        var next = MapChords(Sheet, c => c with { Notation = notation });
+        return Apply(ChordName.Parse(next.Key) is { } key ? next with { Key = (key with { Notation = notation }).ToString() } : next);
+    }
+
+    /// <summary>Notazione più usata dagli accordi del foglio (null se non ci sono accordi riconosciuti).</summary>
+    public ChordNotation? DominantNotation()
+    {
+        var names = Sheet.Sections.SelectMany(ChordSheetText.ChordNames).Append(Sheet.Key)
+            .Select(ChordName.Parse).OfType<ChordName>().ToList();
+        if (names.Count == 0) return null;
+        return names.Count(n => n.Notation == ChordNotation.Italian) * 2 >= names.Count ? ChordNotation.Italian : ChordNotation.International;
+    }
+
+    /// <summary>Diagramma scelto per un accordo («x 3 2 0 1 0»); null torna alla forma proposta.</summary>
+    public bool SetDiagram(string name, IReadOnlyList<int?>? fretsLowToHigh)
+    {
+        name = name.Trim();
+        if (name.Length == 0) return false;
+        var diagrams = fretsLowToHigh == null
+            ? Sheet.Diagrams.Remove(name)
+            : Sheet.Diagrams.SetItem(name, TabEditor.FormatFrets(fretsLowToHigh));
+        return Apply(Sheet with { Diagrams = diagrams });
+    }
+
+    private static Spelling SpellingFor(ChordName? key, int semitones) =>
+        key != null && !key.IsNeutralKey ? key.KeySpelling() : semitones > 0 ? Spelling.Sharps : Spelling.Flats;
+
+    private static ChordSheet MapChords(ChordSheet sheet, Func<ChordName, ChordName> map)
+    {
+        string Map(string name) => ChordName.Parse(name) is { } chord ? map(chord).ToString() : name;
+        return sheet with { Sections = sheet.Sections.Select(s => s with { Body = ChordSheetText.MapChords(s, Map) }).ToImmutableList() };
+    }
+
     // ---------------------------------------------------------------- annulla / ripeti
 
     public bool Undo()

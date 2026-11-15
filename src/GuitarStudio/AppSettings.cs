@@ -31,6 +31,12 @@ public sealed class AppSettings
     /// <summary>Sezioni della tavolozza chiuse dall'utente (per titolo, es. «DINAMICA»).</summary>
     public List<string> CollapsedPaletteSections { get; set; } = new();
 
+    /// <summary>Foglio di accordi: diagrammi degli accordi usati in cima al foglio.</summary>
+    public bool ShowChordDiagrams { get; set; } = true;
+
+    /// <summary>Foglio di accordi: cambiando il capotasto gli accordi diventano le forme da suonare.</summary>
+    public bool CapoKeepsSound { get; set; } = true;
+
     /// <summary>L'elenco dei recenti è cambiato: tablature e fogli di accordi aggiornano i loro menu.</summary>
     public static event Action? RecentFilesChanged;
 

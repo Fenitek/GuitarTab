@@ -43,35 +43,40 @@ public static class Dialogs
     /// Nome e diagramma dell'accordo sopra il tempo. Yes = applica (Chord valorizzato),
     /// No = togli l'accordo esistente, Cancel = nessuna modifica.
     /// </summary>
-    public static (MessageBoxResult Result, ChordInfo? Chord) Chord(Window? owner, ChordInfo initial, bool canRemove)
+    /// <param name="message">Testo in cima al dialogo; null = quello della tablatura.</param>
+    /// <param name="removeLabel">Pulsante «No» quando <paramref name="canRemove"/>.</param>
+    /// <param name="sheetDiagram">Foglio di accordi: il nome è fisso e il diagramma si mostra sempre.</param>
+    public static (MessageBoxResult Result, ChordInfo? Chord) Chord(Window? owner, ChordInfo initial, bool canRemove,
+        string? message = null, string removeLabel = "Togli accordo", bool sheetDiagram = false)
     {
         var strings = initial.FretsLowToHigh.Count;
-        var name = new TextBox { Name = "ChordNameBox", Text = initial.Name, MaxLength = 24 };
+        var name = new TextBox { Name = "ChordNameBox", Text = initial.Name, MaxLength = 24, IsReadOnly = sheetDiagram };
         AutomationProperties.SetName(name, "Nome dell'accordo");
-        name.Loaded += (_, _) => { name.Focus(); name.SelectAll(); };
         var diagram = new CheckBox { Name = "ChordDiagramCheck", Content = "Mostra il diagramma", IsChecked = initial.ShowDiagram, Margin = new Thickness(0, 14, 0, 0) };
         var frets = new TextBox { Name = "ChordFretsBox", Text = TabEditor.FormatFrets(initial.FretsLowToHigh), FontFamily = (FontFamily)Application.Current.FindResource("MonoFont") };
         AutomationProperties.SetName(frets, "Tasti del diagramma dalla corda più grave");
+        var focus = sheetDiagram ? frets : name;
+        focus.Loaded += (_, _) => { focus.Focus(); focus.SelectAll(); };
         var fields = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
-        fields.Children.Add(Label("Nome (es. Do, Am7, G/B)"));
+        fields.Children.Add(Label(sheetDiagram ? "Accordo" : "Nome (es. Do, Am7, G/B)"));
         fields.Children.Add(name);
-        fields.Children.Add(diagram);
+        if (!sheetDiagram) fields.Children.Add(diagram);
         fields.Children.Add(Label($"Diagramma: {strings} tasti dalla corda più grave alla più acuta, x = non suonata"));
         fields.Children.Add(frets);
 
         ChordInfo? result = null;
-        var choice = Show(owner, "Accordo", "Il nome compare sopra il tempo sotto il cursore; il diagramma, se attivo, in cima alla partitura.",
+        var choice = Show(owner, "Accordo", message ?? "Il nome compare sopra il tempo sotto il cursore; il diagramma, se attivo, in cima alla partitura.",
             DialogKind.Question, fields, value =>
             {
                 if (value != MessageBoxResult.Yes) return null;
                 if (string.IsNullOrWhiteSpace(name.Text)) return "Scrivi il nome dell'accordo.";
                 if (TabEditor.ParseFrets(frets.Text, strings) is not { } parsed)
                     return $"Il diagramma vuole {strings} valori separati da spazi: un tasto da 0 a 24 oppure x.";
-                result = new ChordInfo(name.Text.Trim(), diagram.IsChecked == true, parsed);
+                result = new ChordInfo(name.Text.Trim(), sheetDiagram || diagram.IsChecked == true, parsed);
                 return null;
             },
             [("Annulla", MessageBoxResult.Cancel, false),
-             .. canRemove ? [("Togli accordo", MessageBoxResult.No, false)] : Array.Empty<(string, MessageBoxResult, bool)>(),
+             .. canRemove ? [(removeLabel, MessageBoxResult.No, false)] : Array.Empty<(string, MessageBoxResult, bool)>(),
              ("Applica", MessageBoxResult.Yes, true)]);
         return (choice, choice == MessageBoxResult.Yes ? result : null);
     }

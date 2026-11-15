@@ -17,12 +17,46 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 | Sezione (barra laterale) | Stato |
 |---|---|
 | **Tab & Pratica** | Funziona: apertura file Guitar Pro / MusicXML, riproduzione, editor di tablature, pratica (velocità, loop, speed trainer, metronomo, conteggio), manico. |
-| **Accordi** | Foglio di accordi (v0.10.0): testo con accordi sopra, giri in battute, lettura a caratteri grandi, file `.accordi`. |
+| **Accordi** | Foglio di accordi (v0.10.0–0.11.0): testo con accordi sopra, giri in battute, lettura a caratteri grandi, trasposizione, capotasto, nomi Do/C, diagrammi, ChordPro, file `.accordi`. |
 | **Allenatore** | Solo pagina segnaposto. |
 | **Trascrivi MP3** | Solo pagina segnaposto. |
 | **Libreria** | Solo pagina segnaposto. |
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
+
+### Aggiornamento v0.11.0 — strumenti del foglio
+
+- `Editing/ChordName.cs`: `ChordName.Parse` riconosce fondamentale italiana (Do…Si, anche
+  minuscola) o internazionale (A–G maiuscola), alterazioni `# ♯ b ♭` (max 2), suffisso libero e
+  basso `/Nota`. Trappola: «Fadd9»/«Faug» sono F internazionale, non «Fa»+«dd9». Nomi non
+  riconosciuti (N.C., %, x) restano invariati in ogni operazione. Nel file restano `#`/`b`
+  ASCII; ♯/♭ solo in lettura (`DisplayChord`).
+- Trasposizione (`ChordSheetEditor.Transpose`): la tonalità si riscrive con meno alterazioni
+  (`TransposeKey`: tabelle maggiori Re♭ Mi♭ Fa♯ La♭ Si♭, minori Do♯ Mi♭ Fa♯ Sol♯ Si♭) e gli
+  accordi seguono `KeySpelling` (bemolle per Fa, Si♭… e Re/Sol/Do/Fa minore). Senza tonalità o in
+  Do/La minore: diesis salendo, bemolle scendendo. Ogni accordo conserva la sua notazione.
+- `SetCapo(capo, keepSound)`: con keepSound gli accordi scendono di quanto sale il capotasto,
+  scritti secondo la tonalità delle forme (reale − capotasto); la tonalità salvata resta reale.
+  Preferenza `AppSettings.CapoKeepsSound`. `SetInfo` non cambia più il capotasto dalla vista.
+- `ConvertNotation`, `DominantNotation` (stato dei pulsanti Do Re Mi / C D E).
+- Diagrammi: `ChordShapes.For` (aperte comuni, poi barrè forma Mi o La con la fondamentale più
+  bassa; qualità «», m, 7, m7, maj7, sus4, sus2; il basso non cambia la forma). Personalizzati in
+  `ChordSheet.Diagrams` (nome → «x 3 2 0 1 0», formato `TabEditor.FormatFrets`), modificati con
+  `Dialogs.Chord(..., sheetDiagram: true)`: il dialogo degli accordi della tablatura con nome fisso.
+  Disegno: `Views/ChordDiagramView` su carta (SheetInk/SheetMuted/SheetChord, testi ≥ 13 px).
+  Preferenza `AppSettings.ShowChordDiagrams`.
+- File `.accordi`: campo facoltativo `"diagrammi": { "Do": "x 3 2 0 1 0" }` (assente se vuoto);
+  la versione del formato resta 1 perché i lettori precedenti ignorano il campo.
+- `Editing/ChordProFormat.cs`: esporta title/artist/key/capo, `{define: Nome base-fret 1 frets …}`
+  e `{start_of_verse|chorus|bridge|grid: label="Nome"}` (chorus se il nome comincia con
+  Ritornello/Chorus/Refrain, bridge con Ponte/Bridge, grid per i giri). Importa anche le forme
+  abbreviate (t, st, soc, sog…), `{c: …}` fuori sezione come titolo della parte seguente, righe
+  sciolte in «Testo», griglie senza `.`/`||`/`|:`, `define` con base-fret. Le righe di testo che
+  iniziano con `#` o `{` verrebbero lette come commenti/direttive: limite noto.
+- Autotest: Ctrl+Maiusc+↑/↓, ♯ +1 e Ctrl+Z, capotasto 2 e 0, C D E / Do Re Mi, diagrammi in
+  lettura, dialogo del diagramma, ChordPro esporta/importa; foto `foglio-dialogo-diagramma`.
+  Una volta su due l'autotest completo si è fermato sulla soglia di 50 ms dell'anteprima audio
+  della tablatura (misura di tempo, non toccata qui): ripetendo è passato.
 
 ### Aggiornamento v0.10.0 — foglio di accordi
 

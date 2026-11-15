@@ -117,6 +117,11 @@ Foglio di accordi (sezione Accordi): in scrittura informazioni in alto e un riqu
 occupa la metà destra. In lettura la carta Paper riempie la vista: titolo 30, testo 22, accordi
 20 in grassetto SheetChord sopra la sillaba, nomi delle sezioni SheetMuted; zoom 80–200% nella
 riga di stato, visibile solo in lettura. Il campo di Ctrl+K si apre sotto il cursore del testo.
+Barra del foglio: «♭ −1» e «♯ +1» dopo «Accordo…»; i nomi Do Re Mi / C D E (ToolToggle),
+i diagrammi e il capotasto che cambia le forme stanno tra le informazioni. I diagrammi in cima
+alla carta sono disegnati a mano (ChordDiagramView): nome in SheetChord, griglia SheetMuted,
+pallini e capotasto SheetInk, simboli ○/× a 13 px con le corde distanziate almeno quanto un simbolo.
+Sulla carta le alterazioni si leggono ♯ e ♭; nei riquadri di scrittura restano # e b.
 
 ## Elevation & Depth
 
@@ -144,7 +149,7 @@ Raggio dei controlli 5 px, pannelli 6 px; niente nuovi ornamenti per una singola
 | Trasporto e overflow | PracticeView.Toolbar.cs / Dark.xaml | Comandi condivisi, stato sincronizzato, nessun controllo principale tagliato |
 | Divisori | Dark.xaml / HorizontalPanelSplitter | Mouse, frecce e menu alternativi; altezze in AppSettings |
 | Sezioni della tavolozza | Dark.xaml / SectionToggle | Clic apre/chiude, nome accessibile con lo stato, AppSettings.CollapsedPaletteSections |
-| Foglio di accordi | ChordSheetView / ChordSheetPaper | Riquadri per sezione nel tema scuro, carta Paper con SheetInk/SheetChord/SheetMuted; Ctrl+K, F5, nomi accessibili |
+| Foglio di accordi | ChordSheetView / ChordSheetPaper / ChordDiagramView | Riquadri per sezione nel tema scuro, carta Paper con SheetInk/SheetChord/SheetMuted; Ctrl+K, F5, Ctrl+Maiusc+↑/↓, nomi accessibili |
 
 Il recupero automatico usa lo stesso dialogo: Recupera apre una copia da salvare con un
 nome scelto dall'utente; Elimina copia la scarta; Più tardi, Esc e chiusura del dialogo la

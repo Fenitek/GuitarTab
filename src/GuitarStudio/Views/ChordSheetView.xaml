@@ -32,6 +32,9 @@
                                 <MenuItem Header="Salva" InputGestureText="Ctrl+S" Click="Save_Click"/>
                                 <MenuItem Header="Salva come…" InputGestureText="Ctrl+Maiusc+S" Click="SaveAs_Click"/>
                                 <Separator/>
+                                <MenuItem Header="Importa ChordPro…" Click="ImportChordPro_Click"/>
+                                <MenuItem Header="Esporta ChordPro…" Click="ExportChordPro_Click"/>
+                                <Separator/>
                                 <MenuItem Header="Guida rapida e scorciatoie" InputGestureText="F1" Click="Help_Click"/>
                             </ContextMenu>
                         </Button.ContextMenu>
@@ -45,6 +48,11 @@
                     <Border Style="{StaticResource SeparatorLine}"/>
                     <Button x:Name="InsertChordButton" Style="{StaticResource ToolButton}" Content="Accordo…" Padding="12,6" Click="InsertChord_Click"
                             ToolTip="Inserisce un accordo nel punto del cursore del testo (Ctrl+K)" AutomationProperties.Name="Inserisci accordo"/>
+                    <Border Style="{StaticResource SeparatorLine}"/>
+                    <Button x:Name="TransposeDownButton" Style="{StaticResource ToolButton}" Content="♭ −1" Padding="10,6" Margin="0,0,4,0" Click="TransposeDown_Click"
+                            ToolTip="Trasponi tutto il foglio un semitono più in basso (Ctrl+Maiusc+↓)" AutomationProperties.Name="Trasponi giù di un semitono"/>
+                    <Button x:Name="TransposeUpButton" Style="{StaticResource ToolButton}" Content="♯ +1" Padding="10,6" Click="TransposeUp_Click"
+                            ToolTip="Trasponi tutto il foglio un semitono più in alto (Ctrl+Maiusc+↑)" AutomationProperties.Name="Trasponi su di un semitono"/>
                     <TextBlock x:Name="DocTitle" Foreground="{StaticResource TextDim}" FontSize="13" VerticalAlignment="Center" Margin="8,0,12,0"
                                TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
@@ -81,11 +89,24 @@
                             <TextBox x:Name="KeyBox" KeyDown="InfoField_KeyDown" LostFocus="InfoField_LostFocus" AutomationProperties.Name="Tonalità"
                                      ToolTip="Es. Sol, Mim, Re♭ oppure G, Em"/>
                         </StackPanel>
-                        <StackPanel Width="130">
+                        <StackPanel Width="130" Margin="0,0,12,0">
                             <TextBlock Text="Capotasto" Style="{StaticResource FieldLabel}"/>
                             <ComboBox x:Name="CapoCombo" SelectionChanged="CapoCombo_SelectionChanged" Focusable="False" AutomationProperties.Name="Capotasto"/>
                         </StackPanel>
+                        <CheckBox x:Name="CapoAdaptCheck" Content="Il capotasto cambia le forme" VerticalAlignment="Bottom" Margin="0,0,0,7"
+                                  Click="CapoAdapt_Click" AutomationProperties.Name="Il capotasto cambia le forme degli accordi"
+                                  ToolTip="Attivo: cambiando il capotasto gli accordi diventano le forme da suonare e il brano suona uguale (es. La con capotasto 2 → forma di Sol). Spento: cambia solo l'indicazione."/>
                     </StackPanel>
+                    <WrapPanel Margin="0,12,0,0">
+                        <TextBlock Text="Nomi degli accordi" Foreground="{StaticResource TextDim}" FontSize="13" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ToggleButton x:Name="NotationItalianToggle" Style="{StaticResource ToolToggle}" Content="Do Re Mi" Click="Notation_Click" Tag="it"
+                                      ToolTip="Riscrive accordi e tonalità con i nomi italiani (Do, Re, Mi…)" AutomationProperties.Name="Nomi italiani"/>
+                        <ToggleButton x:Name="NotationInternationalToggle" Style="{StaticResource ToolToggle}" Content="C D E" Click="Notation_Click" Tag="en"
+                                      ToolTip="Riscrive accordi e tonalità con i nomi internazionali (C, D, E…)" AutomationProperties.Name="Nomi internazionali" Margin="0,0,18,0"/>
+                        <CheckBox x:Name="DiagramsCheck" Content="Diagrammi in cima al foglio" VerticalAlignment="Center" Margin="0" Click="Diagrams_Click"
+                                  AutomationProperties.Name="Diagrammi degli accordi in cima al foglio"
+                                  ToolTip="Mostra i diagrammi degli accordi usati; nell'anteprima un clic sul diagramma lo cambia"/>
+                    </WrapPanel>
 
                     <TextBlock Text="Sezioni" Style="{StaticResource PanelHeader}" Margin="0,22,0,6"/>
                     <StackPanel x:Name="SectionsHost"/>

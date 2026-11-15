@@ -353,7 +353,8 @@ public sealed class HelpWindow : Window
         ("Ctrl+Maiusc+Invio", "nuova sezione con un giro di soli accordi"),
         ("F5", "passa dalla scrittura alla lettura e ritorno"),
         ("Ctrl+Z / Y", "annulla / ripeti (la scrittura continua è un solo passo)"),
-        ("Ctrl+N / O / S", "nuovo foglio, apri, salva; Ctrl+Maiusc+S salva come")
+        ("Ctrl+N / O / S", "nuovo foglio, apri, salva; Ctrl+Maiusc+S salva come"),
+        ("Ctrl+Maiusc+↑ / ↓", "trasponi tutto il foglio di un semitono più in alto / più in basso")
     };
 
     private UIElement BuildChordSheet()
@@ -378,6 +379,23 @@ public sealed class HelpWindow : Window
             "La grandezza si sceglie in basso a destra (80–200%); le righe vanno a capo tra le parole.",
             "Il foglio si salva in un file «.accordi»: testo in formato JSON, leggibile anche con il Blocco note. " +
             "Come le tablature, ogni 60 secondi c'è una copia di recupero e i file recenti elencano entrambi i tipi."));
+        panel.Children.Add(Article("Trasporre e capotasto",
+            "«♭ −1» e «♯ +1» (o Ctrl+Maiusc+↓ / ↑) spostano tutti gli accordi e la tonalità di un semitono. Diesis o bemolle " +
+            "seguono la nuova tonalità: Mi alzato di 4 semitoni diventa La♭ in Mi maggiore (La♭ maggiore ha 4 bemolle) " +
+            "ma Sol♯ in Mi minore (Sol♯ minore ha i diesis). Senza tonalità si sale con i diesis e si scende con i bemolle.",
+            "Capotasto: con «Il capotasto cambia le forme» attivo, gli accordi diventano quelli da suonare con il capotasto e " +
+            "il brano suona uguale (La con il capotasto al 2° tasto → forma di Sol); spento, cambia solo l'indicazione. " +
+            "La tonalità resta quella reale. Tutto si annulla con Ctrl+Z."));
+        panel.Children.Add(Article("Nomi e diagrammi",
+            "«Do Re Mi» e «C D E» riscrivono accordi e tonalità con i nomi italiani o internazionali. Puoi scrivere in " +
+            "entrambi i modi: Sol7, Lam, Si♭ (anche Sib) oppure G7, Am, Bb; i nomi che non sono accordi, come N.C., restano.",
+            "«Diagrammi in cima al foglio» mostra il diagramma di ogni accordo usato, nelle posizioni aperte più comuni o a barrè. " +
+            "Nell'anteprima un clic su un diagramma (o sul «?» di un accordo senza forma nota) apre lo stesso dialogo degli accordi " +
+            "della tablatura: tasti dalla corda più grave, x = non suonata. «Forma proposta» torna al diagramma automatico."));
+        panel.Children.Add(Article("ChordPro",
+            "ChordPro è un formato di testo aperto per testi con accordi, usato da molte app. File → «Importa ChordPro…» crea " +
+            "un foglio nuovo da un file .cho o .chordpro; «Esporta ChordPro…» scrive il foglio in quel formato senza cambiare il tuo file .accordi.",
+            "Si conservano titolo, artista, tonalità, capotasto, sezioni (strofa, ritornello, ponte, giro) e diagrammi scelti a mano."));
         return panel;
     }
 
