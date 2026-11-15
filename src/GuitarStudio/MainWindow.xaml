@@ -29,6 +29,8 @@
                 <StackPanel>
                     <RadioButton x:Name="NavPractice" Style="{StaticResource NavButton}" Tag="&#xE70F;" Content="Tab" IsChecked="True" Checked="Nav_Checked"
                                  ToolTip="Tab &amp; Pratica: scrivi, apri e studia le tablature"/>
+                    <RadioButton x:Name="NavSheet" Style="{StaticResource NavButton}" Tag="&#xE736;" Content="Accordi" Checked="Nav_Checked"
+                                 ToolTip="Fogli di accordi: testo della canzone con gli accordi sopra, giri e lettura a caratteri grandi"/>
                     <RadioButton x:Name="NavTrainer" Style="{StaticResource NavButton}" Tag="&#xE720;" Content="Allenatore" Checked="Nav_Checked"
                                  ToolTip="Allenatore: suona con la chitarra collegata (in arrivo)"/>
                     <RadioButton x:Name="NavTranscribe" Style="{StaticResource NavButton}" Tag="&#xE8D6;" Content="Trascrivi" Checked="Nav_Checked"
@@ -42,6 +44,7 @@
         <!-- Contenuto -->
         <Grid Grid.Column="1">
             <views:PracticeView x:Name="PracticePage"/>
+            <views:ChordSheetView x:Name="SheetPage" Visibility="Collapsed"/>
             <views:ComingSoonView x:Name="TrainerPage" Visibility="Collapsed" Glyph="&#xE720;"
                 Heading="Allenatore"
                 Description="Collega la chitarra (Blackstar ID:Core via USB) e suona sopra la tab: il programma ti dirà se sei a tempo e quali note sbagli."/>

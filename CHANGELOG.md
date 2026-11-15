@@ -3,6 +3,21 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.10.0 — 2026-11-15
+
+- Nuovo tipo di documento: il **foglio di accordi**, nella nuova sezione «Accordi» della barra
+  laterale. Si crea da File → «Nuovo foglio di accordi» (anche dalla tablatura, che resta aperta).
+- Titolo, artista, tonalità, capotasto e sezioni con un nome (Intro, Strofa, Ritornello…).
+  Ogni sezione è testo con gli accordi sopra le sillabe oppure un giro di soli accordi in battute;
+  le sezioni si aggiungono (Ctrl+Invio, Ctrl+Maiusc+Invio), si spostano, si rinominano e si eliminano.
+- Scrittura rapida: scrivi il testo e premi Ctrl+K per mettere l'accordo nel punto del cursore.
+  Annulla e ripeti per tutto, con la scrittura continua raccolta in un solo passo.
+- Lettura (F5): carta chiara come la partitura, caratteri grandi, grandezza da 80 a 200%.
+  Con la finestra larga l'anteprima sulla carta accompagna la scrittura.
+- File «.accordi» in testo JSON leggibile; copia di recupero ogni 60 secondi come per le
+  tablature; i file recenti elencano tablature e fogli, con il tipo accanto al nome.
+  Guida F1: nuova scheda «Foglio di accordi».
+
 ## 0.9.1 — 2026-11-15
 
 - Tavolozza: le intestazioni (VOCE, DURATA, DINAMICA…) si chiudono e si riaprono con un clic,

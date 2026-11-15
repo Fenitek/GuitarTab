@@ -32,6 +32,11 @@
     <Color x:Key="ShadowColor">Black</Color>
     <SolidColorBrush x:Key="TransparentFill" Color="Transparent"/>
 
+    <!-- Foglio di accordi sulla carta (Paper): contrasto ≥ 5,5:1 per tutti e tre. -->
+    <SolidColorBrush x:Key="SheetInk" Color="#1E1F24"/>
+    <SolidColorBrush x:Key="SheetChord" Color="#9A3B00"/>
+    <SolidColorBrush x:Key="SheetMuted" Color="#555966"/>
+
     <!-- Manico: nessun cambiamento di colore nel trasferimento al tema. -->
     <LinearGradientBrush x:Key="FretboardWood" StartPoint="0.5,0" EndPoint="0.5,1">
         <GradientStop Color="#3A261A" Offset="0"/>

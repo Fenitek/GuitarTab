@@ -56,6 +56,7 @@
                         <Button.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="Nuova tablatura" InputGestureText="Ctrl+N" Click="New_Click"/>
+                                <MenuItem Header="Nuovo foglio di accordi" Click="NewChordSheet_Click"/>
                                 <MenuItem Header="Apri…" InputGestureText="Ctrl+O" Click="Open_Click"/>
                                 <MenuItem x:Name="RecentMenu" Header="Apri recente"/>
                                 <MenuItem Header="Apri l'esercizio demo" Click="Demo_Click"/>

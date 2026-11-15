@@ -82,7 +82,16 @@ public partial class PracticeView : UserControl
         Dispatcher.BeginInvoke(Setup, System.Windows.Threading.DispatcherPriority.ContextIdle);
     }
 
+    /// <summary>Il motore è pronto e il recupero delle tablature è concluso (MainWindow passa ai fogli di accordi).</summary>
+    public event Action? Ready;
+
     private void Setup()
+    {
+        try { SetupEditor(); }
+        finally { Ready?.Invoke(); }
+    }
+
+    private void SetupEditor()
     {
         var settings = new Settings();
         settings.Core.EnableLazyLoading = false;
@@ -162,6 +171,7 @@ public partial class PracticeView : UserControl
 
         InitLayout();
         RebuildRecentMenu();
+        AppSettings.RecentFilesChanged += RebuildRecentMenu;
         LoadSoundFont(AppSettings.Current.SoundFontPath, announce: false);
 
         StartAutosave();
@@ -173,7 +183,8 @@ public partial class PracticeView : UserControl
         }
 
         // Un file passato sulla riga di comando ha la precedenza sull'esercizio demo.
-        if (App.StartupFile is { } startup && OpenPath(startup, confirm: false)) return;
+        // Un foglio di accordi passato all'avvio lo apre MainWindow nella sezione Accordi.
+        if (App.StartupFile is { } startup && !ChordSheetFile.IsChordSheetPath(startup) && OpenPath(startup, confirm: false)) return;
         api.Tex(DemoTex, null);
     }
 
@@ -223,7 +234,7 @@ public partial class PracticeView : UserControl
         var dlg = new OpenFileDialog
         {
             Title = "Apri una tablatura",
-            Filter = "Tablature (*.gp;*.gp3;*.gp4;*.gp5;*.gpx;*.xml;*.musicxml;*.mxl;*.capx)|*.gp;*.gp3;*.gp4;*.gp5;*.gpx;*.xml;*.musicxml;*.mxl;*.capx|Tutti i file|*.*"
+            Filter = "Tablature (*.gp;*.gp3;*.gp4;*.gp5;*.gpx;*.xml;*.musicxml;*.mxl;*.capx)|*.gp;*.gp3;*.gp4;*.gp5;*.gpx;*.xml;*.musicxml;*.mxl;*.capx|Fogli di accordi (*.accordi)|*.accordi|Tutti i file|*.*"
         };
         if (dlg.ShowDialog() == true) OpenPath(dlg.FileName, confirm: false);
     }
@@ -232,6 +243,8 @@ public partial class PracticeView : UserControl
     public bool OpenPath(string path, bool confirm = true)
     {
         if (_editor == null) return false; // il motore non è ancora pronto
+        if (ChordSheetFile.IsChordSheetPath(path))
+            return (Window.GetWindow(this) as MainWindow)?.OpenDocument(path) ?? false;
         if (confirm && !ConfirmDiscard()) return false;
         try
         {

@@ -112,6 +112,12 @@ La guida passa a una colonna quando lo spazio utile è inferiore a 840 DIP. Il m
 le etichette a 13 px, mantiene 4 DIP di distanza e conserva il 24; le etichette intermedie
 possono essere omesse, mantenendo tutte le posizioni e il numero nel tooltip.
 
+Foglio di accordi (sezione Accordi): in scrittura informazioni in alto e un riquadro per sezione
+(nome, tipo, frecce, cestino, testo in MonoFont 15); da 900 DIP utili l'anteprima sulla carta
+occupa la metà destra. In lettura la carta Paper riempie la vista: titolo 30, testo 22, accordi
+20 in grassetto SheetChord sopra la sillaba, nomi delle sezioni SheetMuted; zoom 80–200% nella
+riga di stato, visibile solo in lettura. Il campo di Ctrl+K si apre sotto il cursore del testo.
+
 ## Elevation & Depth
 
 Pannelli separati da bordi sobri; popup e toast mantengono lo stile scuro esistente.
@@ -138,6 +144,7 @@ Raggio dei controlli 5 px, pannelli 6 px; niente nuovi ornamenti per una singola
 | Trasporto e overflow | PracticeView.Toolbar.cs / Dark.xaml | Comandi condivisi, stato sincronizzato, nessun controllo principale tagliato |
 | Divisori | Dark.xaml / HorizontalPanelSplitter | Mouse, frecce e menu alternativi; altezze in AppSettings |
 | Sezioni della tavolozza | Dark.xaml / SectionToggle | Clic apre/chiude, nome accessibile con lo stato, AppSettings.CollapsedPaletteSections |
+| Foglio di accordi | ChordSheetView / ChordSheetPaper | Riquadri per sezione nel tema scuro, carta Paper con SheetInk/SheetChord/SheetMuted; Ctrl+K, F5, nomi accessibili |
 
 Il recupero automatico usa lo stesso dialogo: Recupera apre una copia da salvare con un
 nome scelto dall'utente; Elimina copia la scarta; Più tardi, Esc e chiusura del dialogo la

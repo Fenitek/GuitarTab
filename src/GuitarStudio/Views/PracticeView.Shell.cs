@@ -64,28 +64,23 @@ public partial class PracticeView
 
     // ================================================================ file recenti
 
-    private void RebuildRecentMenu()
-    {
-        RecentMenu.Items.Clear();
-        var recent = AppSettings.Current.RecentFiles;
-        RecentMenu.IsEnabled = recent.Count > 0;
-        foreach (var path in recent)
-        {
-            var item = new MenuItem { Header = Path.GetFileName(path), ToolTip = path };
-            item.Click += (_, _) =>
-            {
-                if (File.Exists(path))
-                {
-                    OpenPath(path);
-                    return;
-                }
-                AppSettings.Current.RemoveRecent(path);
-                RebuildRecentMenu();
-                ShowToast($"«{Path.GetFileName(path)}» non si trova più: l'ho tolto dai file recenti.", ToastKind.Warning);
-            };
-            RecentMenu.Items.Add(item);
-        }
-    }
+    // Un solo elenco per tablature e fogli di accordi: OpenPath manda i fogli alla sezione Accordi.
+    private void RebuildRecentMenu() =>
+        RecentFilesMenu.Fill(RecentMenu, path => OpenPath(path), message => ShowToast(message, ToastKind.Warning));
+
+    // ================================================================ foglio di accordi
+
+    private void NewChordSheet_Click(object sender, RoutedEventArgs e) =>
+        (Window.GetWindow(this) as MainWindow)?.NewChordSheet();
+
+    /// <summary>«Nuova tablatura» dal menu File del foglio di accordi.</summary>
+    public void NewTablature() => NewFile();
+
+    /// <summary>Titolo della finestra quando la sezione torna visibile.</summary>
+    public void RefreshWindowTitle() => UpdateTitle();
+
+    /// <summary>Autotest del foglio di accordi, fornito da MainWindow: (riga del resoconto, fotografo, profilo 200%).</summary>
+    internal Func<Action<string>, VisualCapture?, bool, Task>? ChordSheetSelfTest;
 
     // ================================================================ SoundFont
 

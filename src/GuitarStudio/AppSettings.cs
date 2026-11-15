@@ -31,17 +31,23 @@ public sealed class AppSettings
     /// <summary>Sezioni della tavolozza chiuse dall'utente (per titolo, es. «DINAMICA»).</summary>
     public List<string> CollapsedPaletteSections { get; set; } = new();
 
+    /// <summary>L'elenco dei recenti è cambiato: tablature e fogli di accordi aggiornano i loro menu.</summary>
+    public static event Action? RecentFilesChanged;
+
     public void AddRecent(string path)
     {
         RecentFiles.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
         RecentFiles.Insert(0, path);
         if (RecentFiles.Count > MaxRecent) RecentFiles.RemoveRange(MaxRecent, RecentFiles.Count - MaxRecent);
         Save();
+        RecentFilesChanged?.Invoke();
     }
 
     public void RemoveRecent(string path)
     {
-        if (RecentFiles.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase)) > 0) Save();
+        if (RecentFiles.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase)) == 0) return;
+        Save();
+        RecentFilesChanged?.Invoke();
     }
 
     private static AppSettings Load()

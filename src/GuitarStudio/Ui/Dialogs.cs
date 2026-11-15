@@ -33,8 +33,8 @@ public static class Dialogs
             ("Non salvare", MessageBoxResult.No, false),
             ("Salva", MessageBoxResult.Yes, true));
 
-    public static MessageBoxResult RecoverAutosave(Window? owner, string message) =>
-        Show(owner, "Recupera tablatura", message, DialogKind.Question,
+    public static MessageBoxResult RecoverAutosave(Window? owner, string message, string title = "Recupera tablatura") =>
+        Show(owner, title, message, DialogKind.Question,
             ("Più tardi", MessageBoxResult.Cancel, false),
             ("Elimina copia", MessageBoxResult.No, false),
             ("Recupera", MessageBoxResult.Yes, true));

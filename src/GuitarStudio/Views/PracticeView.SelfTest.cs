@@ -36,6 +36,8 @@ public partial class PracticeView
             {
                 await Task.Delay(800);
                 await RunVisualSelfTest(log);
+                if (ChordSheetSelfTest != null)
+                    await ChordSheetSelfTest(log.AppendLine, _visualCapture, Environment.GetEnvironmentVariable("GS_SELFTEST_LAYOUT") == "1");
                 if (App.UnhandledErrorCount != initialErrors) throw new InvalidOperationException("Errore durante il controllo visivo.");
                 log.AppendLine("OK");
                 File.WriteAllText(report, log.ToString());
@@ -227,6 +229,7 @@ public partial class PracticeView
             await Task.Delay(1200);
             log.AppendLine($"cursore finale: {CursorText.Text} | traccia: {LcdTrack.Text} | play: {_playing}");
             await VerifyAutosave(log);
+            if (ChordSheetSelfTest != null) await ChordSheetSelfTest(log.AppendLine, null, false);
             if (App.UnhandledErrorCount != initialErrors)
                 throw new InvalidOperationException("Errori non gestiti durante l'autotest: controllare crash.log.");
             log.AppendLine("OK");

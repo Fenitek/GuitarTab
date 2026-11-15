@@ -142,7 +142,7 @@ public sealed class HelpWindow : Window
         header.Children.Add(version);
         header.Children.Add(new TextBlock { Text = "Guida rapida", FontSize = 26, FontWeight = FontWeights.SemiBold, Foreground = Res("TextMain") });
 
-        var tabBar = new UniformGrid { Rows = 1, MaxWidth = 660 };
+        var tabBar = new UniformGrid { Rows = 1, MaxWidth = 860 };
         var tabHost = new Border
         {
             Background = Res("BgPanel"), CornerRadius = new CornerRadius(7), Padding = new Thickness(3), Child = tabBar,
@@ -152,6 +152,7 @@ public sealed class HelpWindow : Window
         AddTab(tabBar, "SCORCIATOIE", BuildShortcuts());
         AddTab(tabBar, "EFFETTI: COME FUNZIONANO", BuildEffects());
         AddTab(tabBar, "AUDIO E SUONI", BuildAudio());
+        AddTab(tabBar, "FOGLIO DI ACCORDI", BuildChordSheet());
 
         var root = new DockPanel();
         DockPanel.SetDock(header, Dock.Top);
@@ -342,6 +343,41 @@ public sealed class HelpWindow : Window
             "Speed trainer: a ogni giro del loop la velocità sale del passo che scegli, fino all'obiettivo.",
             "Metronomo e conteggio iniziale si attivano dai pulsanti accanto al loop. Nella finestra stretta gli stessi comandi sono in Altro → Esercitazione.",
             "Play, Stop, display e velocità rimangono sempre visibili; F10 apre Altro e Alt+F apre File."));
+        return panel;
+    }
+
+    private static readonly (string Keys, string What)[] ChordSheetKeys =
+    {
+        ("Ctrl+K", "inserisce un accordo nel punto del cursore del testo (Invio conferma, Esc annulla)"),
+        ("Ctrl+Invio", "nuova sezione di testo dopo quella in cui scrivi"),
+        ("Ctrl+Maiusc+Invio", "nuova sezione con un giro di soli accordi"),
+        ("F5", "passa dalla scrittura alla lettura e ritorno"),
+        ("Ctrl+Z / Y", "annulla / ripeti (la scrittura continua è un solo passo)"),
+        ("Ctrl+N / O / S", "nuovo foglio, apri, salva; Ctrl+Maiusc+S salva come")
+    };
+
+    private UIElement BuildChordSheet()
+    {
+        var panel = new StackPanel { MaxWidth = 820, HorizontalAlignment = HorizontalAlignment.Left };
+        var keys = Card("Tasti del foglio di accordi");
+        foreach (var (k, what) in ChordSheetKeys) ((StackPanel)keys.Child).Children.Add(ShortcutRow(k, what));
+        panel.Children.Add(keys);
+        panel.Children.Add(Article("Che cos'è",
+            "Un documento diverso dalla tablatura, nella sezione «Accordi» a sinistra: titolo, artista, tonalità, capotasto " +
+            "e sezioni con un nome (Intro, Strofa, Ritornello…). Si crea da File → «Nuovo foglio di accordi», anche dalla tablatura, " +
+            "che resta aperta così com'è.",
+            "Ogni sezione è testo della canzone con gli accordi sopra le sillabe, oppure un giro di soli accordi diviso in battute."));
+        panel.Children.Add(Article("Scrivere in fretta",
+            "Scrivi il testo come in un qualsiasi editor, una riga per verso. Quando il cursore è davanti alla sillaba giusta premi " +
+            "Ctrl+K, scrivi il nome (Do, Lam7, Sol/Si…) e Invio: nel riquadro compare tra parentesi quadre, [Do]Nel mezzo.",
+            "Puoi anche scrivere le parentesi a mano. Nei giri ogni riga è una fila di battute: | Do | Sol Lam | Fa |, con più accordi " +
+            "nella stessa battuta separati da spazi. Il tipo della sezione si cambia dal suo menu; le frecce la spostano, il cestino la elimina.",
+            "Con la finestra larga, a destra c'è l'anteprima sulla carta."));
+        panel.Children.Add(Article("Leggere mentre suoni",
+            "«Lettura» (o F5) mostra il foglio su carta chiara a caratteri grandi, con gli accordi in grassetto sopra le sillabe. " +
+            "La grandezza si sceglie in basso a destra (80–200%); le righe vanno a capo tra le parole.",
+            "Il foglio si salva in un file «.accordi»: testo in formato JSON, leggibile anche con il Blocco note. " +
+            "Come le tablature, ogni 60 secondi c'è una copia di recupero e i file recenti elencano entrambi i tipi."));
         return panel;
     }
 

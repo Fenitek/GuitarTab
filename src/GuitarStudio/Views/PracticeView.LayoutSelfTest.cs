@@ -116,7 +116,7 @@ public partial class PracticeView
                     RequireLayout(text.FontSize >= 13, "testi della guida almeno a 13 px");
                     if (text.Text.Length > 70) RequireLayout(text.ActualWidth >= 180, "spazio leggibile per le spiegazioni della guida");
                 }
-                if (i > 0) _visualCapture.Save(main, name + "-guida-" + (i == 1 ? "effetti" : "audio"), help);
+                if (i > 0) _visualCapture.Save(main, name + "-guida-" + (i switch { 1 => "effetti", 2 => "audio", _ => "accordi" }), help);
             }
             tabs[0].IsChecked = true; await VisualCapture.Paint();
             var guideScroll = VisualCapture.Descendants<ScrollViewer>(help).First(s => s.IsVisible);

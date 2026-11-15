@@ -1,0 +1,148 @@
+<UserControl x:Class="GuitarStudio.Views.ChordSheetView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="True" FocusVisualStyle="{x:Null}"
+             PreviewKeyDown="View_PreviewKeyDown">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ============================== BARRA ============================== -->
+        <Border Background="{StaticResource BgPanel}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="8,5">
+            <DockPanel>
+                <StackPanel x:Name="ModeGroup" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ToggleButton x:Name="WriteModeToggle" Style="{StaticResource ToolToggle}" Content="Scrittura" IsChecked="True" Click="Mode_Click" Tag="write"
+                                  ToolTip="Scrivi testo, accordi e sezioni (F5 passa alla lettura)" AutomationProperties.Name="Modalità scrittura"/>
+                    <ToggleButton x:Name="ReadModeToggle" Style="{StaticResource ToolToggle}" Content="Lettura" Click="Mode_Click" Tag="read" Margin="0"
+                                  ToolTip="Foglio a caratteri grandi da leggere mentre suoni (F5)" AutomationProperties.Name="Modalità lettura"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="FileMenuButton" Style="{StaticResource IconButton}" Content="&#xE700;" Click="FileMenu_Click" ToolTip="Menu file (Alt+F)"
+                            AutomationProperties.Name="Menu file">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Nuovo foglio di accordi" InputGestureText="Ctrl+N" Click="New_Click"/>
+                                <MenuItem Header="Nuova tablatura" Click="NewTablature_Click"/>
+                                <MenuItem Header="Apri…" InputGestureText="Ctrl+O" Click="Open_Click"/>
+                                <MenuItem x:Name="RecentMenu" Header="Apri recente"/>
+                                <Separator/>
+                                <MenuItem Header="Salva" InputGestureText="Ctrl+S" Click="Save_Click"/>
+                                <MenuItem Header="Salva come…" InputGestureText="Ctrl+Maiusc+S" Click="SaveAs_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Guida rapida e scorciatoie" InputGestureText="F1" Click="Help_Click"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE8A5;" Click="New_Click" ToolTip="Nuovo foglio di accordi (Ctrl+N)"/>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE8E5;" Click="Open_Click" ToolTip="Apri (Ctrl+O)"/>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE74E;" Click="Save_Click" ToolTip="Salva (Ctrl+S)"/>
+                    <Border Style="{StaticResource SeparatorLine}"/>
+                    <Button x:Name="UndoButton" Style="{StaticResource IconButton}" Content="&#xE7A7;" Click="Undo_Click" ToolTip="Annulla (Ctrl+Z)"/>
+                    <Button x:Name="RedoButton" Style="{StaticResource IconButton}" Content="&#xE7A6;" Click="Redo_Click" ToolTip="Ripeti (Ctrl+Y)"/>
+                    <Border Style="{StaticResource SeparatorLine}"/>
+                    <Button x:Name="InsertChordButton" Style="{StaticResource ToolButton}" Content="Accordo…" Padding="12,6" Click="InsertChord_Click"
+                            ToolTip="Inserisce un accordo nel punto del cursore del testo (Ctrl+K)" AutomationProperties.Name="Inserisci accordo"/>
+                    <TextBlock x:Name="DocTitle" Foreground="{StaticResource TextDim}" FontSize="13" VerticalAlignment="Center" Margin="8,0,12,0"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================== SCRITTURA ============================== -->
+        <Grid x:Name="WritePage" Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="420"/>
+                <ColumnDefinition x:Name="PreviewColumn" Width="*" MinWidth="0"/>
+            </Grid.ColumnDefinitions>
+            <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                <StackPanel Margin="16,8,16,24">
+                    <TextBlock Text="Informazioni" Style="{StaticResource PanelHeader}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Titolo" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="TitleBox" KeyDown="InfoField_KeyDown" LostFocus="InfoField_LostFocus" AutomationProperties.Name="Titolo"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Artista" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="ArtistBox" KeyDown="InfoField_KeyDown" LostFocus="InfoField_LostFocus" AutomationProperties.Name="Artista"/>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal">
+                        <StackPanel Width="130" Margin="0,0,12,0">
+                            <TextBlock Text="Tonalità" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="KeyBox" KeyDown="InfoField_KeyDown" LostFocus="InfoField_LostFocus" AutomationProperties.Name="Tonalità"
+                                     ToolTip="Es. Sol, Mim, Re♭ oppure G, Em"/>
+                        </StackPanel>
+                        <StackPanel Width="130">
+                            <TextBlock Text="Capotasto" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox x:Name="CapoCombo" SelectionChanged="CapoCombo_SelectionChanged" Focusable="False" AutomationProperties.Name="Capotasto"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Text="Sezioni" Style="{StaticResource PanelHeader}" Margin="0,22,0,6"/>
+                    <StackPanel x:Name="SectionsHost"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <Button x:Name="AddLyricsButton" Style="{StaticResource ToolButton}" Click="AddLyrics_Click"
+                                ToolTip="Nuova sezione di testo con gli accordi sopra le sillabe, dopo quella in cui stai scrivendo (Ctrl+Invio)">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="13" VerticalAlignment="Center" Margin="0,1,8,0"/>
+                                <TextBlock Text="Testo e accordi"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="AddProgressionButton" Style="{StaticResource ToolButton}" Click="AddProgression_Click"
+                                ToolTip="Nuova sezione con un giro di soli accordi diviso in battute (Ctrl+Maiusc+Invio)">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="13" VerticalAlignment="Center" Margin="0,1,8,0"/>
+                                <TextBlock Text="Giro di accordi"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+            <Border x:Name="PreviewHost" Grid.Column="1" Background="{StaticResource Paper}" Margin="0,10,10,10" CornerRadius="6" ClipToBounds="True">
+                <ScrollViewer x:Name="PreviewScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False"/>
+            </Border>
+        </Grid>
+
+        <!-- ============================== LETTURA ============================== -->
+        <Border x:Name="ReadPage" Grid.Row="1" Background="{StaticResource Paper}" Margin="10" CornerRadius="6" ClipToBounds="True" Visibility="Collapsed">
+            <ScrollViewer x:Name="ReadScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False"/>
+        </Border>
+
+        <!-- Inserimento rapido di un accordo nel punto del cursore -->
+        <Popup x:Name="ChordPopup" AllowsTransparency="True" StaysOpen="False" Placement="Custom" Closed="ChordPopup_Closed">
+            <Border Background="{StaticResource BgPopup}" BorderBrush="{StaticResource Accent}" BorderThickness="1" CornerRadius="7" Padding="12,10">
+                <StackPanel Width="230">
+                    <TextBlock Text="Accordo nel punto del cursore" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="SemiBold"/>
+                    <TextBox x:Name="ChordEntryBox" Margin="0,8,0,0" MaxLength="16" PreviewKeyDown="ChordEntry_PreviewKeyDown"
+                             FontFamily="{StaticResource MonoFont}" AutomationProperties.Name="Nome dell'accordo da inserire"/>
+                    <TextBlock x:Name="ChordEntryHint" Text="Es. Do, Lam7, Sol/Si · Invio inserisce, Esc annulla" Foreground="{StaticResource TextDim}"
+                               FontSize="13" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- ============================== STATO ============================== -->
+        <Border Grid.Row="2" Background="{StaticResource BgDeep}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="12,4,8,4">
+            <DockPanel>
+                <ComboBox x:Name="ZoomCombo" Visibility="Collapsed" DockPanel.Dock="Right" Width="92" Height="28" MinHeight="28" FontSize="13" Margin="6,0,0,0" VerticalAlignment="Center"
+                          SelectedIndex="1" Focusable="False" SelectionChanged="ZoomCombo_SelectionChanged" ToolTip="Grandezza dei caratteri in lettura">
+                    <ComboBoxItem Content="80%" Tag="0.8"/>
+                    <ComboBoxItem Content="100%" Tag="1"/>
+                    <ComboBoxItem Content="125%" Tag="1.25"/>
+                    <ComboBoxItem Content="150%" Tag="1.5"/>
+                    <ComboBoxItem Content="200%" Tag="2"/>
+                </ComboBox>
+                <TextBlock x:Name="StatusText" Foreground="{StaticResource TextDim}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

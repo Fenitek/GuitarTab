@@ -17,11 +17,64 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 | Sezione (barra laterale) | Stato |
 |---|---|
 | **Tab & Pratica** | Funziona: apertura file Guitar Pro / MusicXML, riproduzione, editor di tablature, pratica (velocità, loop, speed trainer, metronomo, conteggio), manico. |
+| **Accordi** | Foglio di accordi (v0.10.0): testo con accordi sopra, giri in battute, lettura a caratteri grandi, file `.accordi`. |
 | **Allenatore** | Solo pagina segnaposto. |
 | **Trascrivi MP3** | Solo pagina segnaposto. |
 | **Libreria** | Solo pagina segnaposto. |
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
+
+### Aggiornamento v0.10.0 — foglio di accordi
+
+- Documento distinto dalla tablatura, nella sezione **Accordi** della barra laterale
+  (`Views/ChordSheetView`). Tablatura e foglio restano aperti insieme: MainWindow chiede di
+  salvare entrambi alla chiusura e `OpenDocument(path)` instrada per estensione (Apri, recenti,
+  trascinamento, riga di comando). PracticeView ha solo voci di menu e l'instradamento:
+  l'editor di tablature non è cambiato.
+- Modello `Editing/ChordSheet.cs`: record immutabili `ChordSheet(Title, Artist, Key, Capo,
+  Sections)` e `SheetSection(Name, Kind, Body)`. Il corpo è il testo scritto dall'utente:
+  `[Do]Nel mezzo` per le sezioni di testo, `| Do | Sol Lam |` per i giri. `ChordSheetText`
+  separa testo/accordi (`ParseLyric`, `ParseRow`) e sostituisce i nomi (`MapChords`).
+- `Editing/ChordSheetEditor.cs` (senza UI, come TabEditor): ogni modifica passa da `Apply`, che
+  salva il foglio precedente per annulla (max 200). `SetSectionBody(typing: true)` raccoglie la
+  scrittura continua della stessa sezione in un passo finché `EndTyping` (la vista lo chiama dopo
+  1,2 s di pausa, all'inserimento di un accordo e cambiando sezione). `InsertChord` non entra mai
+  dentro un'altra parentesi. `Changed(bool fromHistory)`.
+- Vista: TextBox per sezione con `IsUndoEnabled=false` (Ctrl+Z/Y vanno all'editor). Solo i
+  caratteri scritti non riscrivono il riquadro con il cursore; ogni altra modifica sincronizza
+  tutto. Le posizioni del modello usano `\n`, il TextBox può avere `\r\n`. Lettura e anteprima:
+  `ChordSheetPaper.Build` (WrapPanel di blocchi accordo/sillaba, una parola per blocco dopo la
+  prima, così si va a capo tra le parole). Risorse SheetInk/SheetChord/SheetMuted su Paper.
+- **Formato `.accordi`** (`ChordSheetFile`, JSON UTF-8 senza BOM, accenti non escapati):
+  ```json
+  {
+    "formato": "GuitarStudio foglio di accordi",
+    "versione": 1,
+    "titolo": "…", "artista": "…", "tonalita": "Sol", "capotasto": 0,
+    "sezioni": [
+      { "nome": "Intro",  "tipo": "giro",  "righe": [ "| Sol | Re | Mim Do |" ] },
+      { "nome": "Strofa", "tipo": "testo", "righe": [ "[Sol]Nel mezzo del [Re]cammin", "di nostra [Mim]vita" ] }
+    ]
+  }
+  ```
+  `tipo` è `testo` o `giro`; `capotasto` 0–12; righe vuote finali tolte. Una versione più
+  recente, un formato o un tipo sconosciuti danno FormatException con messaggio italiano.
+  Scrittura su `.tmp` e sostituzione.
+- `AutosaveStore` accetta l'estensione (`.gp` predefinita, `.accordi` per i fogli): le copie
+  non si mescolano. Recupero dei fogli dopo quello delle tablature (`PracticeView.Ready`).
+  `AppSettings.RecentFilesChanged` aggiorna i due menu; `Ui/RecentFilesMenu` mostra il tipo.
+- **Trappola popup**: con «mano destra» nelle impostazioni Tablet di Windows i Popup con
+  Placement=Relative si aprono a SINISTRA del punto. Il campo di Ctrl+K usa Placement=Custom
+  (`PlaceChordPopup`, scala DIP→pixel con targetSize). L'autotest misura la posizione.
+- **Trappola autotest**: nella finestra di prova non attiva `Focus()` non sposta nemmeno il
+  fuoco logico (resta su PracticeView). La sezione attiva si registra in `FocusBody` e in
+  TextChanged; `ActiveSectionIndex` usa il fuoco logico quando c'è.
+- Autotest `ChordSheetView.SelfTest.cs` (chiamato da PracticeView tramite `ChordSheetSelfTest`):
+  scrittura, Ctrl+K, nomi rifiutati, annulla/ripeti, sezioni, file, recenti, copia di recupero,
+  lettura (accordo sopra la sillaba, ≥ 13 px, colori del tema); foto `foglio-scrittura`,
+  `foglio-accordo-al-cursore`, `foglio-lettura` a 1920/minimo e a 1920×1080/200%.
+  Una volta su tre esecuzioni a 200% Windows ha dato il primo piano alla finestra di prova
+  all'avvio (controllo di VisualCapture): ripetere; non dipende dal foglio.
 
 ### Aggiornamento v0.9.1
 

@@ -12,8 +12,9 @@ public sealed class AutosaveStore : IDisposable
     private bool _disposed;
     public string FilePath { get; }
 
-    public AutosaveStore(string? directory = null)
-        : this(Path.Combine(directory ?? DefaultDirectory, $"{Guid.NewGuid():N}.gp"), createDirectory: true)
+    /// <param name="extension">«.gp» per le tablature, «.accordi» per i fogli di accordi: le copie non si mescolano.</param>
+    public AutosaveStore(string? directory = null, string extension = ".gp")
+        : this(Path.Combine(directory ?? DefaultDirectory, $"{Guid.NewGuid():N}{extension}"), createDirectory: true)
     {
     }
 
@@ -25,11 +26,13 @@ public sealed class AutosaveStore : IDisposable
     }
 
     /// <summary>Acquisisce una copia alla volta, dalla più recente. Il chiamante deve disporla.</summary>
-    public static IEnumerable<AutosaveStore> FindRecoverable(string? directory = null)
+    public static IEnumerable<AutosaveStore> FindRecoverable(string? directory = null, string extension = ".gp")
     {
         directory ??= DefaultDirectory;
         if (!Directory.Exists(directory)) yield break;
-        foreach (var path in Directory.GetFiles(directory, "*.gp").OrderByDescending(File.GetLastWriteTimeUtc))
+        foreach (var path in Directory.GetFiles(directory, "*" + extension)
+                     .Where(p => string.Equals(Path.GetExtension(p), extension, StringComparison.OrdinalIgnoreCase))
+                     .OrderByDescending(File.GetLastWriteTimeUtc))
         {
             AutosaveStore candidate;
             try { candidate = new AutosaveStore(path, createDirectory: false); }
@@ -44,7 +47,21 @@ public sealed class AutosaveStore : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (editor.Score == null || !editor.IsDirty) return false;
-        var bytes = editor.ExportGp();
+        Write(editor.ExportGp());
+        return true;
+    }
+
+    /// <summary>Foglio di accordi: stessa scrittura atomica, solo se ci sono modifiche non salvate.</summary>
+    public bool SaveIfNeeded(ChordSheetEditor editor)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (!editor.IsDirty) return false;
+        Write(ChordSheetFile.ToBytes(editor.Sheet));
+        return true;
+    }
+
+    private void Write(byte[] bytes)
+    {
         var temporary = FilePath + ".tmp";
         try
         {
@@ -60,7 +77,6 @@ public sealed class AutosaveStore : IDisposable
         {
             if (File.Exists(temporary)) File.Delete(temporary);
         }
-        return true;
     }
 
     public void Delete()
