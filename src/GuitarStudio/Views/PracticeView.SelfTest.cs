@@ -47,6 +47,7 @@ public partial class PracticeView
             await Task.Delay(800);
             await VerifyOverlayScrollGuard(log);
             log.AppendLine($"nuova: battute={_editor.Staff!.Bars.Count} corde={_editor.StringCount} editabile={_editor.IsEditable}");
+            await VerifySoundFont(log);
             await VerifyNotePreview(log);
             if (Environment.GetEnvironmentVariable("GS_SELFTEST_PREVIEW_ONLY") == "1")
             {

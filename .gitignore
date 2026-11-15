@@ -3,6 +3,8 @@ bin/
 obj/
 publish/
 artifacts/
+build-diagnostic.log
+/generaluser-gs-main.zip
 
 # IDE
 .vs/

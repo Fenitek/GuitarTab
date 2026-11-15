@@ -3,6 +3,15 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.6.0 — 2026-11-15
+
+- Suoni predefiniti sostituiti con GeneralUser GS 1.471 di S. Christian Collins:
+  31,3 MB di campioni per chitarre, bassi e gli altri strumenti General MIDI.
+- Licenza originale inclusa accanto al SoundFont; provenienza e verifiche in docs/SOUNDFONT.md.
+- Scelta del SoundFont personale e ripristino dell'incluso conservati; caricamenti rapidi
+  non possono ripristinare lo stato di un caricamento precedente.
+- Autotest dei 13 programmi per chitarra e basso: campioni non silenziosi e diversi.
+
 ## 0.5.1 — 2026-11-15
 
 - In «Solo tab» le durate e i punti si leggono sotto le corde, con le travature del ritmo.

@@ -276,9 +276,10 @@ public sealed class HelpWindow : Window
             "legature di valore, let ring, accenti e ghost note (più forte / più piano), palm mute e note stoppate (note accorciate).",
             "Hammer-on, pull-off e slide collegano le due note; il glissato continuo dello slide può non sentirsi come su una chitarra vera: " +
             "è un limite della sintesi MIDI, non un errore della tua tablatura."));
-        panel.Children.Add(Article("Perché le chitarre suonano «finte»",
-            "Il SoundFont incluso (SONiVOX) è piccolo e generico: chitarra classica, acustica, pulita e distorta si assomigliano molto.",
-            "Puoi usare un SoundFont General MIDI migliore: menu ☰ → «Scegli un SoundFont…» e seleziona un file .sf2 o .sf3 che hai sul computer. " +
+        panel.Children.Add(Article("I suoni di chitarra e basso",
+            "Il SoundFont incluso è GeneralUser GS 1.471 di S. Christian Collins, con campioni distinti per nylon, acciaio, elettriche e bassi. " +
+            "È distribuito con la sua licenza v2.0 nella cartella Assets; sorgente e testo integrale sono documentati in docs/SOUNDFONT.md.",
+            "Puoi usare un tuo SoundFont General MIDI: menu File → «Scegli un SoundFont…» e seleziona un file .sf2 o .sf3 che hai sul computer. " +
             "Il programma lo ricorda per le volte successive; «Usa il SoundFont incluso» torna a quello di partenza.",
             "Una distorsione credibile richiede comunque un amplificatore simulato: nessun SoundFont la rende alla perfezione."));
         panel.Children.Add(Article("Controllare a occhio cosa viene suonato",

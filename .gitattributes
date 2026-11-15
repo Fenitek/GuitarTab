@@ -2,3 +2,5 @@
 *.sf2 binary
 *.sf3 binary
 *.gp binary
+# Conserva la licenza dell'asset esattamente come distribuita dall'autore.
+src/GuitarStudio/Assets/GeneralUser-GS-LICENSE.txt -text

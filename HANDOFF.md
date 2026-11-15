@@ -23,6 +23,21 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.6.0
+
+- Predefinito `Assets/GeneralUser-GS.sf2`: GeneralUser GS **1.471**, 31.281.186 byte.
+  Non è la 2.0.3 inizialmente valutata. ZIP fornito dall'utente, blob del font e della
+  licenza verificati con la copia ROCKNIX; fonte dell'autore e testo esatto in docs/SOUNDFONT.md.
+  Licenza v2.0 allegata senza rimuovere l'avvertenza sull'origine dei campioni.
+- SONiVOX e sua licenza rimossi dal pacchetto. ZIP personale ignorato e non modificato.
+- Generazione e coda dei caricamenti SoundFont: le letture asincrone e gli eventi vecchi
+  non segnano pronto il caricamento corrente. Scelta personale, preferenza e ripiego testati.
+- `SoundFontSelfTest.cs`: 24–36, nota MIDI 60/velocity 96/150 ms, picchi e SHA256 PCM,
+  confronto tra tutte le 13 uscite. Test dell'identità del file e della licenza nel pacchetto.
+- Verifiche v0.6.0: build 0 avvisi/0 errori, 63/63 xUnit in-process, autotest completo OK,
+  nessun crash.log. Evidenze esterne GuitarStudio-v0.6.0; VSTest e Git conservano i limiti
+  del sandbox già descritti. Commit previsto `v0.6.0: suoni GeneralUser GS inclusi`.
+
 ### Aggiornamento v0.5.1
 
 - Ritmo esplicito: `Notation.RhythmMode = TabRhythmMode.ShowWithBars` in Solo tab,
@@ -307,7 +322,8 @@ Le sezioni sotto descrivono la v0.1.0; con la v0.2.0 è cambiato questo:
 - **C# / .NET 10 / WPF** (`net10.0-windows`). SDK installato: 10.0.204.
 - **alphaTab 1.9.0** (`AlphaTab` + `AlphaTab.Windows`, NuGet): disegno di tab e spartito, import/export Guitar Pro, sintetizzatore MIDI con SoundFont. Licenza MPL-2.0.
 - **NAudio 2.4.0**. ⚠️ Deve restare **2.4.x**: alphaTab.Windows 1.9 è compilato contro NAudio 2.4. Con NAudio 3.x l'app va in crash all'avvio della riproduzione (`TypeLoadException: Method 'Read' in type 'AlphaTab.NAudioSynthOutput'…`).
-- **SoundFont**: `Assets/sonivox.sf2` (SONiVOX GM, licenza Apache 2.0, preso dal pacchetto npm `@coderline/alphatab@1.9.0`). È piccolo (1,3 MB) e la qualità dei suoni di chitarra è bassa (vedi §6).
+- **SoundFont**: `Assets/GeneralUser-GS.sf2`, GeneralUser GS 1.471 di S. Christian Collins,
+  licenza v2.0 accanto al file, 31.281.186 byte. Fonte, integrità e licenza in docs/SOUNDFONT.md.
 
 ### Compilare e avviare
 
@@ -335,7 +351,7 @@ src/GuitarStudio/
   GuitarStudio.csproj          riferimenti NuGet; Assets copiati in output
   App.xaml(.cs)                colori/stili globali (tema scuro), log degli errori non gestiti
   MainWindow.xaml(.cs)         barra laterale con le 4 sezioni; chiede di salvare alla chiusura
-  Assets/sonivox.sf2           SoundFont (+ licenza)
+  Assets/GeneralUser-GS.sf2    SoundFont (+ licenza)
   Editing/
     TabEditor.cs               TUTTA la logica di modifica sul modello alphaTab (nessuna UI)
     ModelCopy.cs               copia profonda di Beat/Note via reflection (alphaTab non ha Clone pubblico)
@@ -381,7 +397,7 @@ src/GuitarStudio/
 ## 6. Problemi segnalati dall'utente (da sistemare per primi)
 
 ### 6.1 "Non capisco se la riproduzione è fedele (bend ecc.)"
-- **Diagnosi**: il sintetizzatore di alphaTab traduce bend, vibrato, slide e hammer-on in pitch bend e articolazioni MIDI, quindi le **note** e gli **effetti** vengono riprodotti. Non è stato verificato a orecchio. Il **timbro** invece è scarso per via del SoundFont SONiVOX (vedi 6.3).
+- **Diagnosi**: il sintetizzatore di alphaTab traduce bend, vibrato, slide e hammer-on in pitch bend e articolazioni MIDI, quindi le **note** e gli **effetti** vengono riprodotti. Non è stato verificato a orecchio. Il timbro SONiVOX segnalato allora è stato sostituito con GeneralUser GS in v0.6.0 (vedi 6.3).
 - **Da fare**:
   1. Verificare a orecchio bend, release, vibrato, slide, hammer, palm mute, dead note e armonici con un file di prova.
   2. Rendere visibile all'utente cosa viene riprodotto (es. il manico che mostra le note in tempo reale c'è già: renderlo più evidente).
@@ -397,10 +413,11 @@ src/GuitarStudio/
   - verificare che lo slide (`SlideOutType.Legato`/`Shift`) sia disegnato e suonato correttamente.
 
 ### 6.3 "I suoni delle chitarre non vanno"
-- **Diagnosi**: SONiVOX è un General MIDI minimale. I programmi 24–36 (nylon, acciaio, pulita, distorta, basso…) esistono ma suonano quasi uguali e poco realistici. Non è un bug di codice: mancano campioni migliori.
+- **Risolto in v0.6.0**: SONiVOX minimale sostituito da GeneralUser GS 1.471 con
+  licenza v2.0 integrale. Verificati i 13 programmi 24–36: nessuno silenzioso, tutti
+  con PCM diverso per la stessa nota. Questo non sostituisce il giudizio a orecchio sulla qualità.
+  Scelta personale `.sf2/.sf3`, preferenza persistente e ripristino inclusi restano disponibili.
 - **Da fare**:
-  - inserire un SoundFont GM migliore **con licenza che permetta di ridistribuirlo** (da verificare caso per caso: per esempio FluidR3_GM è MIT; GeneralUser GS ha una licenza permissiva);
-  - in alternativa, far scegliere all'utente un `.sf2/.sf3` suo (impostazione persistente; `api.LoadSoundFont(bytes, append)`);
   - a lungo termine, per una distorsione credibile serve elaborazione audio (amp sim): fuori dalla portata del SoundFont.
 
 ### 6.4 "Le scorciatoie a sinistra sono illeggibili"

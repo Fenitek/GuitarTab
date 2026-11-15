@@ -87,13 +87,17 @@ public partial class PracticeView
 
     // ================================================================ SoundFont
 
-    private const string BundledSoundFontName = "SONiVOX (incluso)";
-    private static string BundledSoundFont => Path.Combine(AppContext.BaseDirectory, "Assets", "sonivox.sf2");
+    private const string BundledSoundFontName = "GeneralUser GS 1.471 (incluso)";
+    private static string BundledSoundFont => Path.Combine(AppContext.BaseDirectory, "Assets", "GeneralUser-GS.sf2");
     private string _soundFontName = BundledSoundFontName;
+    private int _soundFontLoadGeneration;
+    private readonly Queue<int> _soundFontLoads = new();
 
     /// <summary>Carica il SoundFont scelto dall'utente, oppure quello incluso se il percorso è null.</summary>
     private async void LoadSoundFont(string? customPath, bool announce)
     {
+        var generation = ++_soundFontLoadGeneration;
+        _soundFontReady = false;
         var settings = AppSettings.Current;
         if (customPath != null && !File.Exists(customPath))
         {
@@ -114,6 +118,7 @@ public partial class PracticeView
         {
             StatusText.Text = "Caricamento dei suoni…";
             var bytes = await Task.Run(() => File.ReadAllBytes(path));
+            if (generation != _soundFontLoadGeneration) return;
             if (!LooksLikeSoundFont(bytes))
             {
                 Dialogs.Warning(Window.GetWindow(this), $"«{Path.GetFileName(path)}» non è un SoundFont valido (.sf2 o .sf3).");
@@ -125,6 +130,7 @@ public partial class PracticeView
             _soundFontReady = false;
             _soundFontName = customPath != null ? Path.GetFileName(path) : BundledSoundFontName;
             _announceSoundFont = announce;
+            _soundFontLoads.Enqueue(generation);
             Api.LoadSoundFont(bytes, false);
 
             if (settings.SoundFontPath != customPath)
@@ -145,6 +151,7 @@ public partial class PracticeView
 
     private void OnSoundFontLoaded()
     {
+        if (!_soundFontLoads.TryDequeue(out var generation) || generation != _soundFontLoadGeneration) return;
         _soundFontReady = true;
         TryPlayPendingPreview();
         if (_announceSoundFont) ShowToast($"Suoni caricati: {_soundFontName}", ToastKind.Ok);
@@ -154,6 +161,7 @@ public partial class PracticeView
 
     private void OnSoundFontFailed()
     {
+        if (!_soundFontLoads.TryDequeue(out var generation) || generation != _soundFontLoadGeneration) return;
         var wasCustom = AppSettings.Current.SoundFontPath != null;
         ShowToast(wasCustom
             ? $"Il SoundFont «{_soundFontName}» non si può usare: torno a quello incluso."
