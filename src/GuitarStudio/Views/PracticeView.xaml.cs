@@ -14,6 +14,7 @@ using AlphaTab.Importer;
 using AlphaTab.Model;
 using AlphaTab.Synth;
 using GuitarStudio.Editing;
+using GuitarStudio.Recovery;
 using GuitarStudio.Ui;
 using Microsoft.Win32;
 using Duration = AlphaTab.Model.Duration;
@@ -300,6 +301,9 @@ public partial class PracticeView : UserControl
     private void Save_Click(object sender, RoutedEventArgs e) => Save(false);
     private void SaveAs_Click(object sender, RoutedEventArgs e) => Save(true);
 
+    /// <summary>Solo per l'autotest: sostituisce il dialogo «Salva con nome» (null = annullato).</summary>
+    private Func<string?, string?>? _selfTestSavePath;
+
     private bool Save(bool askPath)
     {
         if (_editor.Score == null) return false;
@@ -309,40 +313,56 @@ public partial class PracticeView : UserControl
         // I formati vecchi (.gp5, .gpx…) si possono leggere ma non scrivere: si salva in .gp.
         if (askPath || path == null || (ext != ".gp" && ext != ".atex"))
         {
-            var dlg = new SaveFileDialog
-            {
-                Title = "Salva tablatura",
-                FileName = SafeFileName(_editor.Score.Title),
-                Filter = "Guitar Pro 7/8 (*.gp)|*.gp|alphaTex, testo (*.atex)|*.atex",
-                InitialDirectory = path != null ? Path.GetDirectoryName(path) : null
-            };
-            if (dlg.ShowDialog() != true) return false;
-            path = dlg.FileName;
+            path = _selfTestSavePath != null ? _selfTestSavePath(path) : AskSavePath(path);
+            if (path == null) return false;
             ext = Path.GetExtension(path).ToLowerInvariant();
         }
 
         try
         {
+            // Il file esistente si sostituisce solo a scrittura completa: un errore lo lascia com'era.
             if (ext == ".atex")
-                File.WriteAllText(path, _editor.ExportAlphaTex());
+                SafeFile.WriteAllText(path, _editor.ExportAlphaTex());
             else
-                File.WriteAllBytes(path, _editor.ExportGp());
-            _currentPath = path;
-            _editor.MarkSaved();
-            UpdateTitle();
-            UpdateLcd();
-            AppSettings.Current.AddRecent(path);
-            RebuildRecentMenu();
-            ShowToast("Salvato: " + Path.GetFileName(path), ToastKind.Ok);
-            ClearAutosave();
-            return true;
+                SafeFile.WriteAllBytes(path, _editor.ExportGp());
         }
         catch (Exception ex)
         {
             App.Log(ex);
-            Dialogs.Warning(Window.GetWindow(this), "Salvataggio non riuscito:\n" + ex.Message);
+            // Niente è cambiato: percorso, stato «modificato» e copia di recupero restano; anzi
+            // la copia si aggiorna subito, così le ultime modifiche sono protette.
+            var recovered = AutosaveNow();
+            var name = Path.GetFileName(path);
+            Dialogs.Warning(Window.GetWindow(this),
+                $"Salvataggio non riuscito: «{name}» non è stato modificato.\n" +
+                (recovered
+                    ? "Le modifiche restano aperte qui e nella copia di recupero.\n\n"
+                    : "Le modifiche restano aperte qui: prova a salvare in un'altra cartella.\n\n") +
+                "Motivo: " + ex.Message);
             return false;
         }
+
+        _currentPath = path;
+        _editor.MarkSaved();
+        UpdateTitle();
+        UpdateLcd();
+        AppSettings.Current.AddRecent(path);
+        RebuildRecentMenu();
+        ShowToast("Salvato: " + Path.GetFileName(path), ToastKind.Ok);
+        ClearAutosave();
+        return true;
+    }
+
+    private string? AskSavePath(string? current)
+    {
+        var dlg = new SaveFileDialog
+        {
+            Title = "Salva tablatura",
+            FileName = SafeFileName(_editor.Score!.Title),
+            Filter = "Guitar Pro 7/8 (*.gp)|*.gp|alphaTex, testo (*.atex)|*.atex",
+            InitialDirectory = current != null ? Path.GetDirectoryName(current) : null
+        };
+        return dlg.ShowDialog() == true ? dlg.FileName : null;
     }
 
     /// <summary>Chiede se salvare le modifiche. Restituisce false se l'utente annulla.</summary>

@@ -25,17 +25,22 @@ public partial class PracticeView
         _autosaveTimer.Start();
     }
 
-    private void AutosaveTick(object? sender, EventArgs e)
+    private void AutosaveTick(object? sender, EventArgs e) => AutosaveNow();
+
+    /// <summary>Aggiorna la copia se serve. True se la copia su disco corrisponde al brano aperto.</summary>
+    private bool AutosaveNow()
     {
-        if (_editor.Score == null || !_editor.IsDirty || _autosavedRevision == _revision) return;
+        if (_editor.Score == null || !_editor.IsDirty) return false;
+        if (_autosavedRevision == _revision) return _autosave != null && File.Exists(_autosave.FilePath);
         try
         {
             _autosave ??= new AutosaveStore();
-            if (!_autosave.SaveIfNeeded(_editor)) return;
+            if (!_autosave.SaveIfNeeded(_editor)) return false;
             _autosavedRevision = _revision;
             _autosaveFailed = false;
             StatusText.Text = "Copia di recupero aggiornata alle " + DateTime.Now.ToString("HH:mm") +
                               ". Usa Salva per conservare il brano nel tuo file.";
+            return true;
         }
         catch (Exception ex)
         {
@@ -44,6 +49,7 @@ public partial class PracticeView
             if (!_autosaveFailed)
                 ShowToast("La copia di recupero non è stata aggiornata. Salva il brano con Ctrl+S.", ToastKind.Warning);
             _autosaveFailed = true;
+            return false;
         }
     }
 

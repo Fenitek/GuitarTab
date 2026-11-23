@@ -60,24 +60,8 @@ public sealed class AutosaveStore : IDisposable
         return true;
     }
 
-    private void Write(byte[] bytes)
-    {
-        var temporary = FilePath + ".tmp";
-        try
-        {
-            using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
-            {
-                stream.Write(bytes);
-                stream.Flush(flushToDisk: true);
-            }
-            // Stesso volume: una scrittura fallita lascia intatta la copia precedente.
-            File.Move(temporary, FilePath, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary)) File.Delete(temporary);
-        }
-    }
+    // Una scrittura fallita lascia intatta la copia precedente.
+    private void Write(byte[] bytes) => SafeFile.WriteAllBytes(FilePath, bytes);
 
     public void Delete()
     {

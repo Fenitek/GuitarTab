@@ -3,6 +3,16 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.11.1 — 2026-11-23
+
+- Salvataggio più sicuro delle tablature (.gp e .atex), sia con Ctrl+S sia con «Salva con nome»:
+  il programma scrive prima un file temporaneo nella stessa cartella e sostituisce il tuo file
+  solo quando la scrittura è completa. Se qualcosa va storto (disco pieno, file aperto in un altro
+  programma, file in sola lettura) il file di prima resta intatto.
+- Se il salvataggio non riesce, il brano resta «modificato» (●), il percorso non cambia e la copia
+  di recupero viene subito aggiornata con le ultime modifiche. L'avviso dice che il file non è
+  stato toccato e perché.
+
 ## 0.11.0 — 2026-11-15
 
 - Trasposizione di tutto il foglio per semitoni («♭ −1», «♯ +1», Ctrl+Maiusc+↓/↑): accordi,

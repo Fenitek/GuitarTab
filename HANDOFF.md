@@ -24,6 +24,19 @@ Questo documento serve a un'altra AI (o a uno sviluppatore) per riprendere il pr
 
 Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab). Regole di lavoro e di versione: `AGENTS.md`. Storico: `CHANGELOG.md`.
 
+### Aggiornamento v0.11.1 — salvataggio sicuro delle tablature
+
+- `Recovery/SafeFile.cs`: scrive in `.<nome>.<guid>.tmp` nella stessa cartella, `Flush(true)`,
+  poi `File.Move(overwrite: true)`; il temporaneo si elimina sempre. Lo usano `PracticeView.Save`
+  (.gp e .atex, UTF-8 senza BOM) e `AutosaveStore`. Una destinazione bloccata o in sola lettura fa
+  fallire la sostituzione e il file resta quello di prima.
+- `Save` in caso d'errore non tocca `_currentPath` né `IsDirty` e chiama `AutosaveNow()` (prima
+  `AutosaveTick`), che ora dice se la copia di recupero corrisponde al brano aperto.
+- `_selfTestSavePath` sostituisce il dialogo «Salva con nome» nell'autotest
+  (`Views/PracticeView.SaveSelfTest.cs`: Ctrl+S e Ctrl+Maiusc+S, riusciti e falliti).
+- Il foglio di accordi ha ancora la sua scrittura con nome temporaneo fisso (`ChordSheetFile.Write`,
+  `<file>.tmp`): da portare su `SafeFile`.
+
 ### Aggiornamento v0.11.0 — strumenti del foglio
 
 - `Editing/ChordName.cs`: `ChordName.Parse` riconosce fondamentale italiana (Do…Si, anche
