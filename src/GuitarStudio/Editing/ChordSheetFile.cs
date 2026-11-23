@@ -5,6 +5,8 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using GuitarStudio.Recovery;
+
 namespace GuitarStudio.Editing;
 
 /// <summary>
@@ -107,18 +109,9 @@ public static class ChordSheetFile
 
     public static ChordSheet Read(string path) => FromJson(File.ReadAllText(path, Encoding.UTF8));
 
-    /// <summary>Scrive su un temporaneo e poi sostituisce: un errore non lascia un file a metà.</summary>
-    public static void Write(string path, ChordSheet sheet)
-    {
-        var temporary = path + ".tmp";
-        try
-        {
-            File.WriteAllBytes(temporary, ToBytes(sheet));
-            File.Move(temporary, path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary)) File.Delete(temporary);
-        }
-    }
+    /// <summary>
+    /// Scrive su un temporaneo univoco nella stessa cartella e sostituisce solo a scrittura completa:
+    /// un errore non lascia un file a metà e non tocca altri file (nemmeno un «&lt;file&gt;.tmp» dell'utente).
+    /// </summary>
+    public static void Write(string path, ChordSheet sheet) => SafeFile.WriteAllBytes(path, ToBytes(sheet));
 }

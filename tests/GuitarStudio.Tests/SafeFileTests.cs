@@ -88,6 +88,26 @@ public sealed class SafeFileTests : IDisposable
         Assert.False(Directory.Exists(Path.GetDirectoryName(path)));
     }
 
+    [Fact]
+    public void ChordSheetWriteLeavesUserTmpFileUntouched()
+    {
+        var path = Path.Combine(_directory, "Perché.accordi");
+        var sentinel = path + ".tmp";
+        byte[] sentinelBytes = [0xC3, 0xA8, 1, 2, 3];
+        File.WriteAllBytes(sentinel, sentinelBytes);
+        var sheet = GuitarStudio.Editing.ChordSheet.New() with { Title = "Perché è così" };
+        GuitarStudio.Editing.ChordSheetFile.Write(path, sheet);
+        Assert.Equal(GuitarStudio.Editing.ChordSheetFile.ToBytes(sheet), File.ReadAllBytes(path));
+        using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            var error = Record.Exception(() => GuitarStudio.Editing.ChordSheetFile.Write(path, sheet with { Title = "Altro" }));
+            Assert.True(error is IOException or UnauthorizedAccessException); // quelle che la vista gestisce
+        }
+        Assert.Equal("Perché è così", GuitarStudio.Editing.ChordSheetFile.Read(path).Title);
+        Assert.Equal(sentinelBytes, File.ReadAllBytes(sentinel));
+        Assert.Equal([sentinel], Leftovers());
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);

@@ -3,6 +3,15 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.11.2 — 2026-11-23
+
+- Anche i fogli di accordi (.accordi) si salvano in modo sicuro, con Ctrl+S e con «Salva con nome»:
+  il file temporaneo ha un nome unico, quindi un tuo file «nome.accordi.tmp» non viene più
+  sovrascritto né cancellato.
+- Se il salvataggio non riesce (per esempio il file è aperto in un altro programma) il foglio di
+  prima resta intatto, quello aperto resta «modificato» sul percorso di prima e la copia di
+  recupero si aggiorna subito. L'avviso dice che il file non è stato toccato e perché.
+
 ## 0.11.1 — 2026-11-23
 
 - Salvataggio più sicuro delle tablature (.gp e .atex), sia con Ctrl+S sia con «Salva con nome»:

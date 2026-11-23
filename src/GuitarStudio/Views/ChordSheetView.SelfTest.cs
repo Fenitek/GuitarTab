@@ -163,6 +163,7 @@ public partial class ChordSheetView
         await VerifyTools(Require, directory);
 
         if (capture != null) await CaptureSheet(capture, layout, log);
+        await VerifySafeSave(Require);
         _editor.MarkSaved();
         AppSettings.Current.RemoveRecent(path);
         AppSettings.Current.RemoveRecent(tabPath);

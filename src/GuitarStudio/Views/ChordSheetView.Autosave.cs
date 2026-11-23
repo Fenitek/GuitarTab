@@ -25,10 +25,14 @@ public partial class ChordSheetView
         _autosaveTimer.Start();
     }
 
-    /// <summary>Aggiorna la copia di recupero se il foglio è cambiato dall'ultima volta.</summary>
+    /// <summary>
+    /// Aggiorna la copia di recupero se il foglio è cambiato dall'ultima volta.
+    /// True se la copia su disco corrisponde al foglio aperto.
+    /// </summary>
     internal bool AutosaveNow()
     {
-        if (!_editor.IsDirty || _autosavedRevision == _editor.Revision) return false;
+        if (!_editor.IsDirty) return false;
+        if (_autosavedRevision == _editor.Revision) return _autosave != null && File.Exists(_autosave.FilePath);
         try
         {
             _autosave ??= new AutosaveStore(extension: ChordSheetFile.Extension);

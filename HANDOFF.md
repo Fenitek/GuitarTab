@@ -34,8 +34,14 @@ Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab).
   `AutosaveTick`), che ora dice se la copia di recupero corrisponde al brano aperto.
 - `_selfTestSavePath` sostituisce il dialogo «Salva con nome» nell'autotest
   (`Views/PracticeView.SaveSelfTest.cs`: Ctrl+S e Ctrl+Maiusc+S, riusciti e falliti).
-- Il foglio di accordi ha ancora la sua scrittura con nome temporaneo fisso (`ChordSheetFile.Write`,
-  `<file>.tmp`): da portare su `SafeFile`.
+- v0.11.2: anche `ChordSheetFile.Write` usa `SafeFile.WriteAllBytes(path, ToBytes(sheet))` (prima
+  `<file>.tmp` fisso, che cancellava un file dell'utente con quel nome). `ChordSheetView.SaveTo` in
+  caso d'errore lascia percorso e «modificato» e chiama `AutosaveNow()`, che ora restituisce true
+  anche quando la copia è già aggiornata. `_selfTestSavePath` come nella tablatura; autotest in
+  `Views/ChordSheetView.SaveSelfTest.cs` (sentinella `<file>.tmp`, destinazione bloccata, riapertura).
+- Trappola: con un gioco o un programma pesante aperto (es. Fortnite) l'autotest completo si ferma
+  sulle soglie di latenza dell'anteprima audio (50 ms, «AudioClock successivo»). Il giro con
+  `GS_SELFTEST_UI=1` + `GS_UI_CAPTURE_DIR` esegue foglio e salvataggi senza quelle misure.
 
 ### Aggiornamento v0.11.0 — strumenti del foglio
 

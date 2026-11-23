@@ -541,45 +541,61 @@ public partial class ChordSheetView : UserControl
         return true;
     }
 
+    /// <summary>Solo per l'autotest: sostituisce il dialogo «Salva con nome» (null = annullato).</summary>
+    private Func<string?, string?>? _selfTestSavePath;
+
     internal bool Save(bool askPath)
     {
         CommitInfo();
         var path = _currentPath;
         if (askPath || path == null)
         {
-            var dlg = new SaveFileDialog
-            {
-                Title = "Salva il foglio di accordi",
-                FileName = SafeFileName(_editor.Sheet.Title),
-                DefaultExt = ChordSheetFile.Extension,
-                Filter = "Foglio di accordi (*.accordi)|*.accordi",
-                InitialDirectory = path != null ? Path.GetDirectoryName(path) : null
-            };
-            if (dlg.ShowDialog() != true) return false;
-            path = dlg.FileName;
+            path = _selfTestSavePath != null ? _selfTestSavePath(path) : AskSavePath(path);
+            if (path == null) return false;
         }
         return SaveTo(path);
+    }
+
+    private string? AskSavePath(string? current)
+    {
+        var dlg = new SaveFileDialog
+        {
+            Title = "Salva il foglio di accordi",
+            FileName = SafeFileName(_editor.Sheet.Title),
+            DefaultExt = ChordSheetFile.Extension,
+            Filter = "Foglio di accordi (*.accordi)|*.accordi",
+            InitialDirectory = current != null ? Path.GetDirectoryName(current) : null
+        };
+        return dlg.ShowDialog() == true ? dlg.FileName : null;
     }
 
     internal bool SaveTo(string path)
     {
         try
         {
+            // Il file esistente si sostituisce solo a scrittura completa: un errore lo lascia com'era.
             ChordSheetFile.Write(path, _editor.Sheet);
-            _currentPath = path;
-            _editor.MarkSaved();
-            AppSettings.Current.AddRecent(path);
-            ClearAutosave();
-            UpdateTitle();
-            SetStatus("Salvato: " + Path.GetFileName(path));
-            return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             App.Log(ex);
-            Dialogs.Warning(Owner, "Salvataggio non riuscito:\n" + ex.Message);
+            // Percorso e stato «modificato» restano; la copia di recupero si aggiorna subito.
+            var recovered = AutosaveNow();
+            Dialogs.Warning(Owner,
+                $"Salvataggio non riuscito: «{Path.GetFileName(path)}» non è stato modificato.\n" +
+                (recovered
+                    ? "Le modifiche restano aperte qui e nella copia di recupero.\n\n"
+                    : "Le modifiche restano aperte qui: prova a salvare in un'altra cartella.\n\n") +
+                "Motivo: " + ex.Message);
             return false;
         }
+        _currentPath = path;
+        _editor.MarkSaved();
+        AppSettings.Current.AddRecent(path);
+        ClearAutosave();
+        UpdateTitle();
+        SetStatus("Salvato: " + Path.GetFileName(path));
+        return true;
     }
 
     private static string SafeFileName(string title)
