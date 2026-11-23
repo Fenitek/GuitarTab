@@ -39,6 +39,12 @@ Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab).
   caso d'errore lascia percorso e «modificato» e chiama `AutosaveNow()`, che ora restituisce true
   anche quando la copia è già aggiornata. `_selfTestSavePath` come nella tablatura; autotest in
   `Views/ChordSheetView.SaveSelfTest.cs` (sentinella `<file>.tmp`, destinazione bloccata, riapertura).
+- v0.11.3: `SafeFile.ArmSelfTestFault(n)` (solo autotest, una scrittura) fa fallire la scrittura
+  del temporaneo dopo `n` byte già su disco. `Views/PracticeView.InterruptedSaveSelfTest.cs` lo usa
+  su .gp e .atex: originale byte per byte, nota ancora aperta e nella copia di recupero, nuovo
+  Ctrl+S, `OpenPath` e controllo della nota riaperta. Va lanciato con `GS_SELFTEST_DATA_DIR` su una
+  cartella temporanea nuova: in `crash.log` di quel profilo devono comparire solo 4 errori di
+  accesso (prove con file bloccato/sola lettura) e 2 «Errore di scrittura simulato».
 - Trappola: con un gioco o un programma pesante aperto (es. Fortnite) l'autotest completo si ferma
   sulle soglie di latenza dell'anteprima audio (50 ms, «AudioClock successivo»). Il giro con
   `GS_SELFTEST_UI=1` + `GS_UI_CAPTURE_DIR` esegue foglio e salvataggi senza quelle misure.

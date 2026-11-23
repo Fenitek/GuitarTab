@@ -3,6 +3,14 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.11.3 — 2026-11-23
+
+- Nuova prova automatica del salvataggio interrotto a metà, per .gp e .atex: si modifica una nota
+  di una tablatura già salvata e la scrittura si rompe quando una parte del file è già su disco.
+  La prova conferma che il file di prima resta identico byte per byte, che la modifica resta
+  aperta (anche nella copia di recupero), che un nuovo Ctrl+S riesce e che riaprendo il file la
+  nota è quella modificata. Nessun cambiamento nell'uso normale del programma.
+
 ## 0.11.2 — 2026-11-23
 
 - Anche i fogli di accordi (.accordi) si salvano in modo sicuro, con Ctrl+S e con «Salva con nome»:

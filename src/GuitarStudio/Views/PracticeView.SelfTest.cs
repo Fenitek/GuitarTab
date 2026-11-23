@@ -229,6 +229,7 @@ public partial class PracticeView
             await Task.Delay(1200);
             log.AppendLine($"cursore finale: {CursorText.Text} | traccia: {LcdTrack.Text} | play: {_playing}");
             await VerifySafeSave(log);
+            await VerifyInterruptedSave(log);
             await VerifyAutosave(log);
             if (ChordSheetSelfTest != null) await ChordSheetSelfTest(log.AppendLine, null, false);
             if (App.UnhandledErrorCount != initialErrors)
