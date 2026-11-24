@@ -45,6 +45,15 @@ Il progetto è un repository git (remoto: https://github.com/Fenitek/GuitarTab).
   Ctrl+S, `OpenPath` e controllo della nota riaperta. Va lanciato con `GS_SELFTEST_DATA_DIR` su una
   cartella temporanea nuova: in `crash.log` di quel profilo devono comparire solo 4 errori di
   accesso (prove con file bloccato/sola lettura) e 2 «Errore di scrittura simulato».
+- v0.11.4: titolo, artista, tonalità e nomi delle sezioni entrano nel foglio solo a LostFocus/Invio.
+  `ChordSheetView.CommitPendingFields()` (ex `CommitInfo`) li registra anche prima di Salva, Annulla,
+  esportazione, ConfirmDiscard e `AutosaveNow`, con `_typingChange` per non riscrivere il campo col
+  cursore. `RenameSection(..., typing: true)` usa il gruppo di annulla «name:i», chiuso da
+  `FinishName` (LostFocus/Invio) con `EndTyping`: copia, Ctrl+S e uscita dal campo = un passo.
+  Autotest in `Views/ChordSheetView.RenameSelfTest.cs`.
+- Trappola: la finestra dell'autotest non è mai attiva, quindi `TextBox.Focus()` non sposta il fuoco
+  (WPF imposta il fuoco logico solo se l'ambito non ne ha già uno). Per simulare «cursore nel campo»
+  usare `FocusManager.SetFocusedElement(window, box)`, che è anche ciò che genera LostFocus.
 - Trappola: con un gioco o un programma pesante aperto (es. Fortnite) l'autotest completo si ferma
   sulle soglie di latenza dell'anteprima audio (50 ms, «AudioClock successivo»). Il giro con
   `GS_SELFTEST_UI=1` + `GS_UI_CAPTURE_DIR` esegue foglio e salvataggi senza quelle misure.

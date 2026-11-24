@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
     <AssemblyTitle>GuitarStudio</AssemblyTitle>
     <!-- Unica fonte della versione: aumentala a ogni modifica (vedi AGENTS.md) -->
-    <Version>0.11.3</Version>
+    <Version>0.11.4</Version>
     <!-- Icona originale, generata da tools/make-icon.ps1 -->
     <ApplicationIcon>Assets\GuitarStudio.ico</ApplicationIcon>
   </PropertyGroup>

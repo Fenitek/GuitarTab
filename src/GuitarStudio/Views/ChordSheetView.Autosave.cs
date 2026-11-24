@@ -31,6 +31,7 @@ public partial class ChordSheetView
     /// </summary>
     internal bool AutosaveNow()
     {
+        CommitPendingFields(); // la copia deve contenere anche il nome che si sta scrivendo
         if (!_editor.IsDirty) return false;
         if (_autosavedRevision == _editor.Revision) return _autosave != null && File.Exists(_autosave.FilePath);
         try

@@ -184,8 +184,8 @@ public partial class ChordSheetView : UserControl
             CornerRadius = new CornerRadius(6), Padding = new Thickness(12, 10, 12, 10), Margin = new Thickness(0, 0, 0, 10), Child = stack
         };
 
-        name.KeyDown += (_, e) => { if (e.Key == Key.Enter) { CommitName(index, name); e.Handled = true; } };
-        name.LostFocus += (_, _) => CommitName(index, name);
+        name.KeyDown += (_, e) => { if (e.Key == Key.Enter) { FinishName(index, name); e.Handled = true; } };
+        name.LostFocus += (_, _) => FinishName(index, name);
         kind.SelectionChanged += (_, _) =>
         {
             if (_syncing || kind.SelectedIndex < 0) return;
@@ -222,7 +222,14 @@ public partial class ChordSheetView : UserControl
     private void CommitName(int index, TextBox box)
     {
         if (_syncing || index >= _editor.Sheet.Sections.Count) return;
-        if (box.Text.Trim() != _editor.Sheet.Sections[index].Name) _editor.RenameSection(index, box.Text);
+        if (box.Text.Trim() != _editor.Sheet.Sections[index].Name) _editor.RenameSection(index, box.Text, typing: true);
+    }
+
+    /// <summary>Uscita dal campo (o Invio): il nome entra nel foglio e il passo di annulla si chiude.</summary>
+    private void FinishName(int index, TextBox box)
+    {
+        CommitName(index, box);
+        _editor.EndTyping();
     }
 
     /// <summary>
@@ -252,11 +259,11 @@ public partial class ChordSheetView : UserControl
     private void InfoField_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter) return;
-        CommitInfo();
+        CommitPendingFields();
         e.Handled = true;
     }
 
-    private void InfoField_LostFocus(object sender, RoutedEventArgs e) => CommitInfo();
+    private void InfoField_LostFocus(object sender, RoutedEventArgs e) => CommitPendingFields();
 
     private void CapoCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -264,10 +271,22 @@ public partial class ChordSheetView : UserControl
         SetCapo(CapoCombo.SelectedIndex);
     }
 
-    private void CommitInfo()
+    /// <summary>
+    /// Porta nel foglio i campi in cui si sta ancora scrivendo: titolo, artista, tonalità e nomi
+    /// delle sezioni. Va chiamato prima di salvare, annullare, esportare o fare la copia di
+    /// recupero, perché questi campi entrano nel foglio solo quando perdono il fuoco. Il campo con
+    /// il cursore non viene riscritto, così si può continuare a scrivere.
+    /// </summary>
+    private void CommitPendingFields()
     {
         if (_syncing) return;
-        _editor.SetInfo(TitleBox.Text, ArtistBox.Text, KeyBox.Text, _editor.Sheet.Capo);
+        _typingChange = true;
+        try
+        {
+            _editor.SetInfo(TitleBox.Text, ArtistBox.Text, KeyBox.Text, _editor.Sheet.Capo);
+            for (var i = 0; i < _cards.Count; i++) CommitName(i, _cards[i].Name);
+        }
+        finally { _typingChange = false; }
     }
 
     // ================================================================ sezioni
@@ -384,7 +403,7 @@ public partial class ChordSheetView : UserControl
 
     internal void SetMode(bool read)
     {
-        CommitInfo();
+        CommitPendingFields();
         _readMode = read;
         WriteModeToggle.IsChecked = !read;
         ReadModeToggle.IsChecked = read;
@@ -469,7 +488,7 @@ public partial class ChordSheetView : UserControl
 
     private void Undo()
     {
-        CommitInfo();
+        CommitPendingFields();
         if (_editor.Undo()) SetStatus("Annullato.");
     }
 
@@ -546,7 +565,7 @@ public partial class ChordSheetView : UserControl
 
     internal bool Save(bool askPath)
     {
-        CommitInfo();
+        CommitPendingFields();
         var path = _currentPath;
         if (askPath || path == null)
         {
@@ -608,7 +627,7 @@ public partial class ChordSheetView : UserControl
     /// <summary>Chiede se salvare le modifiche. Restituisce false se l'utente annulla.</summary>
     public bool ConfirmDiscard()
     {
-        CommitInfo();
+        CommitPendingFields();
         if (!_editor.IsDirty) return true;
         var message = string.IsNullOrWhiteSpace(_editor.Sheet.Title)
             ? "Vuoi salvare le modifiche al foglio di accordi?"

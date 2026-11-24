@@ -191,4 +191,29 @@ public class ChordSheetTests
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
     }
+
+    [Fact]
+    public void Renaming_while_typing_is_one_undo_step_until_the_field_is_left()
+    {
+        var editor = new ChordSheetEditor(Sample());
+        // Copia di recupero a metà nome, poi Ctrl+S, poi uscita dal campo: un solo passo.
+        Assert.True(editor.RenameSection(1, "Ritor", typing: true));
+        Assert.True(editor.RenameSection(1, "Ritornello", typing: true));
+        Assert.False(editor.RenameSection(1, "Ritornello", typing: true));
+        editor.EndTyping();
+        Assert.Equal("Ritornello", editor.Sheet.Sections[1].Name);
+        Assert.True(editor.Undo());
+        Assert.Equal("Strofa", editor.Sheet.Sections[1].Name);
+        Assert.False(editor.CanUndo);
+
+        // Dopo EndTyping un nuovo nome è un passo a sé; il nome di un'altra sezione pure.
+        Assert.True(editor.RenameSection(1, "Ponte", typing: true));
+        editor.EndTyping();
+        Assert.True(editor.RenameSection(1, "Coda", typing: true));
+        Assert.True(editor.RenameSection(2, "Finale", typing: true));
+        Assert.True(editor.Undo());
+        Assert.Equal(("Coda", "Ritornello"), (editor.Sheet.Sections[1].Name, editor.Sheet.Sections[2].Name));
+        Assert.True(editor.Undo());
+        Assert.Equal("Ponte", editor.Sheet.Sections[1].Name);
+    }
 }

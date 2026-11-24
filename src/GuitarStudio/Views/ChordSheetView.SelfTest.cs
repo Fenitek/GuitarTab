@@ -66,7 +66,7 @@ public partial class ChordSheetView
         NewSheet(confirm: false);
         await Task.Delay(150);
         TitleBox.Text = "Canzone di prova"; ArtistBox.Text = "GuitarStudio"; KeyBox.Text = "Sol";
-        CommitInfo();
+        CommitPendingFields();
         Require(_editor.Sheet is { Title: "Canzone di prova", Key: "Sol" }, "titolo, artista e tonalità nel foglio");
 
         var body = _cards[0].Body;
@@ -164,6 +164,7 @@ public partial class ChordSheetView
 
         if (capture != null) await CaptureSheet(capture, layout, log);
         await VerifySafeSave(Require);
+        await VerifyRenameWhileTyping(Require, log);
         _editor.MarkSaved();
         AppSettings.Current.RemoveRecent(path);
         AppSettings.Current.RemoveRecent(tabPath);

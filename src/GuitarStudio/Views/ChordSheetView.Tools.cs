@@ -28,7 +28,7 @@ public partial class ChordSheetView
 
     internal void Transpose(int semitones)
     {
-        CommitInfo();
+        CommitPendingFields();
         if (!_editor.Transpose(semitones))
         {
             SetStatus("Nel foglio non ci sono accordi da trasporre.");
@@ -62,7 +62,7 @@ public partial class ChordSheetView
 
     internal void SetNotation(ChordNotation notation)
     {
-        CommitInfo();
+        CommitPendingFields();
         SetStatus(_editor.ConvertNotation(notation)
             ? notation == ChordNotation.Italian ? "Accordi con i nomi italiani: Do, Re, Mi…" : "Accordi con i nomi internazionali: C, D, E…"
             : "Gli accordi hanno già questi nomi.");
@@ -134,7 +134,7 @@ public partial class ChordSheetView
 
     private void ExportChordPro_Click(object sender, RoutedEventArgs e)
     {
-        CommitInfo();
+        CommitPendingFields();
         var dlg = new SaveFileDialog
         {
             Title = "Esporta in ChordPro",

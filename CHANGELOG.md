@@ -3,6 +3,16 @@
 La versione corrente è in `src/GuitarStudio/GuitarStudio.csproj` (`<Version>`).
 Regole: vedi `AGENTS.md`.
 
+## 0.11.4 — 2026-11-24
+
+- Foglio di accordi: se rinomini una sezione (per esempio da «Strofa» a «Ritornello») e premi
+  Ctrl+S senza uscire dal campo, ora nel file finisce il nome che vedi. Prima restava il nome
+  vecchio finché non si cliccava altrove.
+- Lo stesso vale per la copia di recupero, Ctrl+Z, l'esportazione in ChordPro e la domanda
+  «Vuoi salvare?» alla chiusura. Il cursore resta nel campo e puoi continuare a scrivere.
+- Una rinomina si annulla con un solo Ctrl+Z, anche se nel frattempo sono scattati il
+  salvataggio o la copia di recupero.
+
 ## 0.11.3 — 2026-11-23
 
 - Nuova prova automatica del salvataggio interrotto a metà, per .gp e .atex: si modifica una nota

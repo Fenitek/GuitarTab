@@ -83,8 +83,14 @@ public sealed class ChordSheetEditor
     public bool RemoveSection(int index) =>
         InRange(index) && Apply(Sheet with { Sections = Sheet.Sections.RemoveAt(index) });
 
-    public bool RenameSection(int index, string name) =>
-        InRange(index) && Apply(Sheet with { Sections = Sheet.Sections.SetItem(index, Sheet.Sections[index] with { Name = CleanName(name, Sheet.Sections[index].Kind) }) });
+    /// <summary>
+    /// Rinomina la sezione. Con <paramref name="typing"/> le registrazioni successive dello stesso
+    /// nome (salvataggio o copia di recupero mentre il cursore è ancora nel campo, poi l'uscita dal
+    /// campo) formano un solo passo di annulla, fino a <see cref="EndTyping"/>.
+    /// </summary>
+    public bool RenameSection(int index, string name, bool typing = false) =>
+        InRange(index) && Apply(Sheet with { Sections = Sheet.Sections.SetItem(index, Sheet.Sections[index] with { Name = CleanName(name, Sheet.Sections[index].Kind) }) },
+            typing ? "name:" + index : null);
 
     /// <summary>Sposta la sezione su (-1) o giù (+1). Restituisce il nuovo indice, o quello vecchio se non si muove.</summary>
     public int MoveSection(int index, int delta)
